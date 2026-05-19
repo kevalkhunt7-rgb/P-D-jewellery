@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion'; 
 import SliderComponent from 'react-slick';
 import 'slick-carousel/slick/slick.css';
@@ -43,43 +43,49 @@ const bestSellers = [
 export function BestSellers() {
   const sliderRef = useRef(null);
   const Slider = SliderComponent.default || SliderComponent;
+  
+  // FIX: Force custom layout verification state
+  const [slidesToShow, setSlidesToShow] = useState(4);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    
+    // Hardcoded calculation guard to completely override Slick's built-in broken breakpoint logic
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 640) {
+        setSlidesToShow(1);
+      } else if (width < 1024) {
+        setSlidesToShow(2);
+      } else if (width < 1280) {
+        setSlidesToShow(3);
+      } else {
+        setSlidesToShow(4);
+      }
+    };
+
+    // Run immediately on page mount / direct device refresh
+    handleResize();
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const settings = {
     dots: true,
     infinite: true,
-    speed: 600,
-    slidesToShow: 4,
+    speed: 500,
+    slidesToShow: slidesToShow, // Uses our explicit React state instead of buggy CSS media arrays
     slidesToScroll: 1,
     autoplay: true,
     autoplaySpeed: 4000,
     pauseOnHover: true,
     arrows: false,
-    responsive: [
-      {
-        breakpoint: 1280,
-        settings: {
-          slidesToShow: 3,
-        },
-      },
-      {
-        breakpoint: 1024,
-        settings: {
-          slidesToShow: 2,
-        },
-      },
-      {
-        breakpoint: 640,
-        settings: {
-          slidesToShow: 1,
-          centerMode: true,       // FIXED: Keeps card centered on narrow viewports
-          centerPadding: '20px',  // FIXED: Prevents layout edges from clipping cards
-        },
-      },
-    ],
   };
 
   return (
-    <section className="py-16 md:py-20 bg-gradient-to-b from-white to-[#FFE5E8]/20 overflow-x-hidden">
+    <section className="py-16 md:py-20 bg-gradient-to-b from-white to-[#FFE5E8]/20 overflow-hidden w-full">
       <div className="container mx-auto px-4 lg:px-8">
         
         {/* Section Header */}
@@ -90,105 +96,85 @@ export function BestSellers() {
           transition={{ duration: 0.8 }}
           className="text-center mb-12 md:mb-16 relative"
         >
-          <motion.span
-            initial={{ opacity: 0, scale: 0.8 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            className="inline-block px-4 py-2 rounded-full bg-[#F7E7CE]/50 mb-4"
-            style={{
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              color: '#D4AF37',
-              letterSpacing: '0.1em',
-            }}
+          <span
+            className="inline-block px-4 py-2 rounded-full bg-[#F7E7CE]/50 mb-4 text-xs font-semibold tracking-widest"
+            style={{ color: '#D4AF37' }}
           >
             CUSTOMER FAVORITES
-          </motion.span>
-          <h2
-            className="font-serif mb-4"
-            style={{
-              fontSize: 'clamp(2rem, 4vw, 3.5rem)',
-              fontWeight: 700,
-              color: '#2C2C2C',
-            }}
-          >
+          </span>
+          <h2 className="font-serif mb-4 text-3xl md:text-5xl font-bold text-[#2C2C2C]">
             Best Sellers
           </h2>
-          <p
-            className="max-w-2xl mx-auto px-2"
-            style={{
-              fontSize: '1.125rem',
-              lineHeight: 1.8,
-              color: '#2C2C2C',
-              opacity: 0.7,
-            }}
-          >
+          <p className="max-w-2xl mx-auto px-2 text-base md:text-lg text-[#2C2C2C]/70 leading-relaxed">
             Most loved pieces by our community of jewelry enthusiasts
           </p>
 
-          {/* Navigation Controls - Hidden on Mobile to prevent layout crunching */}
+          {/* Navigation Controls */}
           <div className="hidden sm:flex absolute bottom-0 right-0 gap-3 z-10">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <button
               onClick={() => sliderRef.current?.slickPrev()}
               className="w-11 h-11 rounded-full bg-white shadow-md hover:bg-[#B76E79] hover:text-white transition-all duration-300 flex items-center justify-center border border-gray-100"
-              style={{ color: '#2C2C2C' }}
-              aria-label="Previous products"
             >
               <ChevronLeft className="w-5 h-5" />
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            </button>
+            <button
               onClick={() => sliderRef.current?.slickNext()}
               className="w-11 h-11 rounded-full bg-white shadow-md hover:bg-[#B76E79] hover:text-white transition-all duration-300 flex items-center justify-center border border-gray-100"
-              style={{ color: '#2C2C2C' }}
-              aria-label="Next products"
             >
               <ChevronRight className="w-5 h-5" />
-            </motion.button>
+            </button>
           </div>
         </motion.div>
 
-        {/* Carousel Container */}
-        <div className="w-full mx-auto px-1">
-          <Slider ref={sliderRef} {...settings}>
-            {bestSellers.map((product, index) => (
-              /* FIXED: Applied responsive padding inside the wrapper block to decouple layout logic from ProductCard */
-              <div key={index} className="px-2 sm:px-3 py-4 outline-none">
-                <div className="w-full max-w-[320px] sm:max-w-none mx-auto">
-                  <ProductCard {...product} />
+        {/* Carousel Container Wrapper */}
+        <div className="w-full overflow-hidden px-1">
+          {isMounted ? (
+            /* We append a distinct 'key' based on slides to force a hard component re-render if the window snaps sizes */
+            <Slider ref={sliderRef} {...settings} key={`slides-${slidesToShow}`}>
+              {bestSellers.map((product, index) => (
+                <div key={index} className="px-4 py-4 outline-none">
+                  <div className="w-full mx-auto">
+                    <ProductCard {...product} />
+                  </div>
                 </div>
-              </div>
-            ))}
-          </Slider>
+              ))}
+            </Slider>
+          ) : (
+            <div className="w-full h-96 bg-gray-50/50 animate-pulse rounded-2xl" />
+          )}
         </div>
 
-        {/* Custom Dots Styling */}
+        {/* CSS Fixes for layout overflow track sizing */}
         <style>{`
           .slick-slider {
             padding-bottom: 50px;
           }
           .slick-list {
-            margin: 0 -8px;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden;
+            width: 100% !important;
+          }
+          .slick-track {
+            display: flex !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+          }
+          .slick-slide {
+            height: inherit !important;
+            float: none !important;
           }
           .slick-dots {
             bottom: 10px;
-          }
-          .slick-dots li {
-            margin: 0 4px;
           }
           .slick-dots li button:before {
             font-size: 10px;
             color: #B76E79;
             opacity: 0.3;
-            transition: all 0.3s ease;
           }
           .slick-dots li.slick-active button:before {
             opacity: 1;
             color: #B76E79;
-            transform: scale(1.2);
           }
         `}</style>
       </div>
