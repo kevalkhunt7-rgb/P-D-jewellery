@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { motion } from 'framer-motion'; // Replaced 'motion/react' with standard 'framer-motion'
+import { motion } from 'framer-motion'; 
 import SliderComponent from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
@@ -21,7 +21,7 @@ const bestSellers = [
     tag: 'BESTSELLER',
   },
   {
-    image: 'https://images.unsplash.com/photo-1615197419962-90f21da0956d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwZWFybCUyMGVhcnJpbmdzJTIwZWxlZ2FudHxlbnwxfHx8fDE3NzkxNjY2NDN8MA&ixlib=rb-4.1.0&q=80&w=1080',
+    image: 'https://images.unsplash.com/photo-1615197419962-90f21da0956d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwZWFybCUyMGVhcnJpbmdzJTIwZWxlZ2FudHxlbnwxfHx8fDE3NzkxNjY2NDM8MA&ixlib=rb-4.1.0&q=80&w=1080',
     title: 'Pearl Chandelier Earrings',
     price: 95,
     tag: 'TRENDING',
@@ -41,13 +41,13 @@ const bestSellers = [
 ];
 
 export function BestSellers() {
-  // FIX: Removed TypeScript type annotation (<any>)
   const sliderRef = useRef(null);
-const Slider = SliderComponent.default || SliderComponent;
+  const Slider = SliderComponent.default || SliderComponent;
+
   const settings = {
     dots: true,
     infinite: true,
-    speed: 800,
+    speed: 600,
     slidesToShow: 4,
     slidesToScroll: 1,
     autoplay: true,
@@ -71,21 +71,24 @@ const Slider = SliderComponent.default || SliderComponent;
         breakpoint: 640,
         settings: {
           slidesToShow: 1,
+          centerMode: true,       // FIXED: Keeps card centered on narrow viewports
+          centerPadding: '20px',  // FIXED: Prevents layout edges from clipping cards
         },
       },
     ],
   };
 
   return (
-    <section className="py-20 bg-gradient-to-b from-white to-[#FFE5E8]/20">
+    <section className="py-16 md:py-20 bg-gradient-to-b from-white to-[#FFE5E8]/20 overflow-x-hidden">
       <div className="container mx-auto px-4 lg:px-8">
+        
         {/* Section Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className="text-center mb-16"
+          className="text-center mb-12 md:mb-16 relative"
         >
           <motion.span
             initial={{ opacity: 0, scale: 0.8 }}
@@ -112,7 +115,7 @@ const Slider = SliderComponent.default || SliderComponent;
             Best Sellers
           </h2>
           <p
-            className="max-w-2xl mx-auto"
+            className="max-w-2xl mx-auto px-2"
             style={{
               fontSize: '1.125rem',
               lineHeight: 1.8,
@@ -122,37 +125,41 @@ const Slider = SliderComponent.default || SliderComponent;
           >
             Most loved pieces by our community of jewelry enthusiasts
           </p>
-        </motion.div>
 
-        {/* Carousel with custom navigation */}
-        <div className="relative overflow-hidden px-1">
-          {/* Custom Navigation Buttons */}
-          <div className="absolute -top-16 right-4 flex gap-3 z-10">
+          {/* Navigation Controls - Hidden on Mobile to prevent layout crunching */}
+          <div className="hidden sm:flex absolute bottom-0 right-0 gap-3 z-10">
             <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => sliderRef.current?.slickPrev()}
-              className="w-12 h-12 rounded-full bg-white shadow-lg hover:bg-[#B76E79] hover:text-white transition-all duration-300 flex items-center justify-center"
+              className="w-11 h-11 rounded-full bg-white shadow-md hover:bg-[#B76E79] hover:text-white transition-all duration-300 flex items-center justify-center border border-gray-100"
               style={{ color: '#2C2C2C' }}
+              aria-label="Previous products"
             >
               <ChevronLeft className="w-5 h-5" />
             </motion.button>
             <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => sliderRef.current?.slickNext()}
-              className="w-12 h-12 rounded-full bg-white shadow-lg hover:bg-[#B76E79] hover:text-white transition-all duration-300 flex items-center justify-center"
+              className="w-11 h-11 rounded-full bg-white shadow-md hover:bg-[#B76E79] hover:text-white transition-all duration-300 flex items-center justify-center border border-gray-100"
               style={{ color: '#2C2C2C' }}
+              aria-label="Next products"
             >
               <ChevronRight className="w-5 h-5" />
             </motion.button>
           </div>
+        </motion.div>
 
-          {/* Slider */}
+        {/* Carousel Container */}
+        <div className="w-full mx-auto px-1">
           <Slider ref={sliderRef} {...settings}>
             {bestSellers.map((product, index) => (
-              <div key={index} className="px-3">
-                <ProductCard {...product} />
+              /* FIXED: Applied responsive padding inside the wrapper block to decouple layout logic from ProductCard */
+              <div key={index} className="px-2 sm:px-3 py-4 outline-none">
+                <div className="w-full max-w-[320px] sm:max-w-none mx-auto">
+                  <ProductCard {...product} />
+                </div>
               </div>
             ))}
           </Slider>
@@ -160,25 +167,30 @@ const Slider = SliderComponent.default || SliderComponent;
 
         {/* Custom Dots Styling */}
         <style>{`
-  .slick-slider {
-    padding-bottom: 40px;
-  }
-
-  .slick-dots {
-    bottom: 0px;
-  }
-
-  .slick-dots li button:before {
-    font-size: 20px;
-    color: #B76E79;
-    opacity: 0.4;
-  }
-
-  .slick-dots li.slick-active button:before {
-    opacity: 1;
-    color: #B76E79;
-  }
-`}</style>
+          .slick-slider {
+            padding-bottom: 50px;
+          }
+          .slick-list {
+            margin: 0 -8px;
+          }
+          .slick-dots {
+            bottom: 10px;
+          }
+          .slick-dots li {
+            margin: 0 4px;
+          }
+          .slick-dots li button:before {
+            font-size: 10px;
+            color: #B76E79;
+            opacity: 0.3;
+            transition: all 0.3s ease;
+          }
+          .slick-dots li.slick-active button:before {
+            opacity: 1;
+            color: #B76E79;
+            transform: scale(1.2);
+          }
+        `}</style>
       </div>
     </section>
   );
