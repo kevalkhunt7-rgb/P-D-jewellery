@@ -24,8 +24,8 @@ import { Mail, Lock, User, Phone, Check, ArrowRight, Eye, EyeOff } from 'lucide-
     <div className="min-h-screen w-full bg-[#FDF8F3] relative overflow-hidden flex items-center justify-center font-sans selection:bg-[#E8C7B7]/30 selection:text-[#2C2C2C]">
       
       {/* Background Soft Blurred Organic Shapes & Reflections */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-gradient-to-tr from-[#FFF0EB] to-transparent blur-[120px] opacity-70 pointer-events-none" />
-      <div className="absolute bottom-[-15%] right-[-5%] w-[45vw] h-[45vw] rounded-full bg-gradient-to-bl from-[#E8C7B7]/20 to-[#D4AF37]/10 blur-[140px] opacity-60 pointer-events-none" />
+      <div className="absolute top-[-5%] left-[-5%] w-[35%] h-[35%] rounded-full bg-gradient-to-tr from-[#FFF0EB] to-transparent blur-[120px] opacity-70 pointer-events-none" />
+      <div className="absolute bottom-[-5%] right-[-5%] w-[30%] h-[30%] rounded-full bg-gradient-to-bl from-[#E8C7B7]/20 to-[#D4AF37]/10 blur-[140px] opacity-60 pointer-events-none" />
 
       {/* Floating Ambient Luxury Gold Particles */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">

@@ -72,7 +72,7 @@ export function Hero() {
   const currentSlide = SLIDE_DATA[current];
 
   return (
-    <section className="relative h-screen overflow-hidden bg-gradient-to-br from-[#FAF9F6] via-[#FFE5E8] to-[#F7E7CE]">
+    <section className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#FAF9F6] via-[#FFE5E8] to-[#F7E7CE] flex items-center py-16 lg:py-0">
       {/* Animated background particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {[...Array(20)].map((_, i) => (
@@ -98,10 +98,11 @@ export function Hero() {
       </div>
 
       <div className="container mx-auto px-4 lg:px-8 h-full">
-        <div className="grid lg:grid-cols-2 gap-8 h-full items-center relative">
+        {/* FIXED CONTAINER: flex-col-reverse pulls the image block to the top visual layer on mobile screens */}
+        <div className="flex flex-col-reverse lg:grid lg:grid-cols-2 gap-12 lg:gap-8 h-full items-center relative">
           
-          {/* Left Content */}
-          <div className="z-10 text-center lg:text-left mt-16 lg:mt-0 flex flex-col justify-center h-full">
+          {/* Left Content Column */}
+          <div className="z-10 text-center lg:text-left mt-8 lg:mt-0 flex flex-col justify-center w-full">
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
                 key={current}
@@ -123,7 +124,7 @@ export function Hero() {
                 <h1
                   className="font-serif mb-6"
                   style={{
-                    fontSize: 'clamp(2.5rem, 5.5vw, 4.5rem)',
+                    fontSize: 'clamp(2.2rem, 5.5vw, 4.5rem)',
                     lineHeight: 1.1,
                     fontWeight: 700,
                     color: '#2C2C2C',
@@ -185,25 +186,25 @@ export function Hero() {
             </div>
 
             {/* Static Stats Section */}
-            <div className="grid grid-cols-3 gap-6 mt-12 max-w-md mx-auto lg:mx-0">
+            <div className="grid grid-cols-3 gap-2 sm:gap-6 mt-12 max-w-md mx-auto lg:mx-0 w-full">
               {[
                 { value: '10K+', label: 'Happy Customers' },
                 { value: '500+', label: 'Unique Designs' },
                 { value: '4.9', label: 'Customer Rating' },
               ].map((stat, index) => (
                 <div key={index} className="text-center lg:text-left">
-                  <div className="font-serif text-2xl md:text-3xl font-bold text-[#B76E79]">
+                  <div className="font-serif text-xl sm:text-2xl md:text-3xl font-bold text-[#B76E79]">
                     {stat.value}
                   </div>
-                  <div className="text-xs md:text-sm text-[#2C2C2C] opacity-70">{stat.label}</div>
+                  <div className="text-[10px] sm:text-xs md:text-sm text-[#2C2C2C] opacity-70 leading-tight">{stat.label}</div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Right Slider Image */}
-          <div className="relative hidden lg:flex items-center justify-center h-[75vh]">
-            <div className="relative w-full max-w-[450px] h-[550px]">
+          {/* Right Slider Image Column */}
+          <div className="relative flex items-center justify-center h-[40vh] sm:h-[50vh] lg:h-[75vh] w-full mb-4 lg:mb-0">
+            <div className="relative w-full max-w-[280px] sm:max-w-[380px] lg:max-w-[450px] h-full max-h-[350px] sm:max-h-[480px] lg:max-h-[550px]">
               
               {/* Glow backdrop effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-[#B76E79]/20 to-[#D4AF37]/20 blur-3xl rounded-full" />
@@ -229,22 +230,22 @@ export function Hero() {
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
-                className="absolute -top-8 -right-8 w-32 h-32 border-2 border-[#D4AF37]/30 rounded-full z-0"
+                className="absolute -top-6 -right-6 w-24 h-24 sm:-top-8 sm:-right-8 sm:w-32 sm:h-32 border-2 border-[#D4AF37]/30 rounded-full z-0"
               />
               <motion.div
                 animate={{ rotate: -360 }}
                 transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-                className="absolute -bottom-8 -left-8 w-40 h-40 border-2 border-[#B76E79]/30 rounded-full z-0"
+                className="absolute -bottom-6 -left-6 w-32 h-32 sm:-bottom-8 sm:-left-8 sm:w-40 sm:h-40 border-2 border-[#B76E79]/30 rounded-full z-0"
               />
 
               {/* Manual Controls */}
-              <div className="absolute -bottom-16 left-0 right-0 flex justify-between items-center z-20 px-4">
+              <div className="absolute -bottom-14 sm:-bottom-16 left-0 right-0 flex justify-between items-center z-20 px-2 sm:px-4">
                 <button 
                   onClick={handlePrev}
-                  className="p-3 rounded-full bg-white/80 backdrop-blur-sm shadow-md hover:bg-white text-[#2C2C2C] transition"
+                  className="p-2 sm:p-3 rounded-full bg-white/80 backdrop-blur-sm shadow-md hover:bg-white text-[#2C2C2C] transition"
                   aria-label="Previous slide"
                 >
-                  <ChevronLeft className="w-5 h-5" />
+                  <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
                 
                 {/* Dot Indicators */}
@@ -257,7 +258,7 @@ export function Hero() {
                         setCurrent(idx);
                       }}
                       className={`h-2 transition-all duration-300 rounded-full ${
-                        idx === current ? 'w-8 bg-[#B76E79]' : 'w-2 bg-[#B76E79]/40'
+                        idx === current ? 'w-6 sm:w-8 bg-[#B76E79]' : 'w-2 bg-[#B76E79]/40'
                       }`}
                     />
                   ))}
@@ -265,10 +266,10 @@ export function Hero() {
 
                 <button 
                   onClick={handleNext}
-                  className="p-3 rounded-full bg-white/80 backdrop-blur-sm shadow-md hover:bg-white text-[#2C2C2C] transition"
+                  className="p-2 sm:p-3 rounded-full bg-white/80 backdrop-blur-sm shadow-md hover:bg-white text-[#2C2C2C] transition"
                   aria-label="Next slide"
                 >
-                  <ChevronRight className="w-5 h-5" />
+                  <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </div>
 

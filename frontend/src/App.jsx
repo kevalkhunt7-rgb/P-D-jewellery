@@ -9,18 +9,22 @@ import AboutPage from './pages/About'
 
 function App() {
   return (
-    <>
-      <Navbar />
-      <main className='pt-10'>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login/>}/>
-          <Route path="/profile" element={<Profile/>}/>
-          <Route path="/cart" element={<Cart/>}/>
-          <Route path='/about' element={<AboutPage/>}/>
-        </Routes>
-      </main>
-    </>
+
+    <div className="w-full min-h-screen overflow-x-hidden bg-[#FAF9F6] relative">
+     
+        <Navbar />
+       
+        <main className="pt-16 w-full overflow-x-hidden">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/cart" element={<Cart />} />
+            <Route path="/about" element={<AboutPage />} />
+          </Routes>
+        </main>
+   
+    </div>
   )
 }
 

@@ -68,8 +68,8 @@ import {
     <div className="min-h-screen w-full bg-[#FDF8F3] relative overflow-hidden font-sans text-[#2C2C2C] selection:bg-[#E8C7B7]/30 selection:text-[#2C2C2C] pt-8 pb-16">
       
       {/* Background Soft Blurs & Cinematic Reflections */}
-      <div className="absolute top-[-10%] left-[-10%] w-[55vw] h-[55vw] rounded-full bg-gradient-to-tr from-[#FFF0EB] via-[#E8C7B7]/10 to-transparent blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-[-5%] right-[-5%] w-[45vw] h-[45vw] rounded-full bg-gradient-to-bl from-[#D4AF37]/5 to-[#FFF0EB] blur-[120px] pointer-events-none" />
+      <div className="absolute top-[-5%] left-[-5%] w-[40%] h-[40%] rounded-full bg-gradient-to-tr from-[#FFF0EB] via-[#E8C7B7]/10 to-transparent blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-[-5%] right-[-5%] w-[35%] h-[35%] rounded-full bg-gradient-to-bl from-[#D4AF37]/5 to-[#FFF0EB] blur-[120px] pointer-events-none" />
 
       {/* Floating Gold Dust Particles */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">

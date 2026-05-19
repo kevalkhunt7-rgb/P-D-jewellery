@@ -39,7 +39,7 @@ export function InstagramGallery() {
   const imageFallback = "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=400&auto=format&fit=crop&q=60";
 
   return (
-    <section className="py-20 bg-gradient-to-b from-[#FAF9F6] to-white">
+    <section className="py-20 bg-gradient-to-b from-[#FAF9F6] to-white overflow-hidden">
       <div className="container mx-auto px-4 lg:px-8">
         
         {/* Section Header */}

@@ -29,7 +29,7 @@ export function Testimonials() {
   const fallbackAvatar = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80";
 
   return (
-    <section className="py-20 bg-gradient-to-b from-white to-[#FAF9F6]">
+    <section className="py-20 bg-gradient-to-b from-white to-[#FAF9F6] overflow-hidden">
       <div className="container mx-auto px-4 lg:px-8">
         
         {/* Section Header */}
@@ -82,22 +82,13 @@ export function Testimonials() {
             >
               {/* Quote Icon */}
               <div 
-                className="absolute -top-4 -left-4 w-12 h-12 bg-gradient-to-br from-[#B76E79] to-[#D4AF37] rounded-full flex items-center justify-center shadow-xl z-10"
+                className="absolute top-0 left-0 -translate-x-2 -translate-y-2 w-12 h-12 bg-gradient-to-br from-[#B76E79] to-[#D4AF37] rounded-full flex items-center justify-center shadow-xl z-10"
                 style={{
-                  position: 'absolute',
-                  top: '-16px',
-                  left: '-16px',
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '50%',
                   background: 'linear-gradient(135deg, #B76E79 0%, #D4AF37 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
                   boxShadow: '0 10px 25px -5px rgba(183, 110, 121, 0.4)'
                 }}
               >
-                <Quote className="w-5 h-5 text-white" style={{ color: '#ffffff' }} />
+                <Quote className="w-5 h-5 text-white" />
               </div>
 
               {/* Rating */}

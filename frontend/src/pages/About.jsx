@@ -35,9 +35,9 @@ function AboutPage() {
     <div className="min-h-screen w-full bg-[#FDF8F3] relative overflow-hidden font-sans text-[#2C2C2C] selection:bg-[#E8C7B7]/30 selection:text-[#2C2C2C]">
       
       {/* GLOBAL LUXURY AMBIENT BACKGROUNDS */}
-      <div className="absolute top-[10%] left-[-20%] w-[80vw] h-[80vw] rounded-full bg-gradient-to-tr from-[#FFF0EB] via-[#E8C7B7]/10 to-transparent blur-[160px] pointer-events-none" />
-      <div className="absolute top-[40%] right-[-30%] w-[90vw] h-[90vw] rounded-full bg-gradient-to-bl from-[#D4AF37]/5 via-[#FFF0EB] to-transparent blur-[180px] pointer-events-none" />
-      <div className="absolute bottom-[5%] left-[-10%] w-[70vw] h-[70vw] rounded-full bg-gradient-to-tr from-[#E8C7B7]/15 to-transparent blur-[140px] pointer-events-none" />
+      <div className="absolute top-[10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-gradient-to-tr from-[#FFF0EB] via-[#E8C7B7]/10 to-transparent blur-[160px] pointer-events-none" />
+      <div className="absolute top-[40%] right-[-15%] w-[60%] h-[60%] rounded-full bg-gradient-to-bl from-[#D4AF37]/5 via-[#FFF0EB] to-transparent blur-[180px] pointer-events-none" />
+      <div className="absolute bottom-[5%] left-[-5%] w-[40%] h-[40%] rounded-full bg-gradient-to-tr from-[#E8C7B7]/15 to-transparent blur-[140px] pointer-events-none" />
 
       {/* FLOATING GOLD DUST PARTICLES */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">

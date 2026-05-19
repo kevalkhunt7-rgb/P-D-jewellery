@@ -125,9 +125,9 @@ const Slider = SliderComponent.default || SliderComponent;
         </motion.div>
 
         {/* Carousel with custom navigation */}
-        <div className="relative">
+        <div className="relative overflow-hidden px-1">
           {/* Custom Navigation Buttons */}
-          <div className="absolute -top-20 right-0 flex gap-3 z-10">
+          <div className="absolute -top-16 right-4 flex gap-3 z-10">
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}

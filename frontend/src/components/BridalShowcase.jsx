@@ -4,7 +4,7 @@ import { Sparkles, Heart } from 'lucide-react';
 
 export function BridalShowcase() {
     return (
-        <section className="py-20 bg-gradient-to-br from-[#FFE5E8] via-[#FAF9F6] to-[#F7E7CE]" id="bridal">
+        <section className="py-20 bg-gradient-to-br from-[#FFE5E8] via-[#FAF9F6] to-[#F7E7CE] overflow-hidden" id="bridal">
             <div className="container mx-auto px-4 lg:px-8">
                 <div className="grid lg:grid-cols-2 gap-12 items-center">
                     {/* Image Section */}

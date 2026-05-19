@@ -1,1 +1,23 @@
 @import "tailwindcss";
+
+@layer base {
+  html, body {
+    @apply max-w-full overflow-x-hidden;
+    width: 100%;
+    position: relative;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+}
+
+/* Fix for potential horizontal overflow issues on mobile */
+* {
+  box-sizing: border-box;
+}
+
+#root {
+  max-width: 100vw;
+  overflow-x: hidden;
+  position: relative;
+}
