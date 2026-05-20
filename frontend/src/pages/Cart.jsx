@@ -1,35 +1,22 @@
 import React, { useState } from 'react';
-import { 
-  ShoppingBag, Trash2, Heart, Plus, Minus, ShieldCheck, 
-  Truck, HelpCircle, ArrowRight, Sparkles, ChevronRight 
+import { Link } from 'react-router-dom'; // Added for seamless collection routing
+import { useNavigate } from 'react-router-dom';
+import {
+  ShoppingBag, Trash2, Heart, Plus, Minus, ShieldCheck,
+  Truck, Sparkles, ChevronRight, ArrowRight
 } from 'lucide-react';
-
- function Cart() {
-  // Sample luxury cart items
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: "Rose Gold Empress Drop Earrings",
-      sku: "LUM-ER-0042",
-      price: 210.00,
-      quantity: 1,
-      material: "18k Rose Gold Plating / AAA Cubic Zirconia",
-      image: "https://images.unsplash.com/photo-1630019852942-f89202989a59?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=400"
-    },
-    {
-      id: 2,
-      name: "Champagne Solitaire Royal Ring",
-      sku: "LUM-RG-0911",
-      price: 145.00,
-      quantity: 1,
-      material: "Champagne Gold Finish / Hand-set Crystals",
-      image: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=400"
-    }
-  ]);
-
+import { useCart } from '../context/CartContext'; // Import your global context hook
+import { ProductCard } from '../components/ProductCard';
+function Cart({ currentProduct, quantity, selectedFinish }) {
+  // Destructure real-time shared states and helper functions from your Context
+  const { cart, updateQuantity, removeFromCart } = useCart();
+  const navigate = useNavigate();
   const [promoCode, setPromoCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState(0);
-
+ const handleRedirect = () => {
+    // Simply route to your checkout URL
+    navigate('/checkout');
+  };
   // Recommendations
   const recommendedItems = [
     { id: 101, name: "Siren Marquise Choker", price: "$320.00", image: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=300" },
@@ -37,23 +24,9 @@ import {
     { id: 103, name: "Vintage Tiara Pendant", price: "$175.00", image: "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=300" }
   ];
 
-  // Calculations
-  const updateQuantity = (id, delta) => {
-    setCartItems(prev => prev.map(item => {
-      if (item.id === id) {
-        const newQty = item.quantity + delta;
-        return newQty > 0 ? { ...item, quantity: newQty } : item;
-      }
-      return item;
-    }));
-  };
-
-  const removeItem = (id) => {
-    setCartItems(prev => prev.filter(item => item.id !== id));
-  };
-
-  const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const shipping = subtotal > 300 ? 0 : 15.00;
+  // Dynamic calculations based on live cart items
+  const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  const shipping = subtotal > 300 || subtotal === 0 ? 0 : 15.00;
   const taxes = subtotal * 0.08;
   const grandTotal = subtotal - appliedDiscount + shipping + taxes;
 
@@ -61,12 +34,14 @@ import {
     e.preventDefault();
     if (promoCode.toUpperCase() === 'ATELIER10') {
       setAppliedDiscount(subtotal * 0.10);
+    } else {
+      setAppliedDiscount(0);
     }
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#FDF8F3] relative overflow-hidden font-sans text-[#2C2C2C] selection:bg-[#E8C7B7]/30 selection:text-[#2C2C2C] pt-8 pb-16">
-      
+    <div className="min-h-screen w-full bg-[#FDF8F3] relative overflow-hidden font-sans text-[#2C2C2C] selection:bg-[#E8C7B7]/30 selection:text-[#2C2C2C] pt-24 pb-16">
+
       {/* Background Soft Blurs & Cinematic Reflections */}
       <div className="absolute top-[-5%] left-[-5%] w-[40%] h-[40%] rounded-full bg-gradient-to-tr from-[#FFF0EB] via-[#E8C7B7]/10 to-transparent blur-[140px] pointer-events-none" />
       <div className="absolute bottom-[-5%] right-[-5%] w-[35%] h-[35%] rounded-full bg-gradient-to-bl from-[#D4AF37]/5 to-[#FFF0EB] blur-[120px] pointer-events-none" />
@@ -90,11 +65,11 @@ import {
       </div>
 
       <div className="container mx-auto px-4 lg:px-8 relative z-10 max-w-[1400px]">
-        
+
         {/* TOP SECTION: BREADCRUMBS & HEADER */}
         <div className="text-center mb-12 animate-fade-in">
           <nav className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[#2C2C2C]/40 mb-3">
-            <span className="hover:text-[#B76E79] cursor-pointer transition-colors">Boutique</span>
+            <Link to="/" className="hover:text-[#B76E79] cursor-pointer transition-colors">Boutique</Link>
             <ChevronRight className="w-3 h-3" />
             <span className="text-[#B76E79] font-medium">Your Curation</span>
           </nav>
@@ -106,7 +81,7 @@ import {
           </p>
         </div>
 
-        {cartItems.length === 0 ? (
+        {cart.length === 0 ? (
           /* EMPTY CART STATE */
           <div className="max-w-xl mx-auto text-center py-16 px-6 bg-white/60 backdrop-blur-xl rounded-[2.5rem] border border-white shadow-[0_30px_70px_rgba(232,199,183,0.15)] animate-fade-in-quick">
             <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-[#FFF0EB] to-[#E8C7B7]/30 rounded-full flex items-center justify-center text-[#B76E79] relative">
@@ -117,63 +92,71 @@ import {
             <p className="text-xs text-[#2C2C2C]/50 max-w-sm mx-auto leading-relaxed mb-8">
               Your personal treasure case is waiting to be adorned with timeless elegance and delicate craftsmanship.
             </p>
-            <button 
+            <Link
+              to="/"
               className="luxury-gradient-btn inline-flex items-center gap-3 px-8 py-3.5 rounded-full text-white font-medium text-xs uppercase tracking-widest relative overflow-hidden"
               style={{ background: 'linear-gradient(135deg, #B76E79 0%, #E8C7B7 50%, #D4AF37 100%)', backgroundSize: '200% auto' }}
             >
               <span>Explore Collections</span>
               <ArrowRight className="w-4 h-4" />
               <div className="shimmer-line" />
-            </button>
+            </Link>
           </div>
         ) : (
-          /* TWO-COLUMN LUXURY CART LAYOUT */
+          /* TWO-COLUMN LAYOUT */
           <div className="grid grid-cols-12 gap-8 items-start">
-            
-            {/* LEFT SIDE: CART ITEM LIST */}
+
+            {/* LEFT SIDE: DYNAMIC ITEMS GENERATED FROM GLOBAL STATE */}
             <div className="col-span-12 lg:col-span-8 space-y-6">
-              {cartItems.map((item) => (
-                <div 
-                  key={item.id} 
+              {cart.map((item) => (
+                <div
+                  key={`${item.id}-${item.selectedFinish?.name || 'default'}`}
                   className="bg-white/80 backdrop-blur-xl rounded-[2rem] p-4 sm:p-6 border border-white shadow-[0_15px_40px_rgba(44,44,44,0.02)] flex flex-col sm:flex-row gap-6 relative overflow-hidden group hover:shadow-[0_20px_50px_rgba(232,199,183,0.25)] transition-all duration-500"
                 >
-                  {/* Rose Gold Glow Subtle Inner Line */}
                   <div className="absolute inset-0 rounded-[2rem] border border-transparent pointer-events-none transition-all duration-500 group-hover:border-[#E8C7B7]/40" />
 
                   {/* Product Image Window */}
                   <div className="w-full sm:w-36 h-36 rounded-2xl overflow-hidden bg-[#FDF8F3] border border-[#E8C7B7]/20 relative flex-shrink-0">
-                    <img 
-                      src={item.image} 
-                      alt={item.name} 
+                    <img
+                      src={item.image}
+                      alt={item.title}
                       className="w-full h-full object-cover transition-transform duration-[4000ms] group-hover:scale-105"
                     />
                   </div>
 
-                  {/* Jewelry Specifications & Adjustments */}
+                  {/* Specifications & Live Interactivity Mapping */}
                   <div className="flex flex-col justify-between flex-grow">
                     <div>
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <h3 className="font-serif text-lg text-[#2C2C2C] tracking-wide group-hover:text-[#B76E79] transition-colors duration-300">
-                            {item.name}
+                            {item.title}
                           </h3>
-                          <p className="text-[10px] text-[#2C2C2C]/40 font-mono mt-0.5 tracking-wide uppercase">SKU: {item.sku}</p>
+                          <p className="text-[10px] text-[#2C2C2C]/40 font-mono mt-0.5 tracking-wide uppercase">
+                            SKU: LUM-PR-{item.id}00
+                          </p>
                         </div>
                         <p className="font-serif text-lg font-medium text-[#2C2C2C]">
                           ${(item.price * item.quantity).toFixed(2)}
                         </p>
                       </div>
-                      <p className="text-sm text-[#2C2C2C]/50 font-medium mt-2 italic">
-                        {item.material}
+                      <p className="text-sm text-[#2C2C2C]/50 font-medium mt-2 italic flex items-center gap-1.5">
+                        {item.selectedFinish ? (
+                          <>
+                            <span className={`w-2.5 h-2.5 rounded-full ${item.selectedFinish.class} inline-block border border-stone-900/10`} />
+                            {item.selectedFinish.name}
+                          </>
+                        ) : (
+                          "Signature Classic Composition"
+                        )}
                       </p>
                     </div>
 
-                    {/* Controls Row */}
+                    {/* Quantity Modifier Buttons */}
                     <div className="flex items-center justify-between mt-6 flex-wrap gap-4">
-                      {/* Luxury Stepper */}
                       <div className="flex items-center bg-[#FDF8F3] border border-[#E8C7B7]/40 rounded-full p-1 shadow-sm">
-                        <button 
-                          onClick={() => updateQuantity(item.id, -1)}
+                        <button
+                          onClick={() => updateQuantity(item.id, item.selectedFinish?.name, item.quantity - 1)}
                           className="w-8 h-8 rounded-full flex items-center justify-center text-[#2C2C2C]/60 hover:text-[#B76E79] hover:bg-white transition-all"
                         >
                           <Minus className="w-3.5 h-3.5" />
@@ -181,22 +164,22 @@ import {
                         <span className="w-10 text-center text-xs font-semibold text-[#2C2C2C]">
                           {item.quantity}
                         </span>
-                        <button 
-                          onClick={() => updateQuantity(item.id, 1)}
+                        <button
+                          onClick={() => updateQuantity(item.id, item.selectedFinish?.name, item.quantity + 1)}
                           className="w-8 h-8 rounded-full flex items-center justify-center text-[#2C2C2C]/60 hover:text-[#B76E79] hover:bg-white transition-all"
                         >
                           <Plus className="w-3.5 h-3.5" />
                         </button>
                       </div>
 
-                      {/* Interaction Text Anchors */}
+                      {/* Item Discard Triggers */}
                       <div className="flex items-center gap-6">
                         <button className="inline-flex items-center gap-1.5 text-xs text-[#2C2C2C]/50 hover:text-[#B76E79] transition-colors group/heart">
                           <Heart className="w-3.5 h-3.5 text-[#2C2C2C]/30 group-hover/heart:text-[#B76E79] transition-colors" />
                           <span className="tracking-wide">Save for Later</span>
                         </button>
-                        <button 
-                          onClick={() => removeItem(item.id)}
+                        <button
+                          onClick={() => removeFromCart(item.id, item.selectedFinish?.name)}
                           className="inline-flex items-center gap-1.5 text-xs text-[#2C2C2C]/50 hover:text-red-700 transition-colors group/trash"
                         >
                           <Trash2 className="w-3.5 h-3.5 text-[#2C2C2C]/30 group-hover/trash:text-red-600 transition-colors" />
@@ -204,21 +187,21 @@ import {
                         </button>
                       </div>
                     </div>
+
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* RIGHT SIDE: SUMMARY & CHECKOUT DESK */}
-            <div className="col-span-12 lg:col-span-4 lg:sticky lg:top-6">
+            {/* RIGHT SIDE: LIVE SUMMARY CALCULATION WORKSPACE */}
+            <div className="col-span-12 lg:col-span-4 lg:sticky lg:top-24">
               <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-6 sm:p-8 border border-white shadow-[0_25px_60px_rgba(44,44,44,0.03)] relative overflow-hidden">
-                
-                {/* Visual Glow Layer */}
+
                 <div className="absolute inset-0 rounded-[2.5rem] border border-transparent pointer-events-none luxury-panel-glow" />
 
                 <h3 className="font-serif text-xl tracking-wide mb-6">Atelier Invoice Summary</h3>
 
-                {/* Pricing Breakdowns */}
+                {/* Real Pricing Displays */}
                 <div className="space-y-4 text-sm pb-6 border-b border-[#E8C7B7]/20">
                   <div className="flex justify-between items-center text-[#2C2C2C]/70">
                     <span className="font-light">Subtotal</span>
@@ -237,28 +220,32 @@ import {
                   <div className="flex justify-between items-center text-[#2C2C2C]/70">
                     <span className="font-light">Premium Delivery</span>
                     <span className="font-medium text-[#2C2C2C]">
-                      {shipping === 0 ? <span className="text-[#D4AF37] italic uppercase tracking-wider text-xs font-semibold">Complimentary</span> : `$${shipping.toFixed(2)}`}
+                      {shipping === 0 ? (
+                        <span className="text-[#D4AF37] italic uppercase tracking-wider text-xs font-semibold">Complimentary</span>
+                      ) : (
+                        `$${shipping.toFixed(2)}`
+                      )}
                     </span>
                   </div>
-                  
+
                   <div className="flex justify-between items-center text-[#2C2C2C]/70">
                     <span className="font-light">Estimated Duties & Taxes</span>
                     <span className="font-medium text-[#2C2C2C]">${taxes.toFixed(2)}</span>
                   </div>
                 </div>
 
-                {/* Promo Code Input Panel */}
+                {/* Promo Code Submission */}
                 <form onSubmit={handleApplyPromo} className="py-5 border-b border-[#E8C7B7]/20">
                   <label className="block text-[10px] uppercase font-bold tracking-widest text-[#2C2C2C]/50 mb-2">Promotional Code</label>
                   <div className="flex bg-[#FDF8F3] border border-[#E8C7B7]/40 rounded-full p-1 focus-within:border-[#B76E79] transition-colors">
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="Enter ATELIER10"
                       value={promoCode}
                       onChange={(e) => setPromoCode(e.target.value)}
                       className="bg-transparent pl-4 pr-2 py-2 text-xs text-[#2C2C2C] focus:outline-none w-full tracking-wider uppercase font-medium placeholder-[#2C2C2C]/30"
                     />
-                    <button 
+                    <button
                       type="submit"
                       className="px-5 bg-[#2C2C2C] hover:bg-[#B76E79] text-white text-[10px] uppercase tracking-widest font-medium rounded-full transition-colors duration-300 flex-shrink-0"
                     >
@@ -267,14 +254,14 @@ import {
                   </div>
                 </form>
 
-                {/* Grand Total Representation */}
+                {/* Allocated Grand Total */}
                 <div className="pt-6 pb-6 flex justify-between items-baseline">
                   <span className="font-serif text-base tracking-wide">Total Allocation</span>
                   <span className="font-serif text-2xl font-bold text-[#B76E79]">${grandTotal.toFixed(2)}</span>
                 </div>
 
-                {/* CHECKOUT ACTION INITIATOR */}
                 <button
+                  onClick={handleRedirect}
                   className="luxury-gradient-btn w-full py-4 px-6 rounded-full text-white font-medium tracking-widest text-xs uppercase shadow-lg relative overflow-hidden flex items-center justify-center gap-2"
                   style={{
                     background: 'linear-gradient(135deg, #B76E79 0%, #E8C7B7 50%, #D4AF37 100%)',
@@ -286,7 +273,6 @@ import {
                   <div className="shimmer-line" />
                 </button>
 
-                {/* Trust Signatures */}
                 <div className="mt-6 pt-4 border-t border-[#E8C7B7]/10 flex flex-col gap-3">
                   <div className="flex items-center gap-2.5 text-[11px] text-[#2C2C2C]/60">
                     <ShieldCheck className="w-4 h-4 text-[#D4AF37] flex-shrink-0" />
@@ -294,7 +280,7 @@ import {
                   </div>
                   <div className="flex items-center gap-2.5 text-[11px] text-[#2C2C2C]/60">
                     <Truck className="w-4 h-4 text-[#B76E79] flex-shrink-0" />
-                    <span>Signature required signature white-glove arrival.</span>
+                    <span>Signature required white-glove arrival.</span>
                   </div>
                 </div>
 
@@ -304,41 +290,36 @@ import {
           </div>
         )}
 
-        {/* BOTTOM SECTION: PERSONALIZED LUST LIST CURATIONS */}
-        <div className="mt-20">
-          <div className="flex items-center gap-2 mb-6">
+        {/* BOTTOM SECTION: RECOMMENDATIONS */}
+        <div className="mt-20 relative z-10">
+          <div className="flex items-center gap-2 mb-8">
             <Sparkles className="w-4 h-4 text-[#D4AF37]" />
             <h3 className="font-serif text-xl sm:text-2xl font-light tracking-wide text-[#2C2C2C]">
               You May Also <span className="italic text-[#B76E79]">Love</span>
             </h3>
           </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+
+          {/* Render your authentic grid configuration using the standard ProductCard wrapper */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {recommendedItems.map((product) => (
-              <div 
-                key={product.id} 
-                className="bg-white/70 backdrop-blur-md border border-white rounded-3xl overflow-hidden shadow-sm group hover:shadow-[0_15px_35px_rgba(232,199,183,0.25)] transition-all duration-500 text-center p-3 relative cursor-pointer"
-              >
-                <div className="aspect-square rounded-2xl overflow-hidden bg-[#FDF8F3] mb-4 relative">
-                  <img 
-                    src={product.image} 
-                    alt={product.name} 
-                    className="w-full h-full object-cover transition-transform duration-[4000ms] group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-                <h4 className="font-serif text-base text-[#2C2C2C] px-2 tracking-wide truncate">{product.name}</h4>
-                <p className="text-xs text-[#B76E79] font-semibold mt-1 mb-2">{product.price}</p>
-              </div>
+              <ProductCard
+                key={product.id}
+                product={{
+                  id: product.id,
+                  title: product.name,           // Maps your placeholder 'name' to the expected 'title' property
+                  price: parseFloat(product.price.replace('$', '')), // Sanitizes '$320.00' string to a raw number value
+                  images: [product.image],       // Wraps single source string image into the standard images array 
+                  image: product.image
+                }}
+              />
             ))}
           </div>
         </div>
 
       </div>
 
-      {/* High Efficiency Animation Injector Stylesheet */}
+      {/* Animation Stylesheet Styles */}
       <style>{`
-        /* Slow scriptless ambient drift */
         .cart-gold-dust {
           animation: cartDustMote infinite linear;
         }
@@ -348,8 +329,6 @@ import {
           80% { opacity: 0.3; }
           100% { transform: translateY(-100vh) scale(0.6) rotate(360deg); opacity: 0; }
         }
-
-        /* Continuous rotation for empty cart anchor */
         .animate-spin-slow {
           animation: spinLace 12s linear infinite;
         }
@@ -357,14 +336,10 @@ import {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
-
-        /* Glassmorphism Inner Shadow Injection */
         .luxury-panel-glow {
           box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.6);
           border: 1px solid rgba(232, 199, 183, 0.25);
         }
-
-        /* Premium Shimmer Button Sweep Effects */
         .luxury-gradient-btn {
           transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
@@ -389,8 +364,6 @@ import {
           0% { transform: translateX(-100%); }
           100% { transform: translateX(100%); }
         }
-
-        /* Clean Container Initializer Reveals */
         .animate-fade-in {
           animation: basicFadeIn 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
@@ -410,4 +383,5 @@ import {
     </div>
   );
 }
-export default Cart
+
+export default Cart;

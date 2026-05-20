@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion'; 
 import SliderComponent from 'react-slick';
 import 'slick-carousel/slick/slick.css';
@@ -6,52 +6,22 @@ import 'slick-carousel/slick/slick-theme.css';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { ProductCard } from './ProductCard';
 
-const bestSellers = [
-  {
-    image: 'https://images.unsplash.com/photo-1611583027838-515a1087afdb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxnb2xkJTIwbmVja2xhY2UlMjBlbGVnYW50JTIwamV3ZWxyeXxlbnwxfHx8fDE3NzkxNjY2NDJ8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    title: 'Luxe Gold Layered Chain',
-    price: 129,
-    originalPrice: 179,
-    tag: 'HOT',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1583937443325-97becde478a8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkaWFtb25kJTIwcmluZyUyMGx1eHVyeXxlbnwxfHx8fDE3NzkxNjY2NDJ8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    title: 'Solitaire Diamond Ring',
-    price: 189,
-    tag: 'BESTSELLER',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1615197419962-90f21da0956d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwZWFybCUyMGVhcnJpbmdzJTIwZWxlZ2FudHxlbnwxfHx8fDE3NzkxNjY2NDM8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    title: 'Pearl Chandelier Earrings',
-    price: 95,
-    tag: 'TRENDING',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1633810543462-77c4a3b13f07?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxnb2xkJTIwYnJhY2VsZXQlMjBsdXh1cnl8ZW58MXx8fHwxNzc5MDg0NzUxfDA&ixlib=rb-4.1.0&q=80&w=1080',
-    title: 'Infinity Gold Bangle',
-    price: 109,
-    originalPrice: 149,
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1577883751617-803a40e0057b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjcnlzdGFsJTIwcGVuZGFudCUyMGx1eHVyeXxlbnwxfHx8fDE3NzkxNjY2NDR8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    title: 'Mystic Crystal Pendant',
-    price: 119,
-    tag: 'NEW',
-  },
-];
+// Import your unified database file
+import { premiumProducts } from './data';
 
 export function BestSellers() {
   const sliderRef = useRef(null);
   const Slider = SliderComponent.default || SliderComponent;
   
-  // FIX: Force custom layout verification state
   const [slidesToShow, setSlidesToShow] = useState(4);
   const [isMounted, setIsMounted] = useState(false);
+
+  // Filter or fall back to your data.js items array safely
+  const bestSellersList = premiumProducts || [];
 
   useEffect(() => {
     setIsMounted(true);
     
-    // Hardcoded calculation guard to completely override Slick's built-in broken breakpoint logic
     const handleResize = () => {
       const width = window.innerWidth;
       if (width < 640) {
@@ -65,18 +35,16 @@ export function BestSellers() {
       }
     };
 
-    // Run immediately on page mount / direct device refresh
     handleResize();
-
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const settings = {
     dots: true,
-    infinite: true,
+    infinite: bestSellersList.length > slidesToShow, // Only loop if there are enough items
     speed: 500,
-    slidesToShow: slidesToShow, // Uses our explicit React state instead of buggy CSS media arrays
+    slidesToShow: slidesToShow,
     slidesToScroll: 1,
     autoplay: true,
     autoplaySpeed: 4000,
@@ -96,10 +64,7 @@ export function BestSellers() {
           transition={{ duration: 0.8 }}
           className="text-center mb-12 md:mb-16 relative"
         >
-          <span
-            className="inline-block px-4 py-2 rounded-full bg-[#F7E7CE]/50 mb-4 text-xs font-semibold tracking-widest"
-            style={{ color: '#D4AF37' }}
-          >
+          <span className="inline-block px-4 py-2 rounded-full bg-[#F7E7CE]/50 mb-4 text-xs font-semibold tracking-widest text-[#D4AF37]">
             CUSTOMER FAVORITES
           </span>
           <h2 className="font-serif mb-4 text-3xl md:text-5xl font-bold text-[#2C2C2C]">
@@ -110,29 +75,30 @@ export function BestSellers() {
           </p>
 
           {/* Navigation Controls */}
-          <div className="hidden sm:flex absolute bottom-0 right-0 gap-3 z-10">
-            <button
-              onClick={() => sliderRef.current?.slickPrev()}
-              className="w-11 h-11 rounded-full bg-white shadow-md hover:bg-[#B76E79] hover:text-white transition-all duration-300 flex items-center justify-center border border-gray-100"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => sliderRef.current?.slickNext()}
-              className="w-11 h-11 rounded-full bg-white shadow-md hover:bg-[#B76E79] hover:text-white transition-all duration-300 flex items-center justify-center border border-gray-100"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
+          {bestSellersList.length > slidesToShow && (
+            <div className="hidden sm:flex absolute bottom-0 right-0 gap-3 z-10">
+              <button
+                onClick={() => sliderRef.current?.slickPrev()}
+                className="w-11 h-11 rounded-full bg-white shadow-md hover:bg-[#B76E79] hover:text-white transition-all duration-300 flex items-center justify-center border border-gray-100"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => sliderRef.current?.slickNext()}
+                className="w-11 h-11 rounded-full bg-white shadow-md hover:bg-[#B76E79] hover:text-white transition-all duration-300 flex items-center justify-center border border-gray-100"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          )}
         </motion.div>
 
         {/* Carousel Container Wrapper */}
         <div className="w-full overflow-hidden px-1">
-          {isMounted ? (
-            /* We append a distinct 'key' based on slides to force a hard component re-render if the window snaps sizes */
+          {isMounted && bestSellersList.length > 0 ? (
             <Slider ref={sliderRef} {...settings} key={`slides-${slidesToShow}`}>
-              {bestSellers.map((product, index) => (
-                <div key={index} className="px-4 py-4 outline-none">
+              {bestSellersList.map((product, index) => (
+                <div key={product.id || index} className="px-4 py-4 outline-none">
                   <div className="w-full mx-auto">
                     <ProductCard {...product} />
                   </div>
@@ -144,38 +110,15 @@ export function BestSellers() {
           )}
         </div>
 
-        {/* CSS Fixes for layout overflow track sizing */}
+        {/* CSS Track Structural Layout Cleanups */}
         <style>{`
-          .slick-slider {
-            padding-bottom: 50px;
-          }
-          .slick-list {
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow: hidden;
-            width: 100% !important;
-          }
-          .slick-track {
-            display: flex !important;
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-          }
-          .slick-slide {
-            height: inherit !important;
-            float: none !important;
-          }
-          .slick-dots {
-            bottom: 10px;
-          }
-          .slick-dots li button:before {
-            font-size: 10px;
-            color: #B76E79;
-            opacity: 0.3;
-          }
-          .slick-dots li.slick-active button:before {
-            opacity: 1;
-            color: #B76E79;
-          }
+          .slick-slider { padding-bottom: 50px; }
+          .slick-list { margin: 0 !important; padding: 0 !important; overflow: hidden; width: 100% !important; }
+          .slick-track { display: flex !important; margin-left: 0 !important; margin-right: 0 !important; }
+          .slick-slide { height: inherit !important; float: none !important; }
+          .slick-dots { bottom: 10px; }
+          .slick-dots li button:before { font-size: 10px; color: #B76E79; opacity: 0.3; }
+          .slick-dots li.slick-active button:before { opacity: 1; color: #B76E79; }
         `}</style>
       </div>
     </section>

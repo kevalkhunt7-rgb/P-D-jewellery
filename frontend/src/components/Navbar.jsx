@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, Heart, Search, Menu, X, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useCart } from '../context/CartContext'; // Wire up your cart context
+import { useWishlist } from '../context/WishlistContext';
 
 // Create a custom framer-motion Link component to keep smooth animations
 const MotionLink = motion(Link);
@@ -9,6 +11,13 @@ const MotionLink = motion(Link);
 function Navbar() {
     const [scrolled, setScrolled] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+    // Destructure real-time data methods from your custom cart context hook
+    const { getCartCount } = useCart();
+    const { wishlistCount } = useWishlist();
+    // Placeholder layout state for your wishlist context down the road
+    // If you already have a useWishlist hook, you can import it exactly like useCart above
+   
 
     useEffect(() => {
         const handleScroll = () => {
@@ -23,7 +32,6 @@ function Navbar() {
             initial={{ y: -100 }}
             animate={{ y: 0 }}
             transition={{ duration: 0.8, ease: 'easeOut' }}
-          
             className={`fixed top-0 left-0 right-0 z-50 max-w-full overflow-x-hidden transition-all duration-500 ${scrolled
                 ? 'bg-white/90 backdrop-blur-xl shadow-lg py-4'
                 : 'bg-[#faf8f5]/90 backdrop-blur-md py-3 border-b border-gray-100/20'
@@ -40,7 +48,7 @@ function Navbar() {
                             <h1
                                 className="font-serif tracking-wider"
                                 style={{
-                                    fontSize: 'clamp(1.2rem, 4vw, 1.5rem)', // Responsive font size for logo
+                                    fontSize: 'clamp(1.2rem, 4vw, 1.5rem)',
                                     fontWeight: 700,
                                     background: 'linear-gradient(135deg, #B76E79 0%, #D4AF37 100%)',
                                     WebkitBackgroundClip: 'text',
@@ -106,9 +114,11 @@ function Navbar() {
                             aria-label="Wishlist"
                         >
                             <Heart className="w-5 h-5" />
-                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#B76E79] text-white rounded-full flex items-center justify-center text-[10px] font-bold">
-                                2
-                            </span>
+                            {wishlistCount > 0 && (
+                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#B76E79] text-white rounded-full flex items-center justify-center text-[10px] font-bold">
+                                    {wishlistCount}
+                                </span>
+                            )}
                         </MotionLink>
 
                         {/* Cart/Shopping Bag Icon */}
@@ -120,9 +130,11 @@ function Navbar() {
                             aria-label="Shopping bag"
                         >
                             <ShoppingBag className="w-5 h-5" />
-                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#B76E79] text-white rounded-full flex items-center justify-center text-[10px] font-bold">
-                                3
-                            </span>
+                            {getCartCount() > 0 && (
+                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#B76E79] text-white rounded-full flex items-center justify-center text-[10px] font-bold">
+                                    {getCartCount()}
+                                </span>
+                            )}
                         </MotionLink>
 
                         {/* Mobile Hamburger Toggle */}
@@ -137,7 +149,6 @@ function Navbar() {
                 </div>
 
                 {/* Mobile Menu Dropdown */}
-                {/* FIXED: Wrapped in AnimatePresence with strict height constraints to prevent page width snapping */}
                 <AnimatePresence>
                     {mobileMenuOpen && (
                         <motion.div

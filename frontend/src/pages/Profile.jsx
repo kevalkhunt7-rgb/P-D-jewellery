@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  User, ShoppingBag, Heart, MapPin, CreditCard, Bell, Settings, LogOut, 
+import {
+  User, ShoppingBag, Heart, MapPin, CreditCard, Bell, Settings, LogOut,
   Sparkles, ChevronRight, Package, Calendar, Award, Star, ArrowUpRight, Edit3
 } from 'lucide-react';
+import { useWishlist } from '../context/WishlistContext';
+import { ProductCard } from '../components/ProductCard'; // Adjust this path to your workspace setup
+
 
 function Profile() {
   // 1. Initialize state from the URL hash if present, default to 'profile'
@@ -11,7 +14,7 @@ function Profile() {
     return hash || 'profile';
   });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
+  const { wishlist } = useWishlist();
   // 2. Synchronize activeTab with URL hash when back/forward navigation or link changes occur
   useEffect(() => {
     const handleHashChange = () => {
@@ -64,7 +67,7 @@ function Profile() {
 
   return (
     <div className="min-h-screen w-full bg-[#FDF8F3] relative overflow-hidden font-sans text-[#2C2C2C] selection:bg-[#E8C7B7]/30 selection:text-[#2C2C2C] pt-6 pb-12">
-      
+
       {/* Background Soft Blurred Organic Reflections */}
       <div className="absolute top-[-5%] right-[-5%] w-[40%] h-[40%] rounded-full bg-gradient-to-bl from-[#FFF0EB] via-[#E8C7B7]/10 to-transparent blur-[130px] pointer-events-none" />
       <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[30%] rounded-full bg-gradient-to-tr from-[#D4AF37]/5 to-[#FFF0EB] blur-[150px] pointer-events-none" />
@@ -88,13 +91,13 @@ function Profile() {
       </div>
 
       <div className="container mx-auto px-4 lg:px-8 relative z-10 max-w-[1400px]">
-        
+
         {/* TOP CINEMATIC PROFILE HEADER BANNER */}
         <div className="w-full h-44 sm:h-56 rounded-[2rem] relative overflow-hidden mb-8 border border-white shadow-[0_15px_40px_rgba(232,199,183,0.15)] bg-[#2C2C2C]">
           <div className="absolute inset-0 bg-gradient-to-r from-[#2C2C2C] via-[#2C2C2C]/50 to-transparent z-10" />
-          <img 
-            src="https://images.unsplash.com/photo-1573408301185-9146fe634ad0?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=1200" 
-            alt="Lumiere Silk Background" 
+          <img
+            src="https://images.unsplash.com/photo-1573408301185-9146fe634ad0?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=1200"
+            alt="Lumiere Silk Background"
             className="w-full h-full object-cover opacity-60 mix-blend-luminosity scale-105"
           />
           <div className="absolute inset-0 z-20 flex flex-col justify-center px-8 sm:px-12">
@@ -113,10 +116,10 @@ function Profile() {
 
         {/* MAIN COUTURIER DASHBOARD GRID */}
         <div className="grid grid-cols-12 gap-8 items-start">
-          
+
           {/* MOBILE MENU TOGGLE BUTTON */}
           <div className="col-span-12 lg:hidden flex justify-end">
-            <button 
+            <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="px-5 py-3 bg-white/80 backdrop-blur-md border border-[#E8C7B7]/40 rounded-full text-xs font-medium uppercase tracking-widest text-[#2C2C2C] shadow-sm transition-all active:scale-95"
             >
@@ -126,14 +129,14 @@ function Profile() {
 
           {/* LEFT DASHBOARD SIDEBAR PANEL */}
           <div className={`col-span-12 lg:col-span-3 bg-white/70 backdrop-blur-xl rounded-3xl p-6 border border-white shadow-[0_20px_50px_rgba(44,44,44,0.03)] luxury-panel-glow transition-all duration-500 lg:block ${isMobileMenuOpen ? 'block' : 'hidden lg:block'}`}>
-            
+
             {/* User Profile Circle Segment */}
             <div className="text-center pb-6 border-b border-[#E8C7B7]/20">
               <div className="relative w-24 h-24 mx-auto mb-4 group">
                 <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#B76E79] via-[#E8C7B7] to-[#D4AF37] animate-spin-slow opacity-80" />
                 <div className="absolute inset-[3px] rounded-full bg-[#FDF8F3] flex items-center justify-center overflow-hidden z-10">
-                  <img 
-                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=200" 
+                  <img
+                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=200"
                     alt="Sophia Martinez Profile"
                     className="w-full h-full object-cover"
                   />
@@ -158,11 +161,10 @@ function Profile() {
                   <button
                     key={item.id}
                     onClick={() => handleTabChange(item.id)}
-                    className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-sm transition-all duration-300 group ${
-                      isActive 
-                        ? 'bg-gradient-to-r from-[#FFF0EB] to-white text-[#B76E79] font-medium shadow-sm border-l-2 border-[#B76E79]' 
-                        : 'text-[#2C2C2C]/70 hover:text-[#2C2C2C] hover:bg-white/40'
-                    }`}
+                    className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-sm transition-all duration-300 group ${isActive
+                      ? 'bg-gradient-to-r from-[#FFF0EB] to-white text-[#B76E79] font-medium shadow-sm border-l-2 border-[#B76E79]'
+                      : 'text-[#2C2C2C]/70 hover:text-[#2C2C2C] hover:bg-white/40'
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-[#B76E79]' : 'text-[#2C2C2C]/40 group-hover:text-[#B76E79]/70'}`} />
@@ -176,7 +178,7 @@ function Profile() {
                   </button>
                 );
               })}
-              
+
               <div className="pt-4 mt-4 border-t border-[#E8C7B7]/20">
                 <button className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm text-[#2C2C2C]/50 hover:text-red-700 hover:bg-red-50/30 transition-all group">
                   <LogOut className="w-4 h-4 text-[#2C2C2C]/30 group-hover:text-red-600" />
@@ -188,11 +190,11 @@ function Profile() {
 
           {/* RIGHT SIDE MAIN PROFILE AREA */}
           <div className="col-span-12 lg:col-span-9 space-y-8">
-            
+
             {/* PROFILE DETAIL VIEW */}
             {activeTab === 'profile' && (
               <div className="space-y-8 animate-fade-in-slow">
-                
+
                 {/* Loyalty Tier Progress Status Segment */}
                 <div className="bg-gradient-to-br from-white to-[#FFF0EB]/40 backdrop-blur-xl rounded-3xl p-6 sm:p-8 border border-white shadow-[0_20px_50px_rgba(232,199,183,0.1)] relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
@@ -229,7 +231,7 @@ function Profile() {
                       Update Account
                     </button>
                   </div>
-                  
+
                   <div className="grid sm:grid-cols-2 gap-6">
                     <div className="space-y-1">
                       <span className="text-[10px] uppercase font-bold tracking-wider text-[#2C2C2C]/40">First Name</span>
@@ -260,7 +262,7 @@ function Profile() {
                     ].map((item, idx) => (
                       <div key={idx} className="bg-white/60 border border-white p-3 rounded-2xl text-center group cursor-pointer hover:shadow-md transition-all">
                         <div className="overflow-hidden rounded-xl bg-[#FDF8F3] mb-2.5 aspect-square">
-                          <img src={item.img} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
+                          <img src={item.img} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                         </div>
                         <p className="text-xs font-serif truncate text-[#2C2C2C] px-1">{item.name}</p>
                         <p className="text-xs text-[#B76E79] font-medium mt-0.5">{item.price}</p>
@@ -280,89 +282,121 @@ function Profile() {
             {activeTab === 'orders' && (
               <div className="space-y-6 animate-fade-in-slow">
                 <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-serif text-2xl font-medium tracking-wide">Boutique Despatch Log</h3>
-                  <span className="text-xs text-[#2C2C2C]/50 tracking-wider">Showing 2 Recent Commissions</span>
+                  <h3 className="font-serif text-2xl font-medium tracking-wide text-stone-950">Boutique Despatch Log</h3>
+                  <span className="text-xs text-[#2C2C2C]/50 tracking-wider">
+                    Showing {orders.length} {orders.length === 1 ? 'Recent Commission' : 'Recent Commissions'}
+                  </span>
                 </div>
 
-                {orders.map((order, index) => (
-                  <div key={index} className="bg-white/90 backdrop-blur-xl border border-white rounded-3xl p-6 shadow-[0_12px_40px_rgba(44,44,44,0.02)] transition-all duration-300 hover:shadow-md group">
-                    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#E8C7B7]/20 pb-4 mb-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-[#FFF0EB] flex items-center justify-center text-[#B76E79]">
-                          <Package className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-[#2C2C2C]/40 uppercase tracking-widest">Order Identifier</p>
-                          <p className="text-sm font-semibold text-[#2C2C2C]">{order.id}</p>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-[#2C2C2C]/40 uppercase tracking-widest text-right">Commission Date</p>
-                        <p className="text-sm font-medium text-[#2C2C2C]/80 inline-flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-[#2C2C2C]/30" /> {order.date}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-[#2C2C2C]/40 uppercase tracking-widest text-right">Settlement Total</p>
-                        <p className="text-sm font-bold text-[#B76E79] text-right">{order.total}</p>
-                      </div>
-                      <div>
-                        <span className={`px-4 py-1.5 rounded-full text-xs font-medium tracking-wide ${
-                          order.status === 'In Transit' 
-                            ? 'bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20 animate-pulse' 
-                            : 'bg-green-50 text-green-700 border border-green-200'
-                        }`}>
-                          {order.status}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between flex-wrap gap-4">
-                      <div className="flex items-center gap-4">
-                        <img src={order.image} alt="Jewelry thumbnail" className="w-14 h-14 object-cover rounded-xl border border-[#E8C7B7]/20"/>
-                        <div>
-                          <p className="text-sm font-serif font-medium text-[#2C2C2C]">Premium Curated Parcel ({order.items} items)</p>
-                          <p className="text-xs text-[#2C2C2C]/50 mt-0.5">Dispatched via Premium Atelier White-Glove Messenger</p>
-                        </div>
-                      </div>
-                      <button className="px-5 py-2.5 bg-[#2C2C2C] hover:bg-[#B76E79] text-white font-medium text-xs rounded-full uppercase tracking-widest transition-colors duration-300">
-                        Trace Parcel
-                      </button>
-                    </div>
+                {orders.length === 0 ? (
+                  <div className="text-center py-12 bg-white/40 border border-stone-200/60 rounded-3xl">
+                    <Package className="w-8 h-8 text-[#B76E79]/60 mx-auto mb-3" />
+                    <p className="text-sm font-serif text-stone-600">No recent orders found in this vault ledger.</p>
                   </div>
-                ))}
+                ) : (
+                  orders.map((order, index) => (
+                    <div
+                      key={order.id || index}
+                      className="bg-white/90 backdrop-blur-xl border border-white rounded-3xl p-6 shadow-[0_12px_40px_rgba(44,44,44,0.02)] transition-all duration-300 hover:shadow-md group"
+                    >
+                      {/* Order Meta Header Info */}
+                      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#E8C7B7]/20 pb-4 mb-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-[#FFF0EB] flex items-center justify-center text-[#B76E79]">
+                            <Package className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-[#2C2C2C]/40 uppercase tracking-widest">Order Identifier</p>
+                            <p className="text-sm font-semibold text-[#2C2C2C]">{order.id || `ATLN-${100000 + index}`}</p>
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-[10px] font-bold text-[#2C2C2C]/40 uppercase tracking-widest text-left sm:text-right">Commission Date</p>
+                          <p className="text-sm font-medium text-[#2C2C2C]/80 inline-flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-[#2C2C2C]/30" /> {order.date || 'Just Now'}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-[10px] font-bold text-[#2C2C2C]/40 uppercase tracking-widest text-left sm:text-right">Settlement Total</p>
+                          <p className="text-sm font-bold text-[#B76E79] text-left sm:text-right">
+                            {typeof order.total === 'number' ? `$${order.total.toLocaleString()}` : order.total}
+                          </p>
+                        </div>
+
+                        <div>
+                          <span className={`px-4 py-1.5 rounded-full text-xs font-medium tracking-wide inline-block ${order.status === 'In Transit' || order.status === 'Processing'
+                              ? 'bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20 animate-pulse'
+                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            }`}>
+                            {order.status || 'Confirmed'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Parcel Item Specifications Body */}
+                      <div className="flex items-center justify-between flex-wrap gap-4">
+                        <div className="flex items-center gap-4">
+                          <img
+                            src={order.image || 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=150&q=80'}
+                            alt="Jewelry masterpiece thumbnail"
+                            className="w-14 h-14 object-cover rounded-xl border border-[#E8C7B7]/20 flex-shrink-0"
+                          />
+                          <div>
+                            <p className="text-sm font-serif font-medium text-[#2C2C2C]">
+                              {order.title || 'Premium Curated Parcel'} ({order.items || 1} {order.items === 1 ? 'item' : 'items'})
+                            </p>
+                            <p className="text-xs text-[#2C2C2C]/50 mt-0.5">
+                              {order.shippingMethod === 'insured'
+                                ? 'Dispatched via Insured Armored Security Messenger'
+                                : 'Dispatched via Premium Atelier White-Glove Service'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <button className="px-5 py-2.5 bg-[#2C2C2C] hover:bg-[#B76E79] text-white font-medium text-xs rounded-full uppercase tracking-widest transition-colors duration-300 shadow-sm active:scale-95">
+                          Trace Parcel
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             )}
-
             {/* WISHLIST VIEW */}
             {activeTab === 'wishlist' && (
               <div className="space-y-6 animate-fade-in-slow">
+                {/* Heading Block */}
                 <div className="mb-2">
                   <h3 className="font-serif text-2xl font-medium tracking-wide">The Wishlist Vault</h3>
-                  <p className="text-xs text-[#2C2C2C]/50 mt-1">Your privately reserved acquisitions. Sharing this locker grants boutique allocation hints to partners.</p>
+                  <p className="text-xs text-[#2C2C2C]/50 mt-1">
+                    Your privately reserved acquisitions. Sharing this locker grants boutique allocation hints to partners.
+                  </p>
                 </div>
 
-                <div className="grid sm:grid-cols-2 gap-6">
-                  {wishlistItems.map((item) => (
-                    <div key={item.id} className="bg-white/80 backdrop-blur-xl border border-white rounded-3xl overflow-hidden shadow-sm group hover:shadow-md transition-all duration-300 relative">
-                      <div className="aspect-[4/3] bg-[#FDF8F3] relative overflow-hidden">
-                        <img src={item.image} alt={item.name} className="w-full h-full object-cover transition-transform duration-[4000ms] group-hover:scale-105"/>
-                        <button className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center text-red-500 shadow-sm hover:scale-110 active:scale-95 transition-transform">
-                          <Heart className="w-4 h-4 fill-current" />
-                        </button>
-                      </div>
-                      <div className="p-5 flex items-center justify-between gap-4">
-                        <div>
-                          <h4 className="font-serif text-base font-medium text-[#2C2C2C] tracking-wide">{item.name}</h4>
-                          <p className="text-sm text-[#B76E79] font-semibold mt-1">{item.price}</p>
-                        </div>
-                        <button className="p-3 bg-[#FFF0EB] hover:bg-gradient-to-br hover:from-[#B76E79] hover:to-[#D4AF37] rounded-full text-[#B76E79] hover:text-white transition-all duration-300 shadow-sm flex-shrink-0">
-                          <ShoppingBag className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                {/* Dynamic Grid Layout */}
+                {wishlist && wishlist.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {wishlist.map((item) => (
+                      <ProductCard
+                        key={item.id}
+                        id={item.id}
+                        title={item.title || item.name} // Keeps fallbacks solid if naming parameters vary
+                        price={item.price}
+                        image={item.image}
+                        tag={item.tag}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  /* Elegant Empty State Framework */
+                  <div className="text-center py-16 bg-white/40 backdrop-blur-md rounded-3xl border border-dashed border-gray-200">
+                    <Heart className="w-8 h-8 text-gray-300 mx-auto mb-3 stroke-[1.5]" />
+                    <p className="font-serif text-gray-500 text-sm tracking-wide">Your vault is currently empty</p>
+                    <p className="text-xs text-gray-400 mt-1">Explore our collections to claim your selections.</p>
+                  </div>
+                )}
               </div>
             )}
 
