@@ -176,17 +176,19 @@ export function Hero() {
                   Shop Collection
                 </motion.button>
               </Link>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-8 py-4 rounded-full font-medium tracking-wide bg-white/70 backdrop-blur-sm hover:bg-white transition-all duration-300 text-[#2C2C2C]"
-                style={{
-                  fontSize: '1rem',
-                  border: '1px solid rgba(183, 110, 121, 0.3)',
-                }}
-              >
-                View Lookbook
-              </motion.button>
+              <Link to='/lookbook'>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-8 py-4 rounded-full font-medium tracking-wide bg-white/70 backdrop-blur-sm hover:bg-white transition-all duration-300 text-[#2C2C2C]"
+                  style={{
+                    fontSize: '1rem',
+                    border: '1px solid rgba(183, 110, 121, 0.3)',
+                  }}
+                >
+                  View Lookbook
+                </motion.button>
+              </Link>
             </div>
 
             {/* Static Stats Section */}

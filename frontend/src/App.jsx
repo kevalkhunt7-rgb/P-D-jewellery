@@ -13,6 +13,7 @@ import PremiumCheckoutPage from './pages/Checkout'
 import CollectionsPage from './pages/Collections'
 import NotFoundPage from './pages/NotFound'
 import LookBookPage from './pages/Lookbook'
+import ScrollToTop from './components/ScrollToTop'
 
 function App() {
   return (
@@ -23,19 +24,22 @@ function App() {
           <Navbar />
 
           <main className="pt-16 w-full overflow-x-hidden">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/about" element={<AboutPage />} />
-              <Route path='/product/:id' element={<ProductDetailPage />} />
-              <Route path='checkout' element={<PremiumCheckoutPage/>} />  
-              <Route path='/collections' element={<CollectionsPage/>} />
-              <Route path='/*' element={<NotFoundPage/>} />
-              <Route path='/lookbook' element={<LookBookPage/>} />
-            </Routes>
+            <ScrollToTop />
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/cart" element={<Cart />} />
+                <Route path="/about" element={<AboutPage />} />
+                <Route path='/product/:id' element={<ProductDetailPage />} />
+                <Route path='checkout' element={<PremiumCheckoutPage />} />
+                <Route path='/collections' element={<CollectionsPage />} />
+                <Route path='/*' element={<NotFoundPage />} />
+                <Route path='/lookbook' element={<LookBookPage />} />
+              </Routes>
+          
           </main>
+
         </CartProvider>
       </WishlistProvider>
     </div>
