@@ -1,56 +1,60 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Link } from 'react-router';
-
-// Slider data containing different models, jewelry variants, and specific copy
-const SLIDE_DATA = [
-  {
-    tag: "New Spring Collection 2026",
-    title: "Timeless Elegance",
-    highlight: "Crafted for Every Woman",
-    desc: "Discover our exquisite collection of handcrafted imitation jewelry that celebrates your unique beauty and style.",
-    image: "https://images.unsplash.com/photo-1675881149187-8faaf934e14a?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=1080&h=1200",
-    alt: "Luxury jewelry model showcasing diamond necklaces"
-  },
-  {
-    tag: "Bridal Special",
-    title: "Royal Heritage",
-    highlight: "Moments Made Golden",
-    desc: "Adorn yourself with intricate, traditional imitation sets designed to bring out majestic splendor on your big day.",
-    image: "https://images.unsplash.com/photo-1601121141461-9d6647bca1ed?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=1080&h=1200",
-    alt: "Bridal jewelry variant showcasing traditional gold chokers"
-  },
-  {
-    tag: "Minimalist Luxe",
-    title: "Modern Statement",
-    highlight: "Subtle Yet Striking",
-    desc: "Explore sleek, contemporary geometric designs that elevate your everyday attire effortlessly.",
-    image: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=1080&h=1200",
-    alt: "Minimalist modern rings and fine imitation bracelets"
-  }
-];
+import { Sparkles, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import api from '../utils/api';
 
 export function Hero() {
+  const [banners, setBanners] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState(0);
-  const [direction, setDirection] = useState(0); // -1 for left, 1 for right
+  const [direction, setDirection] = useState(0);
 
-  // Slide navigation handlers
+  useEffect(() => {
+    const fetchBanners = async () => {
+      try {
+        const { data } = await api.get('/banners/all');
+        if (data.success) {
+          
+          const mappedBanners = data.banners.map(b => ({
+            tag: b.subtitle || "New Collection",
+            title: b.title,
+            highlight: b.description ? (b.description.includes('.') ? b.description.split('.')[0] : b.description) : "Exquisite Craftsmanship",
+            desc: b.description || "Discover our unique handcrafted jewelry pieces.",
+            buttonText: b.buttonText || "Shop Collection",
+            image: b.image?.url || "https://images.unsplash.com/photo-1675881149187-8faaf934e14a?auto=format&fit=crop&q=80&w=1080",
+            alt: b.title,
+            link: b.buttonLink || "/collections"
+          }));
+          setBanners(mappedBanners);
+        }
+      } catch (error) {
+        console.error("Failed to fetch banners:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBanners();
+  }, []);
+
   const handleNext = () => {
+    if (banners.length === 0) return;
     setDirection(1);
-    setCurrent((prev) => (prev + 1) % SLIDE_DATA.length);
+    setCurrent((prev) => (prev + 1) % banners.length);
   };
 
   const handlePrev = () => {
+    if (banners.length === 0) return;
     setDirection(-1);
-    setCurrent((prev) => (prev - 1 + SLIDE_DATA.length) % SLIDE_DATA.length);
+    setCurrent((prev) => (prev - 1 + banners.length) % banners.length);
   };
 
-  // Auto-slide effect (changes slide every 6 seconds)
   useEffect(() => {
-    const timer = setInterval(handleNext, 6000);
-    return () => clearInterval(timer);
-  }, []);
+    if (banners.length > 1) {
+      const timer = setInterval(handleNext, 6000);
+      return () => clearInterval(timer);
+    }
+  }, [banners.length]);
 
   // Framer motion variants for the sliding/fade effect
   const slideVariants = {
@@ -70,7 +74,17 @@ export function Hero() {
     })
   };
 
-  const currentSlide = SLIDE_DATA[current];
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-stone-50">
+        <Loader2 className="w-8 h-8 text-amber-600 animate-spin" />
+      </div>
+    );
+  }
+
+  if (banners.length === 0) return null;
+
+  const currentSlide = banners[current];
 
   return (
     <section className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#FAF9F6] via-[#FFE5E8] to-[#F7E7CE] flex items-center py-16 lg:py-0">
@@ -141,7 +155,7 @@ export function Hero() {
                       backgroundClip: 'text',
                     }}
                   >
-                    {currentSlide.highlight}
+                    {currentSlide.subtitle}
                   </span>
                 </h1>
 
@@ -162,7 +176,7 @@ export function Hero() {
 
             {/* Static Interactive Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Link to='/collections' >
+              <Link to={currentSlide.link} >
                 <motion.button
 
                   whileHover={{ scale: 1.05, boxShadow: '0 20px 40px rgba(183, 110, 121, 0.3)' }}
@@ -173,7 +187,7 @@ export function Hero() {
                     fontSize: '1rem',
                   }}
                 >
-                  Shop Collection
+                  {currentSlide.buttonText}
                 </motion.button>
               </Link>
               <Link to='/lookbook'>
@@ -256,7 +270,7 @@ export function Hero() {
 
                 {/* Dot Indicators */}
                 <div className="flex space-x-2">
-                  {SLIDE_DATA.map((_, idx) => (
+                  {banners.map((_, idx) => (
                     <button
                       key={idx}
                       onClick={() => {

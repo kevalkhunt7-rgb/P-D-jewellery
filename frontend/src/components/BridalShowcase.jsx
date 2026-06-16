@@ -1,8 +1,10 @@
 import { motion } from 'framer-motion';
 import { Sparkles, Heart } from 'lucide-react';
-
+import { useNavigate } from 'react-router-dom';
+import brideImg from "../assets/bride.png"
 
 export function BridalShowcase() {
+    const navigate = useNavigate();
     return (
         <section className="py-20 bg-gradient-to-br from-[#FFE5E8] via-[#FAF9F6] to-[#F7E7CE] overflow-hidden" id="bridal">
             <div className="container mx-auto px-4 lg:px-8">
@@ -26,7 +28,7 @@ export function BridalShowcase() {
                             >
                 {/* // Replace the <ImageWithFallback /> section in your BridalShowcase with this: */}
                                 <img
-                                    src="https://images.unsplash.com/photo-1481980235850-66e47651e431?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxicmlkYWwlMjBqZXdlbHJ5JTIwd2VkZGluZ3xlbnwxfHx8fDE3NzkxNjY2NDN8MA&ixlib=rb-4.1.0&q=80&w=1080"
+                                    src={brideImg}
                                     alt="Bridal jewelry collection"
                                     className="w-full h-auto rounded-3xl shadow-2xl"
                                     style={{ display: 'block', width: '100%', height: 'auto' }}
@@ -171,6 +173,7 @@ export function BridalShowcase() {
                             <motion.button
                                 whileHover={{ scale: 1.05, boxShadow: '0 20px 40px rgba(183, 110, 121, 0.3)' }}
                                 whileTap={{ scale: 0.95 }}
+                              onClick={() => navigate('/collections?occasion=wedding')}
                                 className="px-8 py-4 rounded-full font-medium tracking-wide"
                                 style={{
                                     background: 'linear-gradient(135deg, #B76E79 0%, #D4AF37 100%)',

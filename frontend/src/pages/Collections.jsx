@@ -1,21 +1,23 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { 
-  SlidersHorizontal, 
-  Search, 
-  ChevronDown, 
-  X, 
-  Grid, 
-  Sparkles, 
+import {
+  SlidersHorizontal,
+  Search,
+  ChevronDown,
+  X,
+  Grid,
+  Sparkles,
   RotateCcw,
   Sliders,
   Check
 } from 'lucide-react';
+import api from '../utils/api';
 
-// Dynamic integration using your strict data layer specs
-import { premiumProducts } from '../components/data';
+// Dynamic integration using global product context
+import { useProducts } from '../context/ProductContext';
 import { ProductCard } from '../components/ProductCard';// Preserving your intact component logic
+import { useLocation } from 'react-router-dom';
 
 // Luxury Category Pill Metadata Matrix
 const CATEGORIES = [
@@ -29,10 +31,10 @@ const CATEGORIES = [
 
 const PRICE_RANGES = [
   { id: 'all', name: 'All Valuations' },
-  { id: 'under-2500', name: 'Under $2,500', min: 0, max: 2500 },
-  { id: '2500-5000', name: '$2,500 – $5,000', min: 2500, max: 5000 },
-  { id: '5000-10000', name: '$5,000 – $10,000', min: 5000, max: 10000 },
-  { id: 'above-10000', name: 'Above $10,000', min: 10000, max: Infinity }
+  { id: 'under-2500', name: 'Under ₹2,500', min: 0, max: 2500 },
+  { id: '2500-5000', name: '₹2,500 – ₹5,000', min: 2500, max: 5000 },
+  { id: '5000-10000', name: '₹5,000 – ₹10,000', min: 5000, max: 10000 },
+  { id: 'above-10000', name: 'Above ₹10,000', min: 10000, max: Infinity }
 ];
 
 // Framer Motion Fine-Art Animations
@@ -46,17 +48,38 @@ const containerVariants = {
 
 const cardItemVariants = {
   hidden: { opacity: 0, y: 30 },
-  show: { 
-    opacity: 1, 
-    y: 0, 
-    transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } 
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] }
   }
 };
 
 export default function CollectionsPage() {
+  const { products, loading, fetchProducts } = useProducts();
+  const location = useLocation();
+  const [categories, setCategories] = useState([{ id: 'all', name: 'All Collections' }]);
+
   // --- UI Layout and Interaction States ---
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedOccasion, setSelectedOccasion] = useState('all');
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+
+    const q = params.get('search') || '';
+    const cat = params.get('category');
+    const occ = params.get('occasion');
+
+    setSearchQuery(q);
+    setSelectedCategory(cat ? cat.toLowerCase() : 'all');
+    setSelectedOccasion(occ ? occ.toLowerCase() : 'all');
+
+    // Call backend API when search query changes in URL
+    fetchProducts(q);
+
+  }, [location.search, fetchProducts]);
   const [selectedPriceRange, setSelectedPriceRange] = useState('all');
   const [sortBy, setSortBy] = useState('featured');
   const [visibleCount, setVisibleCount] = useState(8); // Initially stream 8 premium elements
@@ -65,21 +88,26 @@ export default function CollectionsPage() {
 
   // --- Dynamic Matrix Filtering Processing Engine ---
   const filteredAndSortedProducts = useMemo(() => {
-    let result = [...premiumProducts];
+    let result = [...(products || [])];
 
-    // 1. Text Search Evaluation Query
-    if (searchQuery.trim() !== '') {
-      const target = searchQuery.toLowerCase();
-      result = result.filter(
-        p => p.title?.toLowerCase().includes(target) || 
-             p.subtitle?.toLowerCase().includes(target) ||
-             p.category?.toLowerCase().includes(target)
-      );
-    }
+    // 1. Backend handles search via fetchProducts, but we keep local filtering 
+    // for immediate UI response if needed or for other criteria.
+    // However, the prompt specifically asks for backend filtering.
+    // The products array already contains the backend-filtered results.
 
     // 2. High-Tier Category Segmenting
     if (selectedCategory !== 'all') {
       result = result.filter(p => p.category?.toLowerCase() === selectedCategory.toLowerCase());
+    }
+
+    // 2b. Occasion Segmenting
+    if (selectedOccasion !== 'all') {
+      result = result.filter(p => {
+        if (Array.isArray(p.occasion)) {
+          return p.occasion.some(occ => occ.toLowerCase() === selectedOccasion.toLowerCase());
+        }
+        return p.occasion?.toLowerCase() === selectedOccasion.toLowerCase();
+      });
     }
 
     // 3. Financial Valuations Filtering Layer
@@ -109,7 +137,14 @@ export default function CollectionsPage() {
     }
 
     return result;
-  }, [searchQuery, selectedCategory, selectedPriceRange, sortBy]);
+  }, [
+    searchQuery,
+    selectedCategory,
+    selectedOccasion,
+    selectedPriceRange,
+    sortBy,
+    products
+  ]);
 
   // --- Load More / Pagination Controllers ---
   const streamedProducts = useMemo(() => {
@@ -119,6 +154,7 @@ export default function CollectionsPage() {
   const handleResetFilters = () => {
     setSearchQuery('');
     setSelectedCategory('all');
+    setSelectedOccasion('all');
     setSelectedPriceRange('all');
     setSortBy('featured');
     setVisibleCount(8);
@@ -133,7 +169,7 @@ export default function CollectionsPage() {
 
   return (
     <div className="min-h-screen bg-[#FDF8F3] text-stone-900 font-sans antialiased selection:bg-[#E8C7B7]/30 pb-24 relative overflow-x-hidden">
-      
+
       {/* Absolute Ambient Background Aura Orbs */}
       <div className="absolute top-[-10%] left-[-20%] w-[60vw] h-[60vw] bg-gradient-to-tr from-[#FFF0EB] to-[#E8C7B7]/10 rounded-full blur-[140px] pointer-events-none mix-blend-multiply" />
       <div className="absolute top-[30%] right-[-10%] w-[50vw] h-[50vw] bg-gradient-to-bl from-[#F7E7CE]/10 to-[#FFF0EB] rounded-full blur-[160px] pointer-events-none" />
@@ -150,7 +186,7 @@ export default function CollectionsPage() {
         </nav>
 
         <div className="max-w-2xl mx-auto space-y-4">
-          <motion.h1 
+          <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
@@ -158,16 +194,7 @@ export default function CollectionsPage() {
           >
             The Atelier Collection
           </motion.h1>
-          <div className="w-16 h-[1px] bg-[#B76E79] mx-auto my-6" />
-          <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3, duration: 0.8 }}
-            className="text-xs sm:text-sm font-light text-stone-500 leading-relaxed tracking-wide max-w-xl mx-auto"
-          >
-            Immerse yourself in exceptional craftsmanship. Discover timeless 18k and 24k gold, signature rose tones, and diamonds curated down to the microscopic setting.
-          </motion.p>
-        </div>
+         </div>
       </section>
 
       {/* ==========================================
@@ -175,17 +202,16 @@ export default function CollectionsPage() {
           ========================================== */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
         <div className="flex items-center justify-start lg:justify-center gap-3 overflow-x-auto pb-4 pt-1 no-scrollbar mask-image-horizontal">
-          {CATEGORIES.map((cat) => {
+          {categories.map((cat) => {
             const isSelected = selectedCategory === cat.id;
             return (
               <button
                 key={cat.id}
                 onClick={() => { setSelectedCategory(cat.id); setVisibleCount(8); }}
-                className={`px-6 py-2.5 rounded-full text-[11px] font-bold uppercase tracking-widest whitespace-nowrap border transition-all duration-500 ${
-                  isSelected 
-                    ? 'bg-stone-950 text-[#FDF8F3] border-stone-950 shadow-md scale-105' 
-                    : 'bg-white/80 text-stone-500 border-stone-200/60 hover:text-stone-900 hover:border-stone-400 backdrop-blur-3xs'
-                }`}
+                className={`px-6 py-2.5 rounded-full text-[11px] font-bold uppercase tracking-widest whitespace-nowrap border transition-all duration-500 ${isSelected
+                  ? 'bg-stone-950 text-[#FDF8F3] border-stone-950 shadow-md scale-105'
+                  : 'bg-white/80 text-stone-500 border-stone-200/60 hover:text-stone-900 hover:border-stone-400 backdrop-blur-3xs'
+                  }`}
               >
                 {cat.name}
               </button>
@@ -199,7 +225,7 @@ export default function CollectionsPage() {
           ========================================== */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-10 sticky top-0 z-30">
         <div className="bg-white/70 backdrop-blur-xl border border-stone-200/60 rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between shadow-lg shadow-stone-950/5">
-          
+
           {/* Left Element Counter Segment */}
           <div className="text-xs tracking-wider text-stone-500 font-light flex items-center gap-2">
             <Grid className="w-4 h-4 text-[#B76E79]/80 stroke-[1.5]" />
@@ -208,7 +234,7 @@ export default function CollectionsPage() {
 
           {/* Right Controls Interacting Core */}
           <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-            
+
             {/* Search Core Pipeline Field */}
             <div className="relative w-full md:w-64">
               <input
@@ -264,11 +290,10 @@ export default function CollectionsPage() {
                             setIsSortDropdownOpen(false);
                             setVisibleCount(8);
                           }}
-                          className={`w-full text-left px-4 py-2.5 text-xs tracking-wide transition-colors flex items-center justify-between ${
-                            sortBy === key 
-                              ? 'bg-[#FFF0EB]/50 text-[#B76E79] font-semibold' 
-                              : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
-                          }`}
+                          className={`w-full text-left px-4 py-2.5 text-xs tracking-wide transition-colors flex items-center justify-between ${sortBy === key
+                            ? 'bg-[#FFF0EB]/50 text-[#B76E79] font-semibold'
+                            : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
+                            }`}
                         >
                           <span>{sortLabelMap[key]}</span>
                           {sortBy === key && <Check className="w-3.5 h-3.5 text-[#B76E79]" />}
@@ -289,23 +314,61 @@ export default function CollectionsPage() {
           ========================================== */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-          
+
           {/* DESKTOP PERMANENT FILTER SIDEBAR NODE */}
           <aside className="hidden lg:block lg:col-span-3 sticky top-28 space-y-8 bg-white/40 backdrop-blur-xl border border-stone-200/40 rounded-2xl p-6 shadow-sm">
-            
+
             {/* Header Reset Node */}
             <div className="flex items-center justify-between pb-4 border-b border-stone-200/60">
               <h3 className="font-serif text-lg tracking-wide text-stone-900 flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-[#D4AF37]" /> Filter Atelier
               </h3>
-              {(selectedCategory !== 'all' || selectedPriceRange !== 'all') && (
-                <button 
+              {(selectedCategory !== 'all' || selectedOccasion !== 'all' || selectedPriceRange !== 'all') && (
+                <button
                   onClick={handleResetFilters}
                   className="text-[10px] font-bold tracking-widest text-[#B76E79] uppercase hover:text-stone-950 flex items-center gap-1 transition-colors"
                 >
                   <RotateCcw className="w-3 h-3" /> Clear
                 </button>
               )}
+            </div>
+
+            {/* Occasion Selection Section */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold tracking-[0.2em] uppercase text-stone-400">Occasion</h4>
+              <div className="space-y-2.5">
+                {[
+                  { id: 'all', name: 'All Occasions' },
+                  { id: 'wedding', name: 'Wedding' },
+                  { id: 'party', name: 'Party' },
+                  { id: 'casual', name: 'Casual' },
+                  { id: 'festive', name: 'Festive' },
+                  { id: 'daily wear', name: 'Daily Wear' }
+                ].map((occ) => {
+                  const isChecked = selectedOccasion === occ.id;
+                  return (
+                    <label
+                      key={occ.id}
+                      className="flex items-center gap-3 group cursor-pointer text-xs font-medium text-stone-600 hover:text-stone-900 transition-colors"
+                    >
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${isChecked
+                        ? 'border-[#B76E79] bg-[#B76E79] text-white shadow-3xs'
+                        : 'border-stone-300 bg-white group-hover:border-stone-400'
+                        }`}>
+                        {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                      </div>
+                      <input
+                        type="radio"
+                        name="desktopOccasion"
+                        checked={isChecked}
+                        onChange={() => { setSelectedOccasion(occ.id); setVisibleCount(8); }}
+                        className="sr-only"
+                      />
+                      <span>{occ.name}</span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Price Selection Domain Section */}
@@ -315,15 +378,14 @@ export default function CollectionsPage() {
                 {PRICE_RANGES.map((range) => {
                   const isChecked = selectedPriceRange === range.id;
                   return (
-                    <label 
-                      key={range.id} 
+                    <label
+                      key={range.id}
                       className="flex items-center gap-3 group cursor-pointer text-xs font-medium text-stone-600 hover:text-stone-900 transition-colors"
                     >
-                      <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
-                        isChecked 
-                          ? 'border-[#B76E79] bg-[#B76E79] text-white shadow-3xs' 
-                          : 'border-stone-300 bg-white group-hover:border-stone-400'
-                      }`}>
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${isChecked
+                        ? 'border-[#B76E79] bg-[#B76E79] text-white shadow-3xs'
+                        : 'border-stone-300 bg-white group-hover:border-stone-400'
+                        }`}>
                         {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
                       </div>
                       <input
@@ -355,8 +417,12 @@ export default function CollectionsPage() {
           {/* DYNAMIC FLEXIBLE CONTAINER GRID PANEL */}
           <div className="col-span-1 lg:col-span-9">
             <AnimatePresence mode="wait">
-              {streamedProducts.length === 0 ? (
-                
+              {loading ? (
+                <div className="text-center py-24 text-stone-500 font-medium tracking-widest animate-pulse">
+                  LOADING ATELIER COLLECTION...
+                </div>
+              ) : streamedProducts.length === 0 ? (
+
                 // LUXURY EMPTY OUTCOME VIEW LAYOUT
                 <motion.div
                   key="empty-state"
@@ -382,11 +448,11 @@ export default function CollectionsPage() {
 
                 // MAIN GRID RENDER BLOCK WITH SCROLL STAGGER HOOKS
                 <div className="space-y-16" key="products-content">
-                  <motion.div 
+                  <motion.div
                     variants={containerVariants}
                     initial="hidden"
                     animate="show"
-                    className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-6 gap-y-10"
+                    className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-10"
                   >
                     {streamedProducts.map((product) => (
                       <motion.div key={product.id} variants={cardItemVariants} className="h-full">
@@ -428,14 +494,14 @@ export default function CollectionsPage() {
         {isMobileFilterOpen && (
           <>
             {/* Dark Mask Shield Overlay */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.4 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsMobileFilterOpen(false)}
               className="fixed inset-0 bg-black z-50 backdrop-blur-3xs"
             />
-            
+
             {/* Sliding Drawer Architecture Sheet */}
             <motion.div
               initial={{ x: '100%' }}
@@ -463,11 +529,38 @@ export default function CollectionsPage() {
                         <button
                           key={cat.id}
                           onClick={() => { setSelectedCategory(cat.id); setVisibleCount(8); }}
-                          className={`text-left py-2 px-3 text-xs rounded-lg transition-colors flex items-center justify-between ${
-                            isSelected ? 'bg-white text-[#B76E79] font-bold shadow-3xs' : 'text-stone-600 hover:bg-stone-100/50'
-                          }`}
+                          className={`text-left py-2 px-3 text-xs rounded-lg transition-colors flex items-center justify-between ${isSelected ? 'bg-white text-[#B76E79] font-bold shadow-3xs' : 'text-stone-600 hover:bg-stone-100/50'
+                            }`}
                         >
                           <span>{cat.name}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Mobile Occasion Section */}
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-bold tracking-[0.2em] uppercase text-stone-400">Occasion</h4>
+                  <div className="flex flex-col gap-1.5">
+                    {[
+                      { id: 'all', name: 'All Occasions' },
+                      { id: 'wedding', name: 'Wedding' },
+                      { id: 'party', name: 'Party' },
+                      { id: 'casual', name: 'Casual' },
+                      { id: 'festive', name: 'Festive' },
+                      { id: 'daily wear', name: 'Daily Wear' }
+                    ].map((occ) => {
+                      const isSelected = selectedOccasion === occ.id;
+                      return (
+                        <button
+                          key={occ.id}
+                          onClick={() => { setSelectedOccasion(occ.id); setVisibleCount(8); }}
+                          className={`text-left py-2 px-3 text-xs rounded-lg transition-colors flex items-center justify-between ${isSelected ? 'bg-white text-[#B76E79] font-bold shadow-3xs' : 'text-stone-600 hover:bg-stone-100/50'
+                            }`}
+                        >
+                          <span>{occ.name}</span>
                           {isSelected && <Check className="w-3.5 h-3.5" />}
                         </button>
                       );
@@ -483,9 +576,8 @@ export default function CollectionsPage() {
                       const isChecked = selectedPriceRange === range.id;
                       return (
                         <label key={range.id} className="flex items-center gap-3 text-xs font-medium text-stone-600">
-                          <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
-                            isChecked ? 'border-[#B76E79] bg-[#B76E79] text-white' : 'border-stone-300 bg-white'
-                          }`}>
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${isChecked ? 'border-[#B76E79] bg-[#B76E79] text-white' : 'border-stone-300 bg-white'
+                            }`}>
                             {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
                           </div>
                           <input

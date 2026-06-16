@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom'; // Added for seamless collection routing
 import { useNavigate } from 'react-router-dom';
 import {
@@ -6,23 +6,34 @@ import {
   Truck, Sparkles, ChevronRight, ArrowRight
 } from 'lucide-react';
 import { useCart } from '../context/CartContext'; // Import your global context hook
+import { useWishlist } from '../context/WishlistContext';
+import { useProducts } from '../context/ProductContext';
 import { ProductCard } from '../components/ProductCard';
+
 function Cart({ currentProduct, quantity, selectedFinish }) {
   // Destructure real-time shared states and helper functions from your Context
   const { cart, updateQuantity, removeFromCart } = useCart();
+  const { toggleWishlist, isInWishlist } = useWishlist();
+  const { products } = useProducts();
   const navigate = useNavigate();
   const [promoCode, setPromoCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState(0);
- const handleRedirect = () => {
-    // Simply route to your checkout URL
-    navigate('/checkout');
+
+  // Recommendations logic - Pick 3 random products whenever page opens
+  const recommendedItems = useMemo(() => {
+    if (!products || products.length === 0) return [];
+    const shuffled = [...products].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, 3);
+  }, [products]);
+
+  const handleSaveForLater = (item) => {
+    // 1. Add to Wishlist if not already there
+    if (!isInWishlist(item.id)) {
+      toggleWishlist(item);
+    }
+    // 2. Remove from Cart
+    removeFromCart(item.id, item.selectedFinish?.name);
   };
-  // Recommendations
-  const recommendedItems = [
-    { id: 101, name: "Siren Marquise Choker", price: "$320.00", image: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=300" },
-    { id: 102, name: "Atelier Blossom Cuff", price: "$195.00", image: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=300" },
-    { id: 103, name: "Vintage Tiara Pendant", price: "$175.00", image: "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=300" }
-  ];
 
   // Dynamic calculations based on live cart items
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
@@ -37,6 +48,11 @@ function Cart({ currentProduct, quantity, selectedFinish }) {
     } else {
       setAppliedDiscount(0);
     }
+  };
+
+  const handleRedirect = () => {
+    // Simply route to your checkout URL
+    navigate('/checkout');
   };
 
   return (
@@ -174,8 +190,11 @@ function Cart({ currentProduct, quantity, selectedFinish }) {
 
                       {/* Item Discard Triggers */}
                       <div className="flex items-center gap-6">
-                        <button className="inline-flex items-center gap-1.5 text-xs text-[#2C2C2C]/50 hover:text-[#B76E79] transition-colors group/heart">
-                          <Heart className="w-3.5 h-3.5 text-[#2C2C2C]/30 group-hover/heart:text-[#B76E79] transition-colors" />
+                        <button
+                          onClick={() => handleSaveForLater(item)}
+                          className="inline-flex items-center gap-1.5 text-xs text-[#2C2C2C]/50 hover:text-[#B76E79] transition-colors group/heart"
+                        >
+                          <Heart className={`w-3.5 h-3.5 transition-colors ${isInWishlist(item.id) ? 'text-[#B76E79] fill-[#B76E79]' : 'text-[#2C2C2C]/30 group-hover/heart:text-[#B76E79]'}`} />
                           <span className="tracking-wide">Save for Later</span>
                         </button>
                         <button
@@ -234,29 +253,11 @@ function Cart({ currentProduct, quantity, selectedFinish }) {
                   </div>
                 </div>
 
-                {/* Promo Code Submission */}
-                <form onSubmit={handleApplyPromo} className="py-5 border-b border-[#E8C7B7]/20">
-                  <label className="block text-[10px] uppercase font-bold tracking-widest text-[#2C2C2C]/50 mb-2">Promotional Code</label>
-                  <div className="flex bg-[#FDF8F3] border border-[#E8C7B7]/40 rounded-full p-1 focus-within:border-[#B76E79] transition-colors">
-                    <input
-                      type="text"
-                      placeholder="Enter ATELIER10"
-                      value={promoCode}
-                      onChange={(e) => setPromoCode(e.target.value)}
-                      className="bg-transparent pl-4 pr-2 py-2 text-xs text-[#2C2C2C] focus:outline-none w-full tracking-wider uppercase font-medium placeholder-[#2C2C2C]/30"
-                    />
-                    <button
-                      type="submit"
-                      className="px-5 bg-[#2C2C2C] hover:bg-[#B76E79] text-white text-[10px] uppercase tracking-widest font-medium rounded-full transition-colors duration-300 flex-shrink-0"
-                    >
-                      Apply Code
-                    </button>
-                  </div>
-                </form>
+
 
                 {/* Allocated Grand Total */}
                 <div className="pt-6 pb-6 flex justify-between items-baseline">
-                  <span className="font-serif text-base tracking-wide">Total Allocation</span>
+                  <span className="font-serif text-base tracking-wide">Total Ammount</span>
                   <span className="font-serif text-2xl font-bold text-[#B76E79]">${grandTotal.toFixed(2)}</span>
                 </div>
 
@@ -304,13 +305,7 @@ function Cart({ currentProduct, quantity, selectedFinish }) {
             {recommendedItems.map((product) => (
               <ProductCard
                 key={product.id}
-                product={{
-                  id: product.id,
-                  title: product.name,           // Maps your placeholder 'name' to the expected 'title' property
-                  price: parseFloat(product.price.replace('$', '')), // Sanitizes '$320.00' string to a raw number value
-                  images: [product.image],       // Wraps single source string image into the standard images array 
-                  image: product.image
-                }}
+                {...product}
               />
             ))}
           </div>

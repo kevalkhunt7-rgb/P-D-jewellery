@@ -1,70 +1,90 @@
+import React from 'react';
 import { Heart, ShoppingBag, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext'; 
 import { useWishlist } from '../context/WishlistContext';
 
-export function ProductCard({
-  id,
-  image,
-  title,
-  price,
-  originalPrice,
-  tag
-}) {
+export function ProductCard(props) {
+  // 🌟 THE HYBRID FIX: Reads properties safely whether passed as an object (product={...}) or flat props!
+  const target = props.product ? props.product : props;
+
+  const id = target._id || target.id;
+  const title = target.name || target.title;
+  const price = target.price;
+  const originalPrice = target.originalPrice;
+  const tag = target.tag;
+  const rating = target.rating || target.defaultRating || 0;
+  const slug = target.slug;
+
+  // 🚨 SAFETY NET: If this is an uninitialized ghost object from the DB, skip rendering
+  if (!id && !title && !price) {
+    return null;
+  }
+
+  // 🛠️ FALLBACK PLACEHOLDER: Prevents layout breaking if an image fails to load or process
   const fallbackPlaceholder =
-    "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=500&auto=format&fit=crop&q=60";
+    "https://placehold.co/500x500/f9fafb/cccccc?text=Image+Unavailable";
+
+  // 🌟 DYNAMIC IMAGE PARSER: Safely uncoils nested multi-image matrices or standard product strings
+  const displayImage = target.image || 
+    (target.images && target.images.length > 0 ? (target.images[0].url || target.images[0]) : fallbackPlaceholder);
 
   const navigate = useNavigate();
-  const { addToCart, cart } = useCart(); // 1. Pull the raw cart array state here
+  const { addToCart, cart } = useCart(); 
   const { toggleWishlist, isInWishlist } = useWishlist();
   
-  const liked = isInWishlist(id);
-  
-  // 2. Check if this specific product is already present inside your shopping cart items array
-  const isAlreadyInCart = cart.some((item) => item.id === id);
+  const liked = isInWishlist ? isInWishlist(id) : false;
+  const isAlreadyInCart = cart?.some((item) => item.id === id) || false;
 
-  // REDIRECT TO PRODUCT PAGE
+  // ⚡ BULLETPROOF URL SLUG GENERATOR
+  const validSlug = slug || title?.toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-') // Replace spaces and special characters with hyphens
+    .replace(/(^-|-$)+/g, '')     // Trim dangling hyphens from either end
+    || id;
+
+  // REDIRECT TO PRODUCT DETAIL PAGE
   const handleProductRedirect = () => {
-    navigate(`/product/${id}`);
+    if (!validSlug) return;
+    navigate(`/product/${validSlug}`);
   };
 
-  // INTERCEPT & DISPATCH INTERACTION TO CART CONTEXT
-  const handleAddToBag = (e) => {
-    e.stopPropagation(); // Stop click from triggering parent handleProductRedirect
+  // ADD TO CART INTERACTION DISPATCHER
+  const handleAddToBag = async (e) => {
+    e.stopPropagation(); 
 
-    // If item is already added to cart, ignore any clicking attempts completely
     if (isAlreadyInCart) return;
 
-    // 1. Sanitize price format if it comes in as a string variant like "$320.00"
     const parsedPrice = typeof price === 'string' 
       ? parseFloat(price.replace(/[^0-9.]/g, '')) 
       : price;
 
-    // 2. Structure the product object exactly like the context expects for parameter 1
     const productData = {
       id: id,
       title: title,
       price: parsedPrice,
-      image: image || fallbackPlaceholder
+      image: displayImage
     };
 
-    // 3. Define a default finish if your store layout uses them for variants
     const defaultFinish = { name: "Signature Classic", class: "bg-amber-100" };
 
-    // 4. Pass arguments matching context signature: addToCart(product, quantity, selectedFinish)
-    addToCart(productData, 1, defaultFinish);
+    if (addToCart) {
+      addToCart(productData, 1, defaultFinish);
+    }
   };
 
+  // WISHLIST INTERACTION DISPATCHER
   const handleWishlistToggle = (e) => {
-    e.stopPropagation(); // Prevent redirecting to details page
+    e.stopPropagation(); 
     
-    toggleWishlist({
-      id,
-      title,
-      price,
-      image,
-      tag
-    });
+    if (toggleWishlist) {
+      toggleWishlist({
+        id,
+        title,
+        price,
+        image: displayImage,
+        tag
+      });
+    }
   };
 
   return (
@@ -94,8 +114,7 @@ export function ProductCard({
               zIndex: 20,
               padding: '4px 12px',
               borderRadius: '9999px',
-              background:
-                'linear-gradient(135deg, #B76E79 0%, #D4AF37 100%)',
+              background: 'linear-gradient(135deg, #B76E79 0%, #D4AF37 100%)',
               color: '#ffffff',
               fontSize: '0.75rem',
               fontWeight: 600,
@@ -106,7 +125,7 @@ export function ProductCard({
           </div>
         )}
 
-        {/* Image Bounding Block */}
+        {/* Image Frame Container */}
         <div
           style={{
             position: 'relative',
@@ -117,8 +136,8 @@ export function ProductCard({
           }}
         >
           <img
-            src={image || fallbackPlaceholder}
-            alt={title}
+            src={displayImage}
+            alt={title || "Product Image"}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             style={{
               width: '100%',
@@ -135,7 +154,7 @@ export function ProductCard({
           {/* Shadow Overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none" />
 
-          {/* Action Buttons */}
+          {/* Action Hover Panel Controls */}
           <div
             className="hover-actions-panel absolute inset-0 flex items-center justify-center gap-3 z-20"
             style={{
@@ -154,7 +173,7 @@ export function ProductCard({
               transition: 'opacity 0.3s ease-in-out'
             }}
           >
-            {/* Wishlist Button - Becomes filled red if 'liked' is true */}
+            {/* Wishlist Button */}
             <button
               onClick={handleWishlistToggle}
               className="action-btn w-11 h-11 rounded-full flex items-center justify-center shadow-md border-0 cursor-pointer"
@@ -177,11 +196,12 @@ export function ProductCard({
               <Heart size={18} fill={liked ? "#ffffff" : "none"} />
             </button>
 
-            {/* QUICK VIEW */}
+            {/* Quick View Button */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`/product/${id}`);
+                if (!validSlug) return;
+                navigate(`/product/${validSlug}`);
               }}
               className="action-btn w-11 h-11 rounded-full text-gray-800 flex items-center justify-center shadow-md border-0 cursor-pointer"
               style={{
@@ -202,7 +222,7 @@ export function ProductCard({
               <Eye size={18} />
             </button>
 
-            {/* SHOPPING BAG / ADD TO CART - Changes style and disables cursor interaction if in cart */}
+            {/* Shopping Bag Button */}
             <button
               onClick={handleAddToBag}
               disabled={isAlreadyInCart}
@@ -229,7 +249,7 @@ export function ProductCard({
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Info Card Body Section */}
         <div
           style={{
             padding: '16px',
@@ -252,7 +272,7 @@ export function ProductCard({
               minHeight: '40px'
             }}
           >
-            {title}
+            {title || 'Loading Product Name...'}
           </h3>
 
           <div
@@ -263,6 +283,7 @@ export function ProductCard({
               marginTop: 'auto'
             }}
           >
+            {/* Price Pricing Display Wrap */}
             <div
               style={{
                 display: 'flex',
@@ -274,14 +295,13 @@ export function ProductCard({
                 style={{
                   fontSize: '1.25rem',
                   fontWeight: 700,
-                  background:
-                    'linear-gradient(135deg, #B76E79 0%, #D4AF37 100%)',
+                  background: 'linear-gradient(135deg, #B76E79 0%, #D4AF37 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text'
                 }}
               >
-                {typeof price === 'number' ? `$${price.toFixed(2)}` : price}
+                {typeof price === 'number' ? `₹${price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : (price || '₹0.00')}
               </span>
 
               {originalPrice && (
@@ -292,12 +312,12 @@ export function ProductCard({
                     color: '#9ca3af'
                   }}
                 >
-                  {typeof originalPrice === 'number' ? `$${originalPrice.toFixed(2)}` : originalPrice}
+                  {typeof originalPrice === 'number' ? `₹${originalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : originalPrice}
                 </span>
               )}
             </div>
 
-            {/* Rating */}
+            {/* Jewelry Golden Rating Stars */}
             <div
               style={{
                 display: 'flex',
@@ -309,7 +329,7 @@ export function ProductCard({
                 <svg
                   key={i}
                   style={{ width: '14px', height: '14px' }}
-                  fill={i < 4 ? '#D4AF37' : '#E5E7EB'}
+                  fill={i < Math.round(rating) ? '#D4AF37' : '#E5E7EB'}
                   viewBox="0 0 20 20"
                 >
                   <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
@@ -319,7 +339,7 @@ export function ProductCard({
           </div>
         </div>
 
-        {/* Hover CSS */}
+        {/* Luxury Component Scope Micro-Styles */}
         <style>{`
           .luxury-product-card:hover {
             transform: translateY(-6px);

@@ -7,19 +7,26 @@ import { PremiumBanner } from '../components/Banner'
 import { Testimonials } from '../components/testimonials'
 import { InstagramGallery } from '../components/InstaGallary'
 import { Footer } from '../components/Footer'
+import WhyChooseUs from '../components/WhyChooseUs'
+import LiveGoldRates from '../components/LiveGoldRates'
+import CertifiedJewellery from '../components/CertifiedJewellery'
+import DiamondCollections from '../components/DiamondCollections'
 
 
 const Home = () => {
     return (
         <div>
             <Hero />
+            <CertifiedJewellery />
             <FeaturedCollections />
+            {/* <LiveGoldRates /> */}
             <BestSellers />
+            <DiamondCollections />
             <BridalShowcase />
+            <WhyChooseUs />
             <PremiumBanner/>
             <Testimonials/>
-            <InstagramGallery/>
-            <Footer/>
+            {/* <InstagramGallery/> */}
             
         </div>
     )

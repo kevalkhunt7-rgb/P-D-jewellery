@@ -1,79 +1,200 @@
 import React, { useState, useEffect } from 'react';
 import {
-  User, ShoppingBag, Heart, MapPin, CreditCard, Bell, Settings, LogOut,
-  Sparkles, ChevronRight, Package, Calendar, Award, Star, ArrowUpRight, Edit3
+  User,
+  ShoppingBag,
+  Heart,
+  MapPin,
+  CreditCard,
+  Bell,
+  Settings,
+  LogOut,
+  Sparkles,
+  ChevronRight,
+  Package,
+  Calendar,
+  Award,
+  Star,
+  ArrowUpRight,
+  Camera,
+  Check,
+  X,
+  Loader2,
+  Lock
 } from 'lucide-react';
-import { useWishlist } from '../context/WishlistContext';
-import { ProductCard } from '../components/ProductCard'; // Adjust this path to your workspace setup
 
+import { useWishlist } from '../context/WishlistContext';
+import { useAuth } from '../context/AuthContext';
+import { ProductCard } from '../components/ProductCard';
+import { AddressManager } from '../components/AddressManager';
+import { useNavigate } from 'react-router-dom';
+import api from '../utils/api';
+import toast from 'react-hot-toast';
 
 function Profile() {
-  // 1. Initialize state from the URL hash if present, default to 'profile'
+  const { user, logout, refreshUser, loading: authLoading } = useAuth();
+  const { wishlist } = useWishlist();
+
+  const navigate = useNavigate();
+
   const [activeTab, setActiveTab] = useState(() => {
     const hash = window.location.hash.replace('#', '');
     return hash || 'profile';
   });
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { wishlist } = useWishlist();
-  // 2. Synchronize activeTab with URL hash when back/forward navigation or link changes occur
+  const [isEditing, setIsEditing] = useState(false);
+  const [updateLoading, setUpdateLoading] = useState(false);
+  const [editData, setEditData] = useState({ name: '', phone: '' });
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [userAddresses, setUserAddresses] = useState(user?.addresses || []);
+
+  console.log("API Products:", wishlist.products);
+  // Sync user addresses when user data loads
   useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '');
-      if (hash) {
-        setActiveTab(hash);
-      } else {
-        setActiveTab('profile');
+    if (user) {
+      setUserAddresses(user.addresses || []);
+      setEditData({ name: user.name, phone: user.phone || '' });
+      setImagePreview(user.avatar?.url || null);
+    }
+  }, [user]);
+  ``
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+  const validWishlistItems = wishlist;
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    setUpdateLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('name', editData.name);
+      formData.append('phone', editData.phone);
+      if (selectedFile) {
+        formData.append('avatar', selectedFile);
+      }
+
+      const { data } = await api.put('/auth/update-profile', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (data.success) {
+        toast.success('Profile updated successfully');
+        setIsEditing(false);
+        await refreshUser(); // Refresh global user state
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setUpdateLoading(false);
+    }
+
+  };
+
+  // Redirect if not logged in
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/login');
+    }
+  }, [user, authLoading, navigate]);
+
+  // Fetch Orders
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (!user) return;
+
+      try {
+        setOrdersLoading(true);
+
+        const { data } = await api.get('/orders/my-orders');
+
+        if (data?.success) {
+          setOrders(data.orders || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch orders:', error);
+      } finally {
+        setOrdersLoading(false);
       }
     };
 
+    fetchOrders();
+  }, [user]);
+
+  // Sync hash with tab
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      setActiveTab(hash || 'profile');
+    };
+
     window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
   }, []);
 
-  // 3. Setter function that changes both state and updates the browser address window hash
+  // Change tab
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
-    window.location.hash = tabId === 'profile' ? '' : tabId; // keeps url clean for root profile view
+
+    if (tabId === 'profile') {
+      window.location.hash = '';
+    } else {
+      window.location.hash = tabId;
+    }
+
     setIsMobileMenuOpen(false);
   };
 
-  // Sample Mock Data for the Luxury Experience
+  // User stats
   const userStats = {
     tier: 'Diamond Orchid Elite',
     points: 2450,
     nextTierPoints: 3000,
-    memberSince: 'Nov 2024'
+    memberSince: 'Nov 2024',
   };
 
-  const orders = [
-    { id: "LUM-9821", date: "May 12, 2026", total: "$345.00", status: "In Transit", items: 2, image: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=150" },
-    { id: "LUM-9410", date: "March 28, 2026", total: "$180.00", status: "Delivered", items: 1, image: "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=150" }
-  ];
 
-  const wishlistItems = [
-    { id: 1, name: "Rose Gold Empress Drop Earrings", price: "$210.00", image: "https://images.unsplash.com/photo-1630019852942-f89202989a59?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=300" },
-    { id: 2, name: "Champagne Solitaire Royal Ring", price: "$145.00", image: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=300" }
-  ];
 
+
+  // Sidebar menu
   const menuItems = [
     { id: 'profile', label: 'My Profile', icon: User },
-    { id: 'orders', label: 'My Orders', icon: ShoppingBag, badge: '1' },
-    { id: 'wishlist', label: 'The Wishlist', icon: Heart },
-    { id: 'addresses', label: 'Saved Addresses', icon: MapPin },
-    { id: 'payments', label: 'Payment Methods', icon: CreditCard },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'settings', label: 'Atelier Settings', icon: Settings },
+    { id: 'orders', label: 'My Orders', icon: ShoppingBag },
+    { id: 'wishlist', label: 'Wishlist', icon: Heart },
+    { id: 'addresses', label: 'Addresses', icon: MapPin },
+
   ];
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FDF8F3]">
+        <div className="flex items-center gap-3 text-[#B76E79]">
+          <div className="w-5 h-5 border-2 border-[#B76E79] border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm tracking-wide">Loading Profile...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen w-full bg-[#FDF8F3] relative overflow-hidden font-sans text-[#2C2C2C] selection:bg-[#E8C7B7]/30 selection:text-[#2C2C2C] pt-6 pb-12">
+    <div className="min-h-screen w-full bg-[#FDF8F3] relative overflow-hidden pt-6 pb-12">
 
-      {/* Background Soft Blurred Organic Reflections */}
-      <div className="absolute top-[-5%] right-[-5%] w-[40%] h-[40%] rounded-full bg-gradient-to-bl from-[#FFF0EB] via-[#E8C7B7]/10 to-transparent blur-[130px] pointer-events-none" />
-      <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[30%] rounded-full bg-gradient-to-tr from-[#D4AF37]/5 to-[#FFF0EB] blur-[150px] pointer-events-none" />
+      {/* Background */}
+      <div className="absolute top-[-5%] right-[-5%] w-[40%] h-[40%] rounded-full bg-gradient-to-bl from-[#FFF0EB] via-[#E8C7B7]/10 to-transparent blur-[130px]" />
+      <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[30%] rounded-full bg-gradient-to-tr from-[#D4AF37]/5 to-[#FFF0EB] blur-[150px]" />
 
-      {/* Floating Ambient Gold Dust Particles */}
-      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+      {/* Gold Dust */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {[...Array(10)].map((_, i) => (
           <div
             key={i}
@@ -84,7 +205,7 @@ function Profile() {
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
               animationDelay: `${Math.random() * 6}s`,
-              animationDuration: `${14 + Math.random() * 10}s`
+              animationDuration: `${14 + Math.random() * 10}s`,
             }}
           />
         ))}
@@ -92,297 +213,387 @@ function Profile() {
 
       <div className="container mx-auto px-4 lg:px-8 relative z-10 max-w-[1400px]">
 
-        {/* TOP CINEMATIC PROFILE HEADER BANNER */}
-        <div className="w-full h-44 sm:h-56 rounded-[2rem] relative overflow-hidden mb-8 border border-white shadow-[0_15px_40px_rgba(232,199,183,0.15)] bg-[#2C2C2C]">
+        {/* Banner */}
+        <div className="w-full h-44 sm:h-56 rounded-[2rem] relative overflow-hidden mb-8 border border-white shadow-lg bg-[#2C2C2C]">
           <div className="absolute inset-0 bg-gradient-to-r from-[#2C2C2C] via-[#2C2C2C]/50 to-transparent z-10" />
+
           <img
             src="https://images.unsplash.com/photo-1573408301185-9146fe634ad0?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=1200"
-            alt="Lumiere Silk Background"
-            className="w-full h-full object-cover opacity-60 mix-blend-luminosity scale-105"
+            alt="Banner"
+            className="w-full h-full object-cover opacity-60"
           />
+
           <div className="absolute inset-0 z-20 flex flex-col justify-center px-8 sm:px-12">
-            <div className="flex items-center gap-2 mb-1.5 animate-subtle-slide">
+            <div className="flex items-center gap-2 mb-2">
               <Sparkles className="w-4 h-4 text-[#D4AF37]" />
-              <span className="text-xs uppercase tracking-[0.25em] text-[#E8C7B7] font-medium">Lumière Private Lounge</span>
+
+              <span className="text-xs uppercase tracking-[0.25em] text-[#E8C7B7]">
+                Private Lounge
+              </span>
             </div>
-            <h1 className="font-serif text-white text-2xl sm:text-4xl tracking-wide font-light">
-              Welcome Back, <span className="italic text-[#FFF0EB]">Beautiful</span>
+
+            <h1 className="font-serif text-white text-2xl sm:text-4xl font-light">
+              Welcome Back,
+              <span className="italic text-[#FFF0EB]"> {user?.name || 'Guest'}</span>
             </h1>
-            <p className="text-white/60 text-xs sm:text-sm tracking-wide mt-2 font-light max-w-md">
-              Your curations, architectural styling options, and membership privileges await your discovery.
+
+            <p className="text-white/60 text-xs sm:text-sm mt-2 max-w-md">
+              Your luxury profile dashboard awaits.
             </p>
           </div>
         </div>
 
-        {/* MAIN COUTURIER DASHBOARD GRID */}
+        {/* Layout */}
         <div className="grid grid-cols-12 gap-8 items-start">
 
-          {/* MOBILE MENU TOGGLE BUTTON */}
+          {/* Mobile Toggle */}
           <div className="col-span-12 lg:hidden flex justify-end">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="px-5 py-3 bg-white/80 backdrop-blur-md border border-[#E8C7B7]/40 rounded-full text-xs font-medium uppercase tracking-widest text-[#2C2C2C] shadow-sm transition-all active:scale-95"
+              className="px-5 py-3 bg-white border rounded-full text-xs uppercase tracking-widest"
             >
-              {isMobileMenuOpen ? 'Close Menu' : 'Atelier Lounge Directory'}
+              {isMobileMenuOpen ? 'Close Menu' : 'Open Menu'}
             </button>
           </div>
 
-          {/* LEFT DASHBOARD SIDEBAR PANEL */}
-          <div className={`col-span-12 lg:col-span-3 bg-white/70 backdrop-blur-xl rounded-3xl p-6 border border-white shadow-[0_20px_50px_rgba(44,44,44,0.03)] luxury-panel-glow transition-all duration-500 lg:block ${isMobileMenuOpen ? 'block' : 'hidden lg:block'}`}>
+          {/* Sidebar */}
+          <div
+            className={`col-span-12 lg:col-span-3 bg-white/70 backdrop-blur-xl rounded-3xl p-6 border border-white shadow-lg transition-all duration-500 ${isMobileMenuOpen ? 'block' : 'hidden lg:block'
+              }`}
+          >
 
-            {/* User Profile Circle Segment */}
+            {/* Profile */}
             <div className="text-center pb-6 border-b border-[#E8C7B7]/20">
               <div className="relative w-24 h-24 mx-auto mb-4 group">
                 <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#B76E79] via-[#E8C7B7] to-[#D4AF37] animate-spin-slow opacity-80" />
+
                 <div className="absolute inset-[3px] rounded-full bg-[#FDF8F3] flex items-center justify-center overflow-hidden z-10">
-                  <img
-                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=200"
-                    alt="Sophia Martinez Profile"
-                    className="w-full h-full object-cover"
-                  />
+                  {imagePreview ? (
+                    <img src={imagePreview} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full rounded-full bg-[#B76E79] flex items-center justify-center text-white text-3xl font-serif">
+                      {user?.name?.charAt(0) || 'U'}
+                    </div>
+                  )}
                 </div>
-                <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-white border border-[#E8C7B7] flex items-center justify-center text-[#2C2C2C] hover:text-[#B76E79] shadow-md transition-transform duration-300 hover:scale-110 z-20">
-                  <Edit3 className="w-3.5 h-3.5" />
-                </button>
+
+                {isEditing && (
+                  <label className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-white border border-[#E8C7B7] flex items-center justify-center text-[#2C2C2C] hover:text-[#B76E79] shadow-md transition-all duration-300 hover:scale-110 z-20 cursor-pointer">
+                    <Camera className="w-4 h-4" />
+                    <input type="file" className="hidden" onChange={handleFileChange} accept="image/*" />
+                  </label>
+                )}
               </div>
-              <h2 className="font-serif text-lg font-medium tracking-wide text-[#2C2C2C]">Sophia Martinez</h2>
+
+              <h2 className="font-serif text-lg font-medium text-[#2C2C2C]">
+                {user?.name}
+              </h2>
+
               <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-[#B76E79]/10 to-[#D4AF37]/10 rounded-full border border-[#E8C7B7]/30 mt-1.5">
                 <Star className="w-3 h-3 text-[#D4AF37] fill-[#D4AF37]" />
-                <span className="text-[10px] uppercase font-semibold tracking-wider text-[#2C2C2C]/80">{userStats.tier}</span>
+
+                <span className="text-[10px] uppercase font-semibold tracking-wider text-[#2C2C2C]/80">
+                  Elite Member
+                </span>
               </div>
             </div>
 
-            {/* Navigation Directory List */}
+            {/* Menu */}
             <nav className="mt-6 space-y-1">
               {menuItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
+
                 return (
                   <button
                     key={item.id}
                     onClick={() => handleTabChange(item.id)}
-                    className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-sm transition-all duration-300 group ${isActive
-                      ? 'bg-gradient-to-r from-[#FFF0EB] to-white text-[#B76E79] font-medium shadow-sm border-l-2 border-[#B76E79]'
-                      : 'text-[#2C2C2C]/70 hover:text-[#2C2C2C] hover:bg-white/40'
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-md font-medium transition-all ${isActive
+                      ? 'bg-gradient-to-r from-[#FFF0EB] to-white text-[#B76E79]'
+                      : 'hover:bg-white/40 text-[#2C2C2C]/70'
                       }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-[#B76E79]' : 'text-[#2C2C2C]/40 group-hover:text-[#B76E79]/70'}`} />
-                      <span className="tracking-wide">{item.label}</span>
+                      <Icon className="w-4 h-4" />
+                      <span>{item.label}</span>
                     </div>
-                    {item.badge ? (
-                      <span className="px-2 py-0.5 text-[10px] font-bold bg-[#B76E79] text-white rounded-full scale-90">{item.badge}</span>
-                    ) : (
-                      <ChevronRight className={`w-3.5 h-3.5 opacity-0 transition-all transform ${isActive ? 'opacity-100 translate-x-0' : 'group-hover:opacity-40 -translate-x-1'}`} />
-                    )}
+
+                    <ChevronRight className="w-4 h-4" />
                   </button>
                 );
               })}
 
+              {/* Logout */}
               <div className="pt-4 mt-4 border-t border-[#E8C7B7]/20">
-                <button className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm text-[#2C2C2C]/50 hover:text-red-700 hover:bg-red-50/30 transition-all group">
-                  <LogOut className="w-4 h-4 text-[#2C2C2C]/30 group-hover:text-red-600" />
-                  <span className="tracking-wide">Leave Atelier</span>
+                <button
+                  onClick={logout}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm hover:bg-red-50 text-red-600"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
                 </button>
               </div>
             </nav>
           </div>
 
-          {/* RIGHT SIDE MAIN PROFILE AREA */}
+          {/* Main */}
           <div className="col-span-12 lg:col-span-9 space-y-8">
 
-            {/* PROFILE DETAIL VIEW */}
+            {/* PROFILE */}
             {activeTab === 'profile' && (
               <div className="space-y-8 animate-fade-in-slow">
-
-                {/* Loyalty Tier Progress Status Segment */}
-                <div className="bg-gradient-to-br from-white to-[#FFF0EB]/40 backdrop-blur-xl rounded-3xl p-6 sm:p-8 border border-white shadow-[0_20px_50px_rgba(232,199,183,0.1)] relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-                    <Award className="w-28 h-28 text-[#D4AF37]" />
-                  </div>
-                  <div className="grid md:grid-cols-3 gap-6 items-center">
-                    <div className="md:col-span-1 border-b md:border-b-0 md:border-r border-[#E8C7B7]/30 pb-4 md:pb-0 md:pr-6">
-                      <p className="text-[10px] uppercase font-bold tracking-widest text-[#2C2C2C]/50 mb-1">Your Lounge Balance</p>
-                      <h3 className="font-serif text-3xl font-semibold text-[#2C2C2C] flex items-baseline gap-1.5">
-                        {userStats.points} <span className="text-xs font-sans font-normal text-[#2C2C2C]/60 tracking-normal">Orchid Crystals</span>
-                      </h3>
-                      <p className="text-xs text-[#B76E79] font-medium mt-1 inline-flex items-center gap-1">
-                        <Sparkles className="w-3 h-3" /> $24.50 Boutique Credits Ready
-                      </p>
-                    </div>
-                    <div className="md:col-span-2">
-                      <div className="flex justify-between items-center text-xs mb-2">
-                        <span className="font-medium text-[#2C2C2C]/70">Next Tier Progression: <span className="text-[#2C2C2C] font-semibold">Orchid Sovereign</span></span>
-                        <span className="font-semibold text-[#D4AF37]">550 Crystals needed</span>
-                      </div>
-                      <div className="w-full h-2 bg-[#F2ECE7] rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-[#B76E79] via-[#E8C7B7] to-[#D4AF37] rounded-full" style={{ width: `${(userStats.points / userStats.nextTierPoints) * 100}%` }} />
-                      </div>
-                      <p className="text-[11px] text-[#2C2C2C]/40 mt-2">Earn 10 Orchid Crystals for every $1 spent. Unlock complimentary white-glove shipping on your next tier elevation.</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Personal Information Core Management Form */}
-                <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-6 sm:p-8 border border-white shadow-[0_20px_50px_rgba(44,44,44,0.02)]">
+                {/* Account Info */}
+                <div className="bg-white rounded-3xl p-6 sm:p-8 border border-white shadow-lg">
                   <div className="flex justify-between items-center mb-6">
-                    <h3 className="font-serif text-xl font-medium tracking-wide">Account Particulars</h3>
-                    <button className="px-4 py-2 text-xs border border-[#E8C7B7] hover:border-[#B76E79] text-[#2C2C2C] hover:text-[#B76E79] rounded-full transition-colors font-medium tracking-wider uppercase">
-                      Update Account
+                    <h3 className="font-serif text-xl">
+                      Account Details
+                    </h3>
+
+                    <button
+                      onClick={() => setIsEditing(!isEditing)}
+                      className="px-4 py-2 text-xs border rounded-full hover:bg-stone-50 transition-colors"
+                    >
+                      {isEditing ? 'Cancel' : 'Edit Profile'}
                     </button>
                   </div>
 
-                  <div className="grid sm:grid-cols-2 gap-6">
-                    <div className="space-y-1">
-                      <span className="text-[10px] uppercase font-bold tracking-wider text-[#2C2C2C]/40">First Name</span>
-                      <p className="py-3 px-4 bg-[#FDF8F3]/60 rounded-xl text-sm border border-[#E8C7B7]/20 font-medium">Sophia</p>
+                  <form onSubmit={handleUpdateProfile} className="space-y-4">
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wider text-[#2C2C2C]/40 ml-1">
+                        Full Name
+                      </span>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editData.name}
+                          onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                          className="w-full mt-1 py-3 px-4 bg-[#FDF8F3]/60 rounded-xl border border-[#B76E79]/30 outline-none focus:border-[#B76E79]"
+                        />
+                      ) : (
+                        <p className="py-3 px-4 bg-[#FDF8F3]/60 rounded-xl border border-[#E8C7B7]/20">
+                          {user?.name}
+                        </p>
+                      )}
                     </div>
-                    <div className="space-y-1">
-                      <span className="text-[10px] uppercase font-bold tracking-wider text-[#2C2C2C]/40">Last Name</span>
-                      <p className="py-3 px-4 bg-[#FDF8F3]/60 rounded-xl text-sm border border-[#E8C7B7]/20 font-medium">Martinez</p>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-[10px] uppercase font-bold tracking-wider text-[#2C2C2C]/40">Email Correspondence</span>
-                      <p className="py-3 px-4 bg-[#FDF8F3]/60 rounded-xl text-sm border border-[#E8C7B7]/20 font-medium">sophia.martinez@atelier.com</p>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-[10px] uppercase font-bold tracking-wider text-[#2C2C2C]/40">Primary Telephone</span>
-                      <p className="py-3 px-4 bg-[#FDF8F3]/60 rounded-xl text-sm border border-[#E8C7B7]/20 font-medium">+1 (555) 234-5678</p>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Recent Items Carousel Hook */}
-                <div>
-                  <h4 className="font-serif text-lg font-medium mb-4 tracking-wide">Recently Admired</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    {[
-                      { name: "Siren Marquise Choker", price: "$320", img: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=150" },
-                      { name: "Atelier Blossom Cuff", price: "$195", img: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=150" }
-                    ].map((item, idx) => (
-                      <div key={idx} className="bg-white/60 border border-white p-3 rounded-2xl text-center group cursor-pointer hover:shadow-md transition-all">
-                        <div className="overflow-hidden rounded-xl bg-[#FDF8F3] mb-2.5 aspect-square">
-                          <img src={item.img} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                        </div>
-                        <p className="text-xs font-serif truncate text-[#2C2C2C] px-1">{item.name}</p>
-                        <p className="text-xs text-[#B76E79] font-medium mt-0.5">{item.price}</p>
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wider text-[#2C2C2C]/40 ml-1">
+                        Email Address
+                      </span>
+                      <p className="py-3 px-4 bg-[#FDF8F3]/60 rounded-xl border border-[#E8C7B7]/20 opacity-60">
+                        {user?.email}
+                      </p>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wider text-[#2C2C2C]/40 ml-1">
+                        Phone Number
+                      </span>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editData.phone}
+                          onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
+                          className="w-full mt-1 py-3 px-4 bg-[#FDF8F3]/60 rounded-xl border border-[#B76E79]/30 outline-none focus:border-[#B76E79]"
+                        />
+                      ) : (
+                        <p className="py-3 px-4 bg-[#FDF8F3]/60 rounded-xl border border-[#E8C7B7]/20">
+                          {user?.phone || 'Not Provided'}
+                        </p>
+                      )}
+                    </div>
+
+                    {isEditing && (
+                      <div className="pt-4">
+                        <button
+                          disabled={updateLoading}
+                          type="submit"
+                          className="w-full py-3 bg-[#B76E79] text-white rounded-xl font-medium hover:bg-[#A65D68] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          {updateLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                          Update Profile Information
+                        </button>
                       </div>
-                    ))}
-                    <div className="border border-dashed border-[#E8C7B7]/60 rounded-2xl p-4 flex flex-col items-center justify-center text-center bg-[#FFF0EB]/10 h-full">
-                      <p className="text-xs text-[#2C2C2C]/40 font-light max-w-[100px]">Discover personalized recommendations</p>
-                      <ArrowUpRight className="w-4 h-4 text-[#B76E79] mt-2" />
-                    </div>
-                  </div>
+                    )}
+                  </form>
                 </div>
-
               </div>
             )}
 
-            {/* ORDERS VIEW */}
+            {/* ADDRESSES */}
+            {activeTab === 'addresses' && (
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-white shadow-lg animate-fade-in-slow">
+                <AddressManager
+                  addresses={userAddresses}
+                  onUpdate={(newAddresses) => {
+                    setUserAddresses(newAddresses);
+                    refreshUser();
+                  }}
+                />
+              </div>
+            )}
+
+
+
+            {/* ORDERS */}
             {activeTab === 'orders' && (
-              <div className="space-y-6 animate-fade-in-slow">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-serif text-2xl font-medium tracking-wide text-stone-950">Boutique Despatch Log</h3>
-                  <span className="text-xs text-[#2C2C2C]/50 tracking-wider">
-                    Showing {orders.length} {orders.length === 1 ? 'Recent Commission' : 'Recent Commissions'}
+              <div className="space-y-6">
+
+                {/* Header Section */}
+                <div className="flex justify-between items-end pb-2 border-b border-stone-100">
+                  <div>
+                    <h3 className="font-serif text-2xl text-stone-800 tracking-wide">
+                      Order History
+                    </h3>
+                    <p className="text-xs text-stone-400 mt-1">
+                      Manage and track your recent purchases
+                    </p>
+                  </div>
+                  <span className="text-xs font-medium bg-stone-100 text-stone-600 px-3 py-1 rounded-full">
+                    {orders.length} {orders.length === 1 ? 'Order' : 'Orders'}
                   </span>
                 </div>
 
-                {orders.length === 0 ? (
-                  <div className="text-center py-12 bg-white/40 border border-stone-200/60 rounded-3xl">
-                    <Package className="w-8 h-8 text-[#B76E79]/60 mx-auto mb-3" />
-                    <p className="text-sm font-serif text-stone-600">No recent orders found in this vault ledger.</p>
+                {/* Loading State */}
+                {ordersLoading ? (
+                  <div className="flex justify-center py-16">
+                    <div className="w-8 h-8 border-3 border-[#B76E79] border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : orders.length === 0 ? (
+                  /* Empty State */
+                  <div className="text-center py-16 bg-white rounded-3xl border border-stone-100 shadow-sm max-w-md mx-auto">
+                    <div className="w-16 h-16 bg-[#FFF0EB] rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Package className="w-7 h-7 text-[#B76E79]" />
+                    </div>
+                    <h4 className="text-base font-medium text-stone-800 mb-1">No orders yet</h4>
+                    <p className="text-sm text-stone-500 max-w-xs mx-auto px-4">
+                      Once you place an order, it will appear here with its tracking details.
+                    </p>
                   </div>
                 ) : (
-                  orders.map((order, index) => (
-                    <div
-                      key={order.id || index}
-                      className="bg-white/90 backdrop-blur-xl border border-white rounded-3xl p-6 shadow-[0_12px_40px_rgba(44,44,44,0.02)] transition-all duration-300 hover:shadow-md group"
-                    >
-                      {/* Order Meta Header Info */}
-                      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#E8C7B7]/20 pb-4 mb-4">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-xl bg-[#FFF0EB] flex items-center justify-center text-[#B76E79]">
-                            <Package className="w-5 h-5" />
+                  /* Orders List */
+                  <div className="space-y-4">
+                    {orders.map((order, index) => {
+                      // Dynamic status styling logic
+                      const status = order.orderStatus?.toUpperCase() || 'PROCESSING';
+                      const isDelivered = status === 'DELIVERED';
+                      const isCancelled = status === 'CANCELLED';
+
+                      let statusClasses = "bg-amber-50 text-amber-700 border-amber-200"; // Default
+                      if (isDelivered) statusClasses = "bg-emerald-50 text-emerald-700 border-emerald-100";
+                      if (isCancelled) statusClasses = "bg-rose-50 text-rose-700 border-rose-100";
+
+                      return (
+                        <div
+                          key={order._id || index}
+                          className="bg-white rounded-2xl p-5 md:p-6 border border-stone-100 shadow-sm hover:shadow-md transition-all duration-200"
+                        >
+                          {/* Order Meta Header */}
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-b border-stone-100 pb-4 mb-4 text-left">
+                            <div>
+                              <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-0.5">
+                                Order ID
+                              </p>
+                              <p className="text-sm font-mono font-medium text-stone-800 truncate max-w-[140px]">
+                                #{order._id?.slice(-8) || index}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-0.5">
+                                Date Placed
+                              </p>
+                              <p className="text-sm text-stone-600 font-medium">
+                                {new Date(order.createdAt).toLocaleDateString('en-IN', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric'
+                                })}
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-0.5">
+                                Total Amount
+                              </p>
+                              <p className="text-sm font-bold text-stone-900">
+                                ₹{order.totalPrice?.toLocaleString('en-IN')}
+                              </p>
+                            </div>
+
+                            <div className="flex sm:justify-end items-center">
+                              <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${statusClasses}`}>
+                                {order.orderStatus}
+                              </span>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-[10px] font-bold text-[#2C2C2C]/40 uppercase tracking-widest">Order Identifier</p>
-                            <p className="text-sm font-semibold text-[#2C2C2C]">{order.id || `ATLN-${100000 + index}`}</p>
+
+                          {/* Order Items & Actions */}
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div className="flex-1">
+                              <h4 className="text-sm font-semibold text-stone-800 line-clamp-1">
+                                {order.orderItems?.[0]?.name}
+                                {order.orderItems?.length > 1 && (
+                                  <span className="text-xs font-normal text-stone-500 ml-1.5">
+                                    + {order.orderItems.length - 1} more item{order.orderItems.length > 2 ? 's' : ''}
+                                  </span>
+                                )}
+                              </h4>
+                              <p className="text-xs text-stone-400 mt-0.5 flex items-center gap-1">
+                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-stone-300"></span>
+                                Payment via {order.paymentMethod}
+                              </p>
+                            </div>
+
+                            {/* Interactive Action Buttons */}
+                            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                              {isDelivered && (
+                                <button
+                                  onClick={() => navigate(`/give-review/${order.orderItems[0]?.product}`)}
+                                  className="flex-1 sm:flex-none px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold rounded-xl transition duration-150 border border-amber-200"
+                                >
+                                  Leave a Review
+                                </button>
+                              )}
+                              <button
+                                onClick={() => navigate(`/order-detail/${order._id}`)}
+                                className="flex-1 sm:flex-none px-5 py-2 bg-stone-900 hover:bg-[#B76E79] text-white text-xs font-medium rounded-xl shadow-sm transition duration-150"
+                              >
+                                Track Order
+                              </button>
+                            </div>
                           </div>
-                        </div>
 
-                        <div>
-                          <p className="text-[10px] font-bold text-[#2C2C2C]/40 uppercase tracking-widest text-left sm:text-right">Commission Date</p>
-                          <p className="text-sm font-medium text-[#2C2C2C]/80 inline-flex items-center gap-1.5">
-                            <Calendar className="w-3.5 h-3.5 text-[#2C2C2C]/30" /> {order.date || 'Just Now'}
-                          </p>
                         </div>
-
-                        <div>
-                          <p className="text-[10px] font-bold text-[#2C2C2C]/40 uppercase tracking-widest text-left sm:text-right">Settlement Total</p>
-                          <p className="text-sm font-bold text-[#B76E79] text-left sm:text-right">
-                            {typeof order.total === 'number' ? `$${order.total.toLocaleString()}` : order.total}
-                          </p>
-                        </div>
-
-                        <div>
-                          <span className={`px-4 py-1.5 rounded-full text-xs font-medium tracking-wide inline-block ${order.status === 'In Transit' || order.status === 'Processing'
-                              ? 'bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20 animate-pulse'
-                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            }`}>
-                            {order.status || 'Confirmed'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Parcel Item Specifications Body */}
-                      <div className="flex items-center justify-between flex-wrap gap-4">
-                        <div className="flex items-center gap-4">
-                          <img
-                            src={order.image || 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=150&q=80'}
-                            alt="Jewelry masterpiece thumbnail"
-                            className="w-14 h-14 object-cover rounded-xl border border-[#E8C7B7]/20 flex-shrink-0"
-                          />
-                          <div>
-                            <p className="text-sm font-serif font-medium text-[#2C2C2C]">
-                              {order.title || 'Premium Curated Parcel'} ({order.items || 1} {order.items === 1 ? 'item' : 'items'})
-                            </p>
-                            <p className="text-xs text-[#2C2C2C]/50 mt-0.5">
-                              {order.shippingMethod === 'insured'
-                                ? 'Dispatched via Insured Armored Security Messenger'
-                                : 'Dispatched via Premium Atelier White-Glove Service'}
-                            </p>
-                          </div>
-                        </div>
-
-                        <button className="px-5 py-2.5 bg-[#2C2C2C] hover:bg-[#B76E79] text-white font-medium text-xs rounded-full uppercase tracking-widest transition-colors duration-300 shadow-sm active:scale-95">
-                          Trace Parcel
-                        </button>
-                      </div>
-                    </div>
-                  ))
+                      );
+                    })}
+                  </div>
                 )}
+
               </div>
             )}
-            {/* WISHLIST VIEW */}
+
+            {/* WISHLIST */}
             {activeTab === 'wishlist' && (
-              <div className="space-y-6 animate-fade-in-slow">
-                {/* Heading Block */}
-                <div className="mb-2">
-                  <h3 className="font-serif text-2xl font-medium tracking-wide">The Wishlist Vault</h3>
+              <div className="space-y-6">
+
+                <div>
+                  <h3 className="font-serif text-2xl">
+                    Wishlist
+                  </h3>
+
                   <p className="text-xs text-[#2C2C2C]/50 mt-1">
-                    Your privately reserved acquisitions. Sharing this locker grants boutique allocation hints to partners.
+                    Your saved luxury pieces.
                   </p>
                 </div>
 
-                {/* Dynamic Grid Layout */}
-                {wishlist && wishlist.length > 0 ? (
+                {validWishlistItems.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {wishlist.map((item) => (
+                    {validWishlistItems.map((item) => (
                       <ProductCard
-                        key={item.id}
-                        id={item.id}
-                        title={item.title || item.name} // Keeps fallbacks solid if naming parameters vary
+                        key={item.id || item._id}
+                        id={item.id || item._id}
+                        title={item.title || item.name}
                         price={item.price}
                         image={item.image}
                         tag={item.tag}
@@ -390,71 +601,90 @@ function Profile() {
                     ))}
                   </div>
                 ) : (
-                  /* Elegant Empty State Framework */
-                  <div className="text-center py-16 bg-white/40 backdrop-blur-md rounded-3xl border border-dashed border-gray-200">
-                    <Heart className="w-8 h-8 text-gray-300 mx-auto mb-3 stroke-[1.5]" />
-                    <p className="font-serif text-gray-500 text-sm tracking-wide">Your vault is currently empty</p>
-                    <p className="text-xs text-gray-400 mt-1">Explore our collections to claim your selections.</p>
+                  <div className="text-center py-16 bg-white rounded-3xl border border-dashed">
+                    <Heart className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+                    <p className="font-serif text-gray-500">Your wishlist is empty</p>
                   </div>
                 )}
+
               </div>
             )}
 
-            {/* FALLBACK INFO FOR UNFINISHED TABS */}
+            {/* OTHER TABS */}
             {!['profile', 'orders', 'wishlist'].includes(activeTab) && (
-              <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-12 text-center border border-white shadow-sm animate-fade-in-slow">
+              <div className="bg-white rounded-3xl p-12 text-center border shadow-sm">
                 <Sparkles className="w-8 h-8 text-[#D4AF37] mx-auto mb-3" />
-                <h3 className="font-serif text-xl font-medium capitalize mb-1">{activeTab.replace('-', ' ')}</h3>
-                <p className="text-sm text-[#2C2C2C]/50 max-w-sm mx-auto">This section of your private lounge is being curated by your architectural design team.</p>
+
+                <h3 className="font-serif text-xl capitalize mb-1">
+                  {activeTab.replace('-', ' ')}
+                </h3>
+
+                <p className="text-sm text-[#2C2C2C]/50">
+                  This section is under development.
+                </p>
               </div>
             )}
 
           </div>
-
         </div>
-
       </div>
 
-      {/* Embedded High Performance CSS Transitions & Keyframes */}
+      {/* Styles */}
       <style>{`
         .profile-gold-dust {
           animation: profileDustFloat infinite linear;
         }
+
         @keyframes profileDustFloat {
-          0% { transform: translateY(0) scale(1) rotate(0deg); opacity: 0; }
-          15% { opacity: 0.3; }
-          85% { opacity: 0.3; }
-          100% { transform: translateY(-100vh) scale(0.7) rotate(360deg); opacity: 0; }
+          0% {
+            transform: translateY(0) scale(1) rotate(0deg);
+            opacity: 0;
+          }
+
+          15% {
+            opacity: 0.3;
+          }
+
+          85% {
+            opacity: 0.3;
+          }
+
+          100% {
+            transform: translateY(-100vh) scale(0.7) rotate(360deg);
+            opacity: 0;
+          }
         }
 
         .animate-spin-slow {
           animation: slowRingSpin 10s linear infinite;
         }
-        @keyframes slowRingSpin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
 
-        .luxury-panel-glow {
-          box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.7);
+        @keyframes slowRingSpin {
+          from {
+            transform: rotate(0deg);
+          }
+
+          to {
+            transform: rotate(360deg);
+          }
         }
 
         .animate-fade-in-slow {
-          animation: entryPanelReveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          animation: entryPanelReveal 0.6s ease forwards;
         }
-        .animate-subtle-slide {
-          animation: subtleSlideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
+
         @keyframes entryPanelReveal {
-          0% { opacity: 0; transform: translateY(8px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes subtleSlideIn {
-          0% { opacity: 0; transform: translateX(-12px); }
-          100% { opacity: 1; transform: translateX(0); }
+          from {
+            opacity: 0;
+            transform: translateY(8px);
+          }
+
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
       `}</style>
-
     </div>
   );
 }

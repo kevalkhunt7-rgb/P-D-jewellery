@@ -1,7 +1,9 @@
 import React from 'react';
-import {   Mail, Phone, MapPin, Heart } from 'lucide-react';
+import { Mail, Phone, MapPin, Heart } from 'lucide-react';
 import { FaFacebookSquare, FaInstagram, FaYoutube } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
+import logo from "../assets/logo.png";
+import { motion, AnimatePresence } from 'framer-motion';
 export function Footer() {
   const currentYear = new Date().getFullYear();
 
@@ -9,31 +11,28 @@ export function Footer() {
     <footer className="bg-gradient-to-b from-[#2C2C2C] to-[#1a1a1a] text-white pt-16 pb-8">
       <div className="container mx-auto px-4 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
-          
+
           {/* Brand Column */}
           <div>
-            <h3
-              className="font-serif mb-4"
-              style={{
-                fontSize: '2rem',
-                fontWeight: 700,
-                background: 'linear-gradient(135deg, #B76E79 0%, #D4AF37 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
+            <motion.img
+              src={logo}
+              alt="P&D Luxury Jewellery"
+              className="h-25 cursor-pointer mb-5 w-auto object-contain scale-[1] origin-center"
+              whileHover={{ rotate: 360 }}
+              transition={{
+                duration: 0.8,
+                ease: "easeInOut",
               }}
-            >
-              LUMIÈRE
-            </h3>
+            />
             <p className="mb-6 opacity-80" style={{ fontSize: '0.875rem', lineHeight: 1.7 }}>
               Crafting timeless elegance through exquisite imitation jewelry. Every piece tells a story of beauty, grace, and sophistication.
             </p>
             <div className="flex gap-3">
               {[
-                { icon: FaFacebookSquare , href: '#' },
-                { icon: FaInstagram , href: '#' },
-                { icon: FaXTwitter , href: '#' },
-                { icon: FaYoutube , href: '#' },
+                { icon: FaFacebookSquare, href: '#' },
+                { icon: FaInstagram, href: '#' },
+                { icon: FaXTwitter, href: '#' },
+                { icon: FaYoutube, href: '#' },
               ].map((social, index) => (
                 <a
                   key={index}

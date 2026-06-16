@@ -7,17 +7,18 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { ProductCard } from './ProductCard';
 
 // Import your unified database file
-import { premiumProducts } from './data';
+import { useProducts } from '../context/ProductContext';
 
 export function BestSellers() {
   const sliderRef = useRef(null);
   const Slider = SliderComponent.default || SliderComponent;
   
+  const { getBestSellers } = useProducts();
   const [slidesToShow, setSlidesToShow] = useState(4);
   const [isMounted, setIsMounted] = useState(false);
 
-  // Filter or fall back to your data.js items array safely
-  const bestSellersList = premiumProducts || [];
+  // Use the helper from context
+  const bestSellersList = getBestSellers();
 
   useEffect(() => {
     setIsMounted(true);

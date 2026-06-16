@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { 
   Sparkles, 
@@ -13,47 +13,16 @@ import {
   VolumeX 
 } from 'lucide-react';
 import { FiInstagram } from "react-icons/fi";
-// --- MOCK PRODUCT CARD FOR SELF-CONTAINED EXECUTION ---
-// In your project, replace this with your actual imports:
-// import { ProductCard } from "../components/ProductCard";
-// import { premiumProducts } from "../components/data";
-const ProductCard = ({ product }) => (
-  <div className="group relative bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-700 border border-stone-100 flex flex-col h-full">
-    <div className="aspect-[4/5] overflow-hidden relative bg-stone-100">
-      <img 
-        src={product.image} 
-        alt={product.title} 
-        className="w-full h-full object-cover transition-transform duration-[1.5s] ease-out group-hover:scale-110"
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-6">
-        <span className="text-white text-xs uppercase tracking-widest font-medium">View Atelier Piece</span>
-      </div>
-    </div>
-    <div className="p-6 flex flex-col flex-grow bg-white">
-      <span className="text-[10px] uppercase tracking-[0.2em] text-[#B76E79] font-semibold mb-1 block">{product.collection}</span>
-      <h3 className="font-serif text-lg text-[#2C2C2C] mb-2 font-medium line-clamp-1">{product.title}</h3>
-      <div className="flex items-center justify-between mt-auto pt-4 border-t border-stone-50">
-        <span className="font-serif text-base text-stone-900 font-semibold">{product.price}</span>
-        <span className="text-xs text-[#2C2C2C]/60 tracking-wider group-hover:text-[#B76E79] transition-colors flex items-center gap-1">
-          Explore <ArrowRight className="w-3 h-3" />
-        </span>
-      </div>
-    </div>
-  </div>
-);
-
-const premiumProducts = [
-  { id: 1, title: "Aurelia Diamond Drop Earrings", collection: "Royal Heritage", price: "$4,850", image: "https://images.unsplash.com/photo-1635767798638-3e25273a8236?auto=format&fit=crop&q=80&w=800" },
-  { id: 2, title: "Seraphina Rose Gold Choker", collection: "Modern Minimal", price: "$3,200", image: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&q=80&w=800" },
-  { id: 3, title: "Marquise Cut Halo Engagement Ring", collection: "Bridal Collection", price: "$12,400", image: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&q=80&w=800" },
-  { id: 4, title: "Infinite Luminary Tennis Bracelet", collection: "Diamond Classics", price: "$8,900", image: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?auto=format&fit=crop&q=80&w=800" },
-  { id: 5, title: "Nocturnal Emerald Statement Ring", collection: "Evening Glamour", price: "$6,750", image: "https://images.unsplash.com/photo-1603561591411-07134e71a2a9?auto=format&fit=crop&q=80&w=800" },
-  { id: 6, title: "Solitaire Pear Drop Pendant", collection: "Diamond Classics", price: "$5,100", image: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&q=80&w=800" },
-];
+import { ProductCard } from "../components/ProductCard";
+import { useProducts } from '../context/ProductContext';
+import logo from "../assets/logo.png";
+import {Link} from "react-router-dom";
+import video1 from "../assets/video1.mp4";
 
 export default function LookBookPage() {
+  const { products = [] } = useProducts();
   const [activeQuote, setActiveQuote] = useState(0);
-  const [isVideoMuted, setIsVideoMuted] = useState(true);
+
   const { scrollY } = useScroll();
   
   // Parallax effects
@@ -65,7 +34,14 @@ export default function LookBookPage() {
     { text: "A timeless masterpiece that transitions beyond luxury jewelry.", author: "HARPER'S BAZAAR" },
     { text: "Redefining the modern heirloom beautifully for generations to come.", author: "THE ATELIER JOURNAL" }
   ];
+const [isVideoMuted, setIsVideoMuted] = useState(true);
+  const videoRef = useRef(null);
 
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.muted = isVideoMuted;
+    }
+  }, [isVideoMuted]);
   useEffect(() => {
     const timer = setInterval(() => {
       setActiveQuote((prev) => (prev + 1) % quotes.length);
@@ -74,11 +50,11 @@ export default function LookBookPage() {
   }, []);
 
   const collections = [
-    { title: "Bridal Collection", desc: "Eternal promises cast in pure platinum and brilliant diamonds.", img: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=800" },
-    { title: "Royal Heritage", desc: "Regal geometry infused with deep historical craftsmanship.", img: "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?auto=format&fit=crop&q=80&w=800" },
-    { title: "Modern Minimal", desc: "Architectural profiles speaking volumes through fine delicate lines.", img: "https://images.unsplash.com/photo-1506634572416-48cdfe530110?auto=format&fit=crop&q=80&w=800" },
-    { title: "Evening Glamour", desc: "Deep rich tanzanites and emeralds tailored for moonlit settings.", img: "https://images.unsplash.com/photo-1566753323558-f4e0952af115?auto=format&fit=crop&q=80&w=800" },
-    { title: "Diamond Classics", desc: "The definitive standard of flawless brilliance made permanent.", img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=800" }
+    { title: "Bridal Collection", desc: "Exquisite bridal jewellery crafted in radiant gold,  diamonds, and precious gemstones  to celebrate your forever.", img: "https://i.pinimg.com/736x/bb/80/d5/bb80d5507aaa4bda050a789a0a1db5f0.jpg" , link: "/collections?occasion=wedding"  },
+    { title: "Party Wear Collection", desc: "Bold brilliance and contemporary elegance for every grand entrance.", img: "https://i.pinimg.com/736x/0a/33/92/0a33926334e164749fcf59259d4bf9fb.jpg" , link: "/collections?occasion=party"  },
+    { title: "Casual Wear Collection", desc: "Architectural profiles speaking volumes through fine delicate lines.", img: "https://i.pinimg.com/1200x/19/b6/af/19b6af5a789d1bef849deadd33388d7d.jpg" , link: "/collections?occasion=casual"  },
+    { title: "Festive Glamour", desc: "Deep rich tanzanites and emeralds tailored for moonlit settings.", img: "https://i.pinimg.com/736x/4a/3a/cd/4a3acd0181c6d0a0f985141e052397e3.jpg" , link: "/collections?occasion=festive"  },
+    { title: "Daily Wear Collection", desc: "The definitive standard of flawless brilliance made permanent.", img: "https://i.pinimg.com/736x/49/58/9c/49589c33e274de7908f59611ac0dcaa3.jpg" , link: "/collections?occasion=Daily Wear"  }
   ];
 
   const instagramGallery = [
@@ -104,7 +80,7 @@ export default function LookBookPage() {
         <motion.div style={{ y: heroBgY }} className="absolute inset-0 w-full h-full scale-105">
           <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-[#FDF8F3] z-10" />
           <img 
-            src="https://images.unsplash.com/photo-1469334031218-e382a71b716b?auto=format&fit=crop&q=80&w=1920" 
+            src="https://i.pinimg.com/1200x/c1/c2/ad/c1c2ad15fb935d87ba9e48f19144d6b1.jpg" 
             alt="Cinematic Campaign Background" 
             className="w-full h-full object-cover object-center transform"
           />
@@ -126,22 +102,32 @@ export default function LookBookPage() {
             transition={{ delay: 0.3, duration: 1 }}
             className="flex items-center gap-2 mb-6 border border-[#E8C7B7]/30 bg-white/5 backdrop-blur-md px-4 py-1.5 rounded-full"
           >
+            <motion.img
+                                    src={logo}
+                                    alt="P&D Luxury Jewellery"
+                                    className="h-15 w-auto object-contain scale-[1] origin-center"
+                                    whileHover={{ rotate: 360 }}
+                                    transition={{
+                                        duration: 0.8,
+                                        ease: "easeInOut",
+                                    }}
+                                />
             <Sparkles className="w-3.5 h-3.5 text-[#D4AF37] fill-current animate-spin" style={{ animationDuration: '6s' }} />
-            <span className="text-white text-[10px] font-bold tracking-[0.3em] uppercase">HAUTE JOAILLERIE CAMPAIGN</span>
+            <span className="text-white text-[30px] font-bold tracking-[0.3em] uppercase">P&D LUXURY JEWELLERY</span>
           </motion.div>
-
+                     
           <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl text-white font-light tracking-tight leading-[1.05] mb-8">
-            The Art of <br />
-            <span className="italic text-[#E8C7B7] font-normal">Timeless Elegance</span>
+          <br />
+            <span className="italic text-[#E8C7B7] font-normal"> LUXURY JEWELLERY COLLECTION</span>
           </h1>
 
           <p className="text-[#FDF8F3]/80 text-sm md:text-base font-light tracking-[0.15em] max-w-xl mx-auto mb-12 uppercase leading-relaxed">
-            A visual symphony of rare brilliant diamonds, solid gold, and editorial masterworks curated for the connoisseur.
+            Discover a world of timeless sophistication, where every jewel is meticulously crafted to embody luxury and grace.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-5">
             <button className="group px-8 py-4 bg-[#2C2C2C] border border-stone-800 text-[#FDF8F3] hover:bg-[#B76E79] rounded-full text-xs font-semibold tracking-[0.2em] uppercase shadow-xl transition-all duration-500 flex items-center gap-3">
-              <span>EXPLORE COLLECTION</span>
+              <Link to="/collections"><span>EXPLORE COLLECTION</span></Link>
               <ArrowRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-1" />
             </button>
             <button className="group px-8 py-4 bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white hover:text-stone-900 rounded-full text-xs font-semibold tracking-[0.2em] uppercase transition-all duration-500 flex items-center gap-2">
@@ -153,7 +139,7 @@ export default function LookBookPage() {
 
         {/* Scroll down indicator */}
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 text-stone-400">
-          <span className="text-[9px] tracking-[0.25em] font-bold text-stone-400/80 uppercase">Scroll to Discover</span>
+          
           <motion.div 
             animate={{ y: [0, 8, 0] }} 
             transition={{ repeat: Infinity, duration: 2 }}
@@ -181,7 +167,7 @@ export default function LookBookPage() {
               className="col-span-8 overflow-hidden rounded-[2.5rem] shadow-2xl shadow-stone-900/10 aspect-[3/4] relative z-10"
             >
               <img 
-                src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=800" 
+                src="https://i.pinimg.com/736x/9c/58/32/9c5832aa30b4bd71ae31cad34d83b668.jpg" 
                 alt="Editorial Portrait" 
                 className="w-full h-full object-cover"
               />
@@ -195,7 +181,7 @@ export default function LookBookPage() {
               className="col-span-4 overflow-hidden rounded-[2rem] shadow-xl self-end mb-[-40px] aspect-[4/5] relative z-20 border-4 border-[#FDF8F3]"
             >
               <img 
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=800" 
+                src="https://i.pinimg.com/1200x/fc/0f/9e/fc0f9e94b242a1504c834d29d21a057b.jpg" 
                 alt="Detail Close-up" 
                 className="w-full h-full object-cover"
               />
@@ -213,26 +199,21 @@ export default function LookBookPage() {
             <div className="space-y-3">
               <span className="text-[11px] font-bold tracking-[0.25em] text-[#B76E79] uppercase block">THE PHILOSOPHY</span>
               <h2 className="font-serif text-3xl sm:text-5xl text-[#2C2C2C] font-light leading-tight tracking-tight">
-                Crafted for moments that <span className="italic font-normal text-[#D4AF37]">deserve forever.</span>
+                Crafted to Celebrate Life’s <span className="italic font-normal text-[#D4AF37]">Most Precious Moments.</span>
               </h2>
             </div>
             
             <hr className="border-stone-200 w-24" />
 
             <p className="text-stone-600 font-light text-sm sm:text-base leading-relaxed">
-              At our core lies an unyielding commitment to flawless artistic architectural composition. Every curvature, metal setting, and gemstone setting is selected with couture discipline. We don’t manufacture jewelry; we materialize legacies.
+              At the heart of our brand lies a passion for timeless craftsmanship and uncompromising excellence. Every design is thoughtfully created, every precious metal carefully selected, and every gemstone meticulously set to achieve unparalleled beauty and brilliance. We do not simply create jewellery; we craft symbols of love, achievement, and legacy that endure through generations.
             </p>
 
             <blockquote className="border-left-2 border-[#E8C7B7] pl-4 italic font-serif text-lg text-stone-500/90 leading-relaxed bg-white/40 p-4 rounded-xl backdrop-blur-sm border border-stone-100">
-              “True luxury isn’t about being noticed, it is about being remembered across generations.”
+              “True luxury is not measured by what you wear, but by the stories and memories your jewellery carries through time.”
             </blockquote>
 
-            <div className="pt-2">
-              <button className="group text-xs font-bold tracking-[0.2em] text-stone-900 uppercase flex items-center gap-2.5 hover:text-[#B76E79] transition-colors duration-300">
-                <span>OUR ARTISANAL HERITAGE</span>
-                <span className="w-8 h-px bg-stone-900 group-hover:bg-[#B76E79] transition-all duration-300 group-hover:w-12" />
-              </button>
-            </div>
+           
           </motion.div>
 
         </div>
@@ -241,53 +222,52 @@ export default function LookBookPage() {
       {/* =====================================
           3. FEATURED LOOKBOOK COLLECTIONS
          ===================================== */}
-      <section className="py-20 bg-gradient-to-b from-transparent via-[#FFF6F0] to-transparent overflow-hidden">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-16 mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div className="space-y-2">
-            <span className="text-[11px] font-bold tracking-[0.25em] text-[#B76E79] uppercase block">CURATED EDITORIALS</span>
-            <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-[#2C2C2C] font-light tracking-tight">
-              Seasonal Chapters
-            </h2>
-          </div>
-          <p className="text-stone-500 text-xs sm:text-sm font-light tracking-wider max-w-md">
-            Swipe or scroll through the structural collection narratives envisioned by our master stone setters and fashion designers this season.
+  <div className="overflow-x-auto mb-5 pb-10 pt-4 px-4 sm:px-8 lg:px-16 flex gap-8 no-scrollbar snap-x snap-mandatory scroll-smooth">
+  {collections.map((col, idx) => (
+    <motion.div 
+      key={idx}
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{ duration: 0.7, delay: idx * 0.1, ease: [0.21, 1.02, 0.43, 1.01] }}
+      className="relative flex flex-col justify-end flex-shrink-0 w-[290px] sm:w-[360px] md:w-[400px] aspect-[3/4] rounded-[2rem] overflow-hidden shadow-2xl group snap-start p-6 sm:p-8 bg-stone-900"
+    >
+      {/* Cinematic Vignette Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-10 transition-all duration-500 group-hover:via-black/50" />
+      
+      {/* Smooth Image Zoom */}
+      <img 
+        src={col.img} 
+        alt={col.title} 
+        className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1.5s] cubic-bezier(0.25, 1, 0.5, 1) group-hover:scale-105"
+        loading="lazy"
+      />
+      
+      {/* Content Container */}
+      <div className="relative z-20 space-y-4 transform transition-transform duration-500 ease-out group-hover:translate-y-[-4px]">
+        <div className="space-y-2">
+          <h3 className="font-serif text-2xl sm:text-3xl text-stone-50 font-medium tracking-wide">
+            {col.title}
+          </h3>
+          <p className="text-stone-300/80 font-light text-xs sm:text-sm tracking-wide leading-relaxed line-clamp-2 max-w-[90%]">
+            {col.desc}
           </p>
         </div>
 
-        {/* Horizontal Scroll Track Wrapper */}
-        <div className="overflow-x-auto pb-8 pt-4 px-4 sm:px-6 lg:px-16 flex gap-6 no-scrollbar snap-x snap-mandatory">
-          {collections.map((col, idx) => (
-            <motion.div 
-              key={idx}
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: idx * 0.1 }}
-              className="min-w-[290px] sm:min-w-[380px] w-[380px] aspect-[3/4] rounded-[2.2rem] overflow-hidden shadow-lg group relative snap-start flex flex-col justify-end p-6 sm:p-8 bg-stone-800"
-            >
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10 z-10 transition-opacity duration-500 group-hover:from-black/90" />
-              <img 
-                src={col.img} 
-                alt={col.title} 
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-[2s] ease-out group-hover:scale-105"
-              />
-              
-              <div className="relative z-20 space-y-3 transform transition-transform duration-500 group-hover:translate-y-[-4px]">
-                <h3 className="font-serif text-2xl sm:text-3xl text-white font-medium">{col.title}</h3>
-                <p className="text-white/70 font-light text-xs sm:text-sm tracking-wide leading-relaxed line-clamp-2">
-                  {col.desc}
-                </p>
-                <div className="pt-2">
-                  <button className="px-5 py-2.5 bg-white/10 backdrop-blur-md border border-white/20 text-white rounded-full text-[10px] font-bold tracking-widest uppercase hover:bg-white hover:text-stone-900 transition-all duration-300 flex items-center gap-2">
-                    <span>EXPLORE STORY</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+        {/* Semantic & Accessible Link Button */}
+        <div className="pt-2">
+          <Link 
+            to={col.link}
+            className="inline-flex items-center gap-2 px-5 py-3 bg-white/10 backdrop-blur-md border border-white/10 text-white rounded-full text-[10px] font-bold tracking-widest uppercase transition-all duration-300 hover:bg-white hover:text-stone-950 hover:border-white hover:shadow-lg hover:shadow-white/5"
+          >
+            <span>Explore Collection</span> 
+            <ArrowRight className="w-3 h-3 transition-transform duration-300 group-hover:translate-x-1" />
+          </Link>
         </div>
-      </section>
+      </div>
+    </motion.div>
+  ))}
+</div>
 
       {/* =====================================
           4. IMMERSIVE FULL-WIDTH BANNER
@@ -333,7 +313,7 @@ export default function LookBookPage() {
 
         {/* Responsive Grid showcasing 6 items exactly */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10">
-          {premiumProducts.slice(0, 6).map((product, idx) => (
+          {products.slice(0, 6).map((product, idx) => (
             <motion.div
               key={product.id}
               initial={{ opacity: 0, y: 50 }}
@@ -341,7 +321,7 @@ export default function LookBookPage() {
               viewport={{ once: true, margin: "-50px" }}
               transition={{ duration: 0.8, delay: idx * 0.1 }}
             >
-              <ProductCard product={product} />
+              <ProductCard {...product} />
             </motion.div>
           ))}
         </div>
@@ -351,59 +331,72 @@ export default function LookBookPage() {
           6. VIDEO CAMPAIGN SECTION
          ===================================== */}
       <section className="py-20 bg-stone-950 text-white overflow-hidden">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-16">
-          <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            
-            <div className="lg:col-span-4 space-y-6">
-              <span className="text-[#B76E79] text-[11px] font-bold tracking-[0.3em] uppercase block">BRAND FILM</span>
-              <h2 className="font-serif text-3xl sm:text-4xl font-light tracking-tight leading-tight">
-                Behind The <br />
-                <span className="italic font-normal text-[#E8C7B7]">Atelier Doors</span>
-              </h2>
-              <p className="text-stone-400 font-light text-xs sm:text-sm leading-relaxed">
-                Step inside our historical Parisian sanctuary where pure metallurgy converges seamlessly with fine diamond cutting artistry.
-              </p>
-              <div className="pt-2 flex items-center gap-4">
-                <button 
-                  onClick={() => setIsVideoMuted(!isVideoMuted)}
-                  className="p-3 bg-white/5 border border-white/10 rounded-full hover:bg-white/10 transition-colors text-stone-300"
-                  title={isVideoMuted ? "Unmute audio" : "Mute audio"}
-                >
-                  {isVideoMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                </button>
-                <span className="text-[10px] uppercase tracking-widest text-stone-500 font-mono">RUN TIME: 2M 14S</span>
-              </div>
+      <div className="container mx-auto px-4 sm:px-6 lg:px-16">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+
+          {/* Left Content */}
+          <div className="lg:col-span-4 space-y-6">
+            <span className="text-[#B76E79] text-[11px] font-bold tracking-[0.3em] uppercase block">
+              BRAND FILM
+            </span>
+
+            <h2 className="font-serif text-3xl sm:text-4xl font-light tracking-tight leading-tight">
+              Behind The <br />
+              <span className="italic font-normal text-[#E8C7B7]">
+                Atelier Doors
+              </span>
+            </h2>
+
+            <p className="text-stone-400 font-light text-xs sm:text-sm leading-relaxed">
+              Step inside our historical Parisian sanctuary where pure
+              metallurgy converges seamlessly with fine diamond cutting
+              artistry.
+            </p>
+
+            <div className="pt-2 flex items-center gap-4">
+              <button
+                onClick={() => setIsVideoMuted(!isVideoMuted)}
+                className="p-3 bg-white/5 border border-white/10 rounded-full hover:bg-white/10 transition-colors text-stone-300"
+                title={isVideoMuted ? "Unmute audio" : "Mute audio"}
+              >
+                {isVideoMuted ? (
+                  <VolumeX className="w-4 h-4" />
+                ) : (
+                  <Volume2 className="w-4 h-4" />
+                )}
+              </button>
+
+              
             </div>
-
-            <div className="lg:col-span-8">
-              <div className="relative aspect-video rounded-[2rem] overflow-hidden group shadow-2xl border border-white/5 bg-stone-900">
-                
-                {/* Decorative Video Placeholder Image mapping back to look/feel */}
-                <img 
-                  src="https://images.unsplash.com/photo-1601121141461-9d6647bca1ed?auto=format&fit=crop&q=80&w=1200" 
-                  alt="Video Slate" 
-                  className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-1000"
-                />
-                
-                {/* Glassmorphic Overlay Media Container Trigger */}
-                <div className="absolute inset-0 bg-black/30 flex items-center justify-center z-20">
-                  <button className="relative w-20 h-20 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30 text-white shadow-xl transition-all duration-500 hover:scale-110 hover:bg-white hover:text-stone-950 group">
-                    <div className="absolute inset-0 rounded-full border border-white/40 animate-ping opacity-40 group-hover:opacity-0" />
-                    <Play className="w-6 h-6 fill-current ml-1" />
-                  </button>
-                </div>
-
-                <div className="absolute bottom-6 left-6 z-30 bg-black/40 backdrop-blur-sm px-4 py-2 rounded-xl text-[10px] tracking-widest text-white/90 border border-white/5 font-light flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                  <span>PREVIEW STREAM ACTIVE</span>
-                </div>
-
-              </div>
-            </div>
-
           </div>
+
+          {/* Video Section */}
+          <div className="lg:col-span-8">
+            <div className="relative aspect-video rounded-[2rem] overflow-hidden group shadow-2xl border border-white/5 bg-stone-900">
+
+              {/* Video */}
+              <video
+                ref={videoRef}
+                src={video1}
+                autoPlay
+                loop
+                muted={isVideoMuted}
+                playsInline
+                preload="auto"
+                className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-1000"
+              />
+
+              {/* Dark Overlay */}
+              <div className="absolute inset-0 bg-black/20 z-10" />
+
+              
+
+            </div>
+          </div>
+
         </div>
-      </section>
+      </div>
+    </section>
 
       {/* =====================================
           7. TESTIMONIAL / QUOTE STRIP

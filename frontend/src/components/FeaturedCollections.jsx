@@ -4,13 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import { ProductCard } from './ProductCard';
 
 // Import Product Data
-import { premiumProducts } from './data';
+import { useProducts } from '../context/ProductContext';
 
 export function FeaturedCollections() {
   const navigate = useNavigate();
+  const { getLatestProducts } = useProducts();
 
-  // Show only first 6 products
-  const displayCollections = premiumProducts.slice(0, 6);
+  // Get 6 latest products
+  const displayCollections = getLatestProducts();
 
   return (
     <section
@@ -67,9 +68,11 @@ export function FeaturedCollections() {
                 id={product.id}
                 image={product.images?.[0]}
                 title={product.title}
+                slug={product.slug}
                 price={product.price}
                 originalPrice={product.originalPrice}
                 tag={product.tag}
+                rating={product.rating} // ✨ FIXED: Passing the rating down to show colored stars
               />
             </motion.div>
           ))}
