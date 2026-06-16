@@ -18,7 +18,7 @@ function Navbar() {
 
     const { getCartCount } = useCart();
     const { wishlistCount } = useWishlist();
-    const { user, isAuthenticated } = useAuth();
+    const { isAuthenticated } = useAuth();
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -139,12 +139,12 @@ function Navbar() {
                                 {isSearchOpen ? <X className="w-5 h-5" /> : <Search className="w-5 h-5" />}
                             </button>
 
-                            {/* Profile Icon */}
+                            {/* Profile Icon (Now visible on all screens) */}
                             <MotionLink
                                 to={isAuthenticated ? "/profile" : "/login"}
                                 whileHover={{ scale: 1.1 }}
                                 whileTap={{ scale: 0.95 }}
-                                className="text-[#2C2C2C] hover:text-[#B76E79] transition-colors hidden md:block p-1"
+                                className="text-[#2C2C2C] hover:text-[#B76E79] transition-colors p-1"
                                 aria-label={isAuthenticated ? "Account" : "Login"}
                             >
                                 <User className="w-5 h-5" />
@@ -231,12 +231,10 @@ function Navbar() {
                         initial={{ opacity: 0, y: "-100%" }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: "-100%" }}
-                        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }} // Custom elegant cubic-bezier easing
-                        className={`fixed left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-b border-gray-100 shadow-xl transition-all duration-500 ${scrolled ? 'top-[68px]' : 'top-[77px]'
-                            }`}
+                        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                        className={`fixed left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-b border-gray-100 shadow-xl transition-all duration-500 ${scrolled ? 'top-[68px]' : 'top-[77px]'}`}
                     >
                         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10 max-w-4xl w-full">
-
                             {/* Input Form Section */}
                             <form onSubmit={handleSearch} className="relative group w-full mb-8">
                                 <input
@@ -255,7 +253,6 @@ function Navbar() {
                                     <ArrowRight className="w-6 h-6 transform group-hover:translate-x-1 transition-transform" />
                                 </button>
                             </form>
-
                         </div>
                     </motion.div>
                 )}
