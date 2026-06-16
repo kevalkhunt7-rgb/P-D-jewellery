@@ -89,10 +89,10 @@ function Cart({ currentProduct, quantity, selectedFinish }) {
             <ChevronRight className="w-3 h-3" />
             <span className="text-[#B76E79] font-medium">Your Curation</span>
           </nav>
-          <h1 className="font-serif text-3xl sm:text-5xl font-light tracking-wide text-[#2C2C2C]">
+          <h1 className="font-serif text-3xl sm:text-5xl font-medium tracking-wide text-[#2C2C2C]">
             Your Luxury <span className="italic text-[#B76E79]">Collection</span>
           </h1>
-          <p className="text-xs sm:text-sm text-[#2C2C2C]/60 tracking-wide mt-2 font-light">
+          <p className="text-xs sm:text-sm text-[#2C2C2C]/60 tracking-wide mt-2 font-medium">
             Beautiful pieces hand-selected for your private reflection.
           </p>
         </div>
@@ -104,7 +104,7 @@ function Cart({ currentProduct, quantity, selectedFinish }) {
               <ShoppingBag className="w-8 h-8 stroke-[1.25]" />
               <div className="absolute inset-0 rounded-full border border-dashed border-[#D4AF37]/40 animate-spin-slow" />
             </div>
-            <h2 className="font-serif text-2xl font-light mb-3">The Vault is Empty</h2>
+            <h2 className="font-serif text-2xl font-medium mb-3">The Vault is Empty</h2>
             <p className="text-xs text-[#2C2C2C]/50 max-w-sm mx-auto leading-relaxed mb-8">
               Your personal treasure case is waiting to be adorned with timeless elegance and delicate craftsmanship.
             </p>
@@ -152,8 +152,8 @@ function Cart({ currentProduct, quantity, selectedFinish }) {
                             SKU: LUM-PR-{item.id}00
                           </p>
                         </div>
-                        <p className="font-serif text-lg font-medium text-[#2C2C2C]">
-                          ${(item.price * item.quantity).toFixed(2)}
+                        <p className=" text-lg font-medium text-[#2C2C2C]">
+                          ₹{(item.price * item.quantity).toFixed(2)}
                         </p>
                       </div>
                       <p className="text-sm text-[#2C2C2C]/50 font-medium mt-2 italic flex items-center gap-1.5">
@@ -223,13 +223,13 @@ function Cart({ currentProduct, quantity, selectedFinish }) {
                 {/* Real Pricing Displays */}
                 <div className="space-y-4 text-sm pb-6 border-b border-[#E8C7B7]/20">
                   <div className="flex justify-between items-center text-[#2C2C2C]/70">
-                    <span className="font-light">Subtotal</span>
-                    <span className="font-medium text-[#2C2C2C]">${subtotal.toFixed(2)}</span>
+                    <span className="font-medium">Subtotal</span>
+                    <span className="font-medium text-[#2C2C2C]">₹{subtotal.toFixed(2)}</span>
                   </div>
 
                   {appliedDiscount > 0 && (
                     <div className="flex justify-between items-center text-green-700">
-                      <span className="font-light inline-flex items-center gap-1">
+                      <span className="font-medium inline-flex items-center gap-1">
                         <Sparkles className="w-3.5 h-3.5" /> Privilege Discount (10%)
                       </span>
                       <span className="font-semibold">-${appliedDiscount.toFixed(2)}</span>
@@ -237,19 +237,19 @@ function Cart({ currentProduct, quantity, selectedFinish }) {
                   )}
 
                   <div className="flex justify-between items-center text-[#2C2C2C]/70">
-                    <span className="font-light">Premium Delivery</span>
+                    <span className="font-medium">Premium Delivery</span>
                     <span className="font-medium text-[#2C2C2C]">
                       {shipping === 0 ? (
                         <span className="text-[#D4AF37] italic uppercase tracking-wider text-xs font-semibold">Complimentary</span>
                       ) : (
-                        `$${shipping.toFixed(2)}`
+                        `₹${shipping.toFixed(2)}`
                       )}
                     </span>
                   </div>
 
                   <div className="flex justify-between items-center text-[#2C2C2C]/70">
-                    <span className="font-light">Estimated Duties & Taxes</span>
-                    <span className="font-medium text-[#2C2C2C]">${taxes.toFixed(2)}</span>
+                    <span className="font-medium">Estimated Duties & Taxes</span>
+                    <span className="font-medium text-[#2C2C2C]">₹{taxes.toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -258,7 +258,7 @@ function Cart({ currentProduct, quantity, selectedFinish }) {
                 {/* Allocated Grand Total */}
                 <div className="pt-6 pb-6 flex justify-between items-baseline">
                   <span className="font-serif text-base tracking-wide">Total Ammount</span>
-                  <span className="font-serif text-2xl font-bold text-[#B76E79]">${grandTotal.toFixed(2)}</span>
+                  <span className=" text-2xl font-bold text-[#B76E79]">₹{grandTotal.toFixed(2)}</span>
                 </div>
 
                 <button
@@ -295,7 +295,7 @@ function Cart({ currentProduct, quantity, selectedFinish }) {
         <div className="mt-20 relative z-10">
           <div className="flex items-center gap-2 mb-8">
             <Sparkles className="w-4 h-4 text-[#D4AF37]" />
-            <h3 className="font-serif text-xl sm:text-2xl font-light tracking-wide text-[#2C2C2C]">
+            <h3 className="font-serif text-xl sm:text-2xl font-medium tracking-wide text-[#2C2C2C]">
               You May Also <span className="italic text-[#B76E79]">Love</span>
             </h3>
           </div>
