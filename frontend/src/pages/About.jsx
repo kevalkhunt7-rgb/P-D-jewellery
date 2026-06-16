@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react';
 import { 
   Sparkles, Award, Shield, Heart, Gem, Gift, 
-   ArrowRight, CheckCircle2, ShoppingBag, Eye
+  ArrowRight, CheckCircle2, ShoppingBag, Eye
 } from 'lucide-react';
-import { FiInstagram } from "react-icons/fi";
-import brandlogo from "../assets/fulllogo.jpeg"
+import { FiInstagram } from "react-icons/fi";// Fallback/Alternative icon context if needed
+import brandlogo from "../assets/fulllogo.jpeg";
 
 function AboutPage() {
   
@@ -33,12 +33,13 @@ function AboutPage() {
   }, []);
 
   return (
-    <div className="min-h-screen w-full bg-[#FDF8F3] relative overflow-hidden font-sans text-[#2C2C2C] selection:bg-[#E8C7B7]/30 selection:text-[#2C2C2C]">
+    /* FIXED: Added max-w-full and overflow-x-hidden for layout security on mobile screens */
+    <div className="min-h-screen w-full max-w-full bg-[#FDF8F3] relative overflow-x-hidden font-sans text-[#2C2C2C] selection:bg-[#E8C7B7]/30 selection:text-[#2C2C2C]">
       
       {/* GLOBAL LUXURY AMBIENT BACKGROUNDS */}
-      <div className="absolute top-[10%] left-[-10%] w-[50%] h-[50%] rounded-full  pointer-events-none" />
-      <div className="absolute top-[40%] right-[-15%] w-[60%] h-[60%] rounded-full  pointer-events-none" />
-      <div className="absolute bottom-[5%] left-[-5%] w-[40%] h-[40%] rounded-full  pointer-events-none" />
+      <div className="absolute top-[10%] left-[-10%] w-[50%] h-[50%] rounded-full pointer-events-none" />
+      <div className="absolute top-[40%] right-[-15%] w-[60%] h-[60%] rounded-full pointer-events-none" />
+      <div className="absolute bottom-[5%] left-[-5%] w-[40%] h-[40%] rounded-full pointer-events-none" />
 
       {/* FLOATING GOLD DUST PARTICLES */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
@@ -72,11 +73,11 @@ function AboutPage() {
             <Sparkles className="w-5 h-5 text-[#D4AF37] animate-pulse" />
             <span className="text-xs sm:text-sm uppercase tracking-[0.35em] text-[#E8C7B7] font-semibold">The Pure Gold, Timeless Beauty</span>
           </div>
-          <h1 className="font-serif text-white text-4xl sm:text-6xl md:text-7xl font-light tracking-wide leading-tight mb-6">
+          <h1 className="font-serif text-white text-3xl sm:text-6xl md:text-7xl font-light tracking-wide leading-tight mb-6">
             Where Gold Becomes Art <br />
             <span className="italic text-[#FFF0EB] font-normal font-serif">Crafted for Life's Precious Moments</span>
           </h1>
-          <p className="text-white/80 font-light text-sm sm:text-lg tracking-wide max-w-2xl leading-relaxed animate-fade-in-delayed">
+          <p className="text-white/80 font-light text-xs sm:text-lg tracking-wide max-w-2xl leading-relaxed animate-fade-in-delayed">
             Experience masterfully crafted gold jewellery inspired by timeless beauty. Every design is a symbol of refinement, authenticity, and lasting value.
           </p>
           <div className="mt-10 animate-fade-in-delayed">
@@ -85,45 +86,45 @@ function AboutPage() {
             </a>
           </div>
         </div>
-                      
-       
       </section>
 
-
       {/* 2. BRAND STORY SECTION */}
-      <section id="story" className="py-24 px-4 container mx-auto max-w-[1300px] relative z-20">
-        <div className="grid lg:grid-cols-12 gap-12 lg:gap-20 items-center">
+      {/* FIXED: Adjusted container grid spacing and overflow boundaries for safe responsive margins */}
+      <section id="story" className="py-20 px-4 max-w-[1300px] mx-auto relative z-20 overflow-hidden">
+        <div className="grid grid-cols-12 gap-8 lg:gap-20 items-center">
           
-          <div className="col-span-12 lg:col-span-6 relative reveal-on-scroll reveal-fade-left">
-            <div className="absolute -top-6 -left-6 w-32 h-32 border-t-2 border-l-2 border-[#E8C7B7]/40 rounded-tl-[3rem]" />
-            <div className="rounded-[3rem] overflow-hidden shadow-[0_30px_60px_rgba(44,44,44,0.06)] bg-[#2C2C2C] aspect-[3/4]">
+          {/* Brand Logo & Presentation Container */}
+          <div className="col-span-12 lg:col-span-6 relative reveal-on-scroll reveal-fade-left p-2 sm:p-6">
+            <div className="absolute top-0 left-0 w-24 h-24 sm:w-32 sm:h-32 border-t-2 border-l-2 border-[#E8C7B7]/40 rounded-tl-[2rem] sm:rounded-tl-[3rem]" />
+            <div className="rounded-[2rem] sm:rounded-[3rem] overflow-hidden shadow-[0_30px_60px_rgba(44,44,44,0.06)] bg-[#2C2C2C] aspect-[3/4]">
               <img 
                 src={brandlogo} 
                 alt="Fine Jewelry Artisanal Styling" 
                 className="w-full h-full object-cover opacity-90 transition-transform duration-[6000ms] hover:scale-105"
               />
             </div>
-            <div className="absolute -bottom-6 -right-6 w-32 h-32 border-b-2 border-r-2 border-[#D4AF37]/30 rounded-br-[3rem]" />
+            <div className="absolute bottom-0 right-0 w-24 h-24 sm:w-32 sm:h-32 border-b-2 border-r-2 border-[#D4AF37]/30 rounded-br-[2rem] sm:rounded-br-[3rem]" />
           </div>
 
-          <div className="col-span-12 lg:col-span-6 space-y-8 reveal-on-scroll reveal-fade-right">
+          {/* Typography Content Wrapper */}
+          <div className="col-span-12 lg:col-span-6 space-y-6 lg:space-y-8 reveal-on-scroll reveal-fade-right">
             <div className="space-y-3">
               <span className="text-xs uppercase tracking-[0.25em] text-[#B76E79] font-bold block">Born from Passion</span>
-              <h2 className="font-serif text-3xl sm:text-5xl text-[#2C2C2C] font-light tracking-wide leading-tight">
+              <h2 className="font-serif text-2xl sm:text-5xl text-[#2C2C2C] font-light tracking-wide leading-tight">
                 An Evolution of <span className="italic font-normal text-[#B76E79]">Aesthetic Perfection</span>
               </h2>
             </div>
             
-            <div className="bg-white/60 backdrop-blur-xl p-8 rounded-3xl border space-y-6">
-              <p className="text-sm sm:text-base text-[#2C2C2C]/80 leading-relaxed font-light">
+            <div className="bg-white/60 backdrop-blur-xl p-6 sm:p-8 rounded-3xl border border-white/80 space-y-4 sm:space-y-6 shadow-sm">
+              <p className="text-xs sm:text-base text-[#2C2C2C]/80 leading-relaxed font-light">
                 Founded with a visionary purpose, our atelier was built to dismantle the barrier between high couture design and approachability. We believe that a woman’s radiance shouldn’t depend on a price tag, but on the soul of the craftsmanship she wears.
               </p>
-              <p className="text-sm sm:text-base text-[#2C2C2C]/80 leading-relaxed font-light">
+              <p className="text-xs sm:text-base text-[#2C2C2C]/80 leading-relaxed font-light">
                 Every stone is hand-selected, every curve hand-carved, utilizing premium composite materials that mimic the light dispersion patterns of flawless diamonds and natural precious gemstones.
               </p>
             </div>
 
-            <blockquote className="border-l-4 border-[#E8C7B7] pl-4 italic text-base text-[#2C2C2C]/70 font-serif">
+            <blockquote className="border-l-4 border-[#E8C7B7] pl-4 italic text-sm sm:text-base text-[#2C2C2C]/70 font-serif">
               "True luxury is not defined by cost, but by the emotion elicited when a piece touches your skin."
             </blockquote>
           </div>
@@ -131,11 +132,38 @@ function AboutPage() {
         </div>
       </section>
 
-
-    
-
-      
-
+      {/* Global Embedded Keyframe Interactions styling layer */}
+      <style>{`
+        .luxury-dust-float {
+          animation: floatDust infinite linear;
+        }
+        @keyframes floatDust {
+          0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+          50% { opacity: 0.3; }
+          100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+        }
+        .animate-luxury-zoom {
+          animation: zoomSlow 20s ease-out infinite alternate;
+        }
+        @keyframes zoomSlow {
+          0% { transform: scale(1.02); }
+          100% { transform: scale(1.1); }
+        }
+        .reveal-on-scroll {
+          opacity: 0;
+          transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .reveal-fade-left {
+          transform: translateX(-30px);
+        }
+        .reveal-fade-right {
+          transform: translateX(30px);
+        }
+        .reveal-visible {
+          opacity: 1 !important;
+          transform: translateX(0) translateY(0) !important;
+        }
+      `}</style>
     </div>
   );
 }

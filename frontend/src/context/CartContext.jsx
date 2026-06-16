@@ -2,12 +2,14 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../utils/api';
 import { useAuth } from './AuthContext';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom'; // 1. Import useNavigate
 
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
   const { user } = useAuth();
   const [cart, setCart] = useState([]);
+  const navigate = useNavigate(); // 2. Initialize the navigation hook
 
   // Fetch cart from backend if user is logged in
   useEffect(() => {
@@ -56,6 +58,15 @@ export function CartProvider({ children }) {
     quantity = 1,
     selectedFinish = null
   ) => {
+    // 3. AUTH GUARD: Check if user is logged out
+    if (!user) {
+      toast.error("Please sign in to add items to your cart");
+      
+      // Redirect to login page and preserve the current path so they can return seamlessly
+      navigate('/login', { state: { from: window.location.pathname } });
+      return; // Break execution to avoid making an unauthenticated API call
+    }
+
     try {
       const payload = {
         productId: product._id || product.id,
@@ -110,7 +121,7 @@ export function CartProvider({ children }) {
             ];
           }
 
-          // sync localStorage for guest users
+          // sync localStorage for guest users (Fallback safety)
           if (!user) {
             localStorage.setItem(
               'atelier_cart',
@@ -168,7 +179,6 @@ export function CartProvider({ children }) {
     }
   };
 
-  // FIXED: Now communicates with backend to empty database records
   const clearCart = async () => {
     if (user) {
       try {
@@ -178,7 +188,6 @@ export function CartProvider({ children }) {
         }
       } catch (error) {
         console.error('Failed to clear backend cart:', error);
-        // Fallback: clear UI state even if API fails so user sees an empty cart
         setCart([]);
       }
     } else {

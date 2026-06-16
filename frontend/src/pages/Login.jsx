@@ -98,7 +98,8 @@ function Login() {
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   return (
-    <div className="min-h-screen w-full bg-[#FDF8F3] relative overflow-hidden flex items-center justify-center font-sans selection:bg-[#E8C7B7]/30 selection:text-[#2C2C2C]">
+    /* FIXED: Added strict 'overflow-x-hidden' and 'max-w-full' to prevent any elements or particles from stretching the page layout horizontally */
+    <div className="min-h-screen w-full max-w-full bg-[#FDF8F3] relative overflow-x-hidden flex items-center justify-center font-sans selection:bg-[#E8C7B7]/30 selection:text-[#2C2C2C]">
 
       {/* Background Soft Blurred Organic Shapes & Reflections */}
       <div className="absolute top-[-5%] left-[-5%] w-[35%] h-[35%] rounded-full bg-gradient-to-tr from-[#FFF0EB] to-transparent blur-[120px] opacity-70 pointer-events-none" />
@@ -123,7 +124,8 @@ function Login() {
       </div>
 
       {/* Main Container: Editorial Split-Screen Layout */}
-      <div className="w-full min-h-screen md:min-h-[85vh] max-w-[1300px] bg-white/40 md:backdrop-blur-xl md:rounded-[32px] md:shadow-[0_32px_80px_rgba(44,44,44,0.06)] md:border md:border-white/60 overflow-hidden grid lg:grid-cols-12 relative z-10 transition-all duration-700 m-0 md:m-6">
+      {/* FIXED: Modified grid rules and max widths to fit small screens seamlessly */}
+      <div className="w-full min-h-screen md:min-h-[85vh] max-w-[1300px] bg-white/40 md:backdrop-blur-xl md:rounded-[32px] md:shadow-[0_32px_80px_rgba(44,44,44,0.06)] md:border md:border-white/60 overflow-hidden grid grid-cols-12 relative z-10 transition-all duration-700 m-0 md:m-6">
 
         {/* LEFT SIDE: Cinematic Editorial Image & Branding */}
         <div className="hidden lg:block lg:col-span-5 relative overflow-hidden group bg-[#2C2C2C]">
@@ -152,7 +154,7 @@ function Login() {
         </div>
 
         {/* RIGHT SIDE: Elegant Interactive Glassmorphism Form Area */}
-        <div className="col-span-12 lg:col-span-7 flex flex-col justify-center items-center px-6 sm:px-12 lg:px-20 py-12 relative">
+        <div className="col-span-12 lg:col-span-7 flex flex-col justify-center items-center px-4 sm:px-12 lg:px-20 py-12 relative w-full max-w-full">
 
           {/* Mobile Brand Header */}
           <div className="lg:hidden text-center mb-8">
@@ -163,7 +165,8 @@ function Login() {
           </div>
 
           {/* Form Luxury Card */}
-          <div className="w-full max-w-[460px] bg-white/70 backdrop-blur-md rounded-3xl p-6 sm:p-10 border border-white/80 shadow-[0_20px_50px_rgba(232,199,183,0.15)] relative">
+          {/* FIXED: Changed standard padding slightly on mobile ('p-5 sm:p-10') so it doesn't push bounds out */}
+          <div className="w-full max-w-[460px] bg-white/70 backdrop-blur-md rounded-3xl p-5 sm:p-10 border border-white/80 shadow-[0_20px_50px_rgba(232,199,183,0.15)] relative box-border">
             <div className="absolute inset-0 rounded-3xl border border-transparent pointer-events-none luxury-card-glow" />
 
             {/* View Switcher Tabs (Login vs Register) */}
@@ -467,14 +470,14 @@ function Login() {
                   <div className="flex-grow border-t border-[#E8C7B7]/20" />
                 </div>
 
-                <div className="flex justify-center w-full min-h-[44px]">
+                {/* FIXED: Removed raw width="380px" parameter from GoogleLogin block which forced text overflow off-screen on mobile viewports. Added a standard responsive max-width layout structure to its container instead */}
+                <div className="flex justify-center w-full min-h-[44px] max-w-full overflow-hidden">
                   {clientId ? (
                     <GoogleOAuthProvider clientId={clientId}>
                       <GoogleLogin
                         theme="outline"
                         size="large"
                         shape="pill"
-                        width="380px"
                         text="signin_with"
                         onSuccess={async (credentialResponse) => {
                           const success = await loginWithGoogle(credentialResponse.credential);

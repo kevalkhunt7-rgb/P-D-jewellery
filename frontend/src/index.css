@@ -11,6 +11,20 @@
   }
 }
 
+
+/* Prevents any element from stretching the page horizontally */
+html, body, #root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: inherit;
+}
 /* Fix for potential horizontal overflow issues on mobile */
 * {
   box-sizing: border-box;
