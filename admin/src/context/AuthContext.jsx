@@ -52,7 +52,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await axios.post('http://localhost:5001/api/auth/login', {
+      const response = await axios.post('https://p-d-jewellery.onrender.com/api/auth/login', {
         email,
         password
       });
