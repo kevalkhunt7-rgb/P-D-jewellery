@@ -45,16 +45,6 @@ const productSchema = new mongoose.Schema(
       },
     ],
 
-    price: {
-      type: Number,
-      required: true,
-    },
-
-    originalPrice: {
-      type: Number,
-      default: 0,
-    },
-
     discountPercentage: {
       type: Number,
       default: 0,
@@ -77,15 +67,14 @@ const productSchema = new mongoose.Schema(
     // ==========================================
     metalType: {
       type: String,
-      // Added alternative production base metals so your architecture is sound
       enum: ["Gold", "Silver", "Platinum", "Brass", "Stainless-Steel", "Titanium"],
       default: "Gold",
     },
 
     purity: {
       type: String,
-      // Cleaned values to match frontend selections (Added 14KT)
-      enum: ["14KT", "18KT", "22KT", "24KT", "925 Sterling", "950 Platinum", "999 Platinum"],
+      required: true,
+      enum: ["22KT", "18KT", "14KT", "9KT", "24KT", "925 Sterling", "950 Platinum", "999 Platinum", "925", "999"],
       default: "22KT",
     },
 
@@ -107,6 +96,7 @@ const productSchema = new mongoose.Schema(
 
     netWeight: {
       type: Number,
+      required: true,
       default: 0, // in grams
     },
 
@@ -149,32 +139,34 @@ const productSchema = new mongoose.Schema(
       public_id: String,
     },
 
-    makingCharges: {
+    makingChargeType: {
+      type: String,
+      required: true,
+      enum: ["per_gram", "percentage"],
+      default: "per_gram",
+    },
+
+    makingChargeValue: {
       type: Number,
+      required: true,
       default: 0,
+    },
+
+    cgstRate: {
+      type: Number,
+      default: 1.5, // CGST percentage
+    },
+
+    sgstRate: {
+      type: Number,
+      default: 1.5, // SGST percentage
     },
 
     gst: {
       type: Number,
-      default: 3, // GST percentage
+      default: 3, // GST percentage (for backward compatibility)
     },
 
-    priceBreakup: {
-      metalPrice: Number,
-      makingCharges: Number,
-      gst: Number,
-      total: Number,
-    },
-
-    warranty: {
-      type: String,
-      default: "Lifetime",
-    },
-
-    buybackEligibility: {
-      type: Boolean,
-      default: true,
-    },
 
     // Removed the deprecated legacy 'material' field to avoid duplicate field conflicts!
     color: {
@@ -233,6 +225,12 @@ const productSchema = new mongoose.Schema(
     totalSales: {
       type: Number,
       default: 0,
+    },
+
+    gender: {
+      type: String,
+      enum: ["male", "female", "unisex"],
+      default: "unisex",
     },
 
     tags: [

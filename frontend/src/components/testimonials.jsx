@@ -1,232 +1,109 @@
 import React from 'react';
-import { Star, Quote } from 'lucide-react';
+import { Star } from 'lucide-react';
 
-const testimonials = [
-  {
-    name: 'Sophia Martinez',
-    role: 'Bride, New York',
-    image: 'https://images.unsplash.com/photo-1581841064838-a470c740e8ee?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
-    text: 'The bridal collection exceeded all my expectations! The craftsmanship is stunning, and I received so many compliments on my wedding day. Absolutely worth every penny.',
-    rating: 5,
-  },
-  {
-    name: 'Emma Thompson',
-    role: 'Fashion Blogger',
-    image: 'https://images.unsplash.com/photo-1675881149187-8faaf934e14a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
-    text: 'LUMIÈRE has become my go-to for elegant jewelry. The quality is exceptional for imitation pieces, and the designs are incredibly sophisticated. Highly recommend!',
-    rating: 5,
-  },
-  {
-    name: 'Olivia Chen',
-    role: 'Corporate Executive',
-    image: 'https://images.unsplash.com/photo-1581841064838-a470c740e8ee?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
-    text: 'Perfect for everyday luxury! The pieces are elegant enough for boardroom meetings yet affordable. Customer service is outstanding too.',
-    rating: 5,
-  },
+const INDIAN_REVIEWS = [
+  { id: 1, name: "Aanya Sharma", rating: 5, tag: "Verified Buyer", location: "Mumbai", comment: "The finish on the gold is absolutely breathtaking. Perfect modern geometric lines and seamless polish!", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80" },
+  { id: 2, name: "Rohan Mehta", rating: 5, tag: "Groom", location: "Delhi", comment: "Bought diamond stud earrings for my wife. The BIS hallmark number is authentic. Incredibly great customer service.", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80" },
+  { id: 3, name: "Priya Patel", rating: 3, tag: "Bride", location: "Ahmedabad", comment: "Exquisite craftsmanship! The diamond clarity is exactly as stated in the certificate. Truly worth every penny.", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80" },
+  { id: 4, name: "Ananya Iyer", rating: 4, tag: "Collector", location: "Chennai", comment: "Impressed by the transparent cost breakdown and low making charges. Exceeded all my premium expectations.", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80" },
+  { id: 5, name: "Kabir Singh", rating: 5, tag: "Verified Buyer", location: "Chandigarh", comment: "Stunning design collection. The net weight matches perfectly with the certificate detail layout.", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80" },
+  { id: 6, name: "Diya Joshi", rating: 4, tag: "Bride", location: "Pune", comment: "The packaging was luxury tier and shipping was fully insured. Received so many compliments on my special day!", avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80" }
 ];
 
-export function Testimonials() {
-  const fallbackAvatar = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80";
+export function AutoReviewSlider() {
+  const continuousReviews = [...INDIAN_REVIEWS, ...INDIAN_REVIEWS];
 
   return (
-    <section className="py-20 bg-gradient-to-b from-white to-[#FAF9F6] overflow-hidden">
-      <div className="container mx-auto px-4 lg:px-8">
-        
-        {/* Section Header */}
-        <div className="text-center mb-16 max-w-3xl mx-auto">
-          <span
-            className="inline-block px-4 py-2 rounded-full bg-[#FFE5E8]/50 mb-4"
-            style={{
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              color: '#B76E79',
-              letterSpacing: '0.1em',
-            }}
-          >
-            TESTIMONIALS
-          </span>
-          <h2
-            className="font-serif mb-4"
-            style={{
-              fontSize: 'clamp(2rem, 4vw, 3.5rem)',
-              fontWeight: 700,
-              color: '#2C2C2C',
-            }}
-          >
-            What Our Customers Say
-          </h2>
-          <p
-            className="max-w-2xl mx-auto"
-            style={{
-              fontSize: '1.125rem',
-              lineHeight: 1.8,
-              color: '#2C2C2C',
-              opacity: 0.7,
-            }}
-          >
-            Join thousands of happy customers who trust LUMIÈRE for their jewelry needs
-          </p>
-        </div>
+    <div className="w-full bg-stone-50/40 border-y border-stone-200/30 py-12 overflow-hidden relative select-none">
 
-        {/* Testimonials Grid */}
-        <div className="grid md:grid-cols-3 gap-8">
-          {testimonials.map((testimonial, index) => (
+      {/* Infinite Marquee Slider Engine */}
+      <style>{`
+                @keyframes inlineMarquee {
+                    0% { transform: translateX(0); }
+                    100% { transform: translateX(-50%); }
+                }
+                .custom-slider-track {
+                    display: flex;
+                    width: max-content;
+                    animation: inlineMarquee 35s linear infinite;
+                }
+                .custom-slider-track:hover {
+                    animation-play-state: paused;
+                }
+            `}</style>
+
+      {/* Title Heading */}
+      <div className="container mx-auto px-6 mb-10 text-center">
+        <h4 className="text-[11px] font-bold tracking-[0.25em] text-[#B76E79] uppercase mb-1">
+          Luxury
+        </h4>
+        <p className="font-serif text-xl text-stone-800">Words From Our Customers</p>
+      </div>
+
+      {/* Slider Container Track */}
+      <div className="w-full overflow-hidden pt-4 pb-2">
+        <div className="custom-slider-track gap-8 pr-8">
+          {continuousReviews.map((review, idx) => (
             <div
-              key={index}
-              className="luxury-testimonial-card group relative bg-white rounded-3xl p-8 shadow-lg transition-all duration-500"
-              style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '1.5rem',
-                position: 'relative'
-              }}
+              key={`${review.id}-${idx}`}
+              className="w-[340px] bg-white rounded-[2rem] border border-stone-100 p-7 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.04)] flex flex-col justify-between flex-shrink-0 relative mt-4 mb-2"
             >
-              {/* Quote Icon */}
-              <div 
-                className="absolute top-0 left-0 -translate-x-2 -translate-y-2 w-12 h-12 bg-gradient-to-br from-[#B76E79] to-[#D4AF37] rounded-full flex items-center justify-center shadow-xl z-10"
-                style={{
-                  background: 'linear-gradient(135deg, #B76E79 0%, #D4AF37 100%)',
-                  boxShadow: '0 10px 25px -5px rgba(183, 110, 121, 0.4)'
-                }}
-              >
-                <Quote className="w-5 h-5 text-white" />
+              {/* FLOATING CORNER QUOTE BADGE */}
+              <div className="absolute -top-4 -left-3 w-10 h-10 rounded-full bg-gradient-to-br from-[#c59b63] via-[#b68a4c] to-[#9e7439] flex items-center justify-center shadow-[0_4px_12px_rgba(183,110,121,0.25)] border border-white/20">
+                <span className="text-white font-serif font-bold text-xl leading-none -mt-1 select-none">
+                  “
+                </span>
               </div>
 
-              {/* Rating */}
-              <div className="flex gap-1 mb-4">
-                {[...Array(testimonial.rating)].map((_, i) => (
-                  <Star key={i} className="w-5 h-5 text-[#D4AF37] fill-[#D4AF37]" />
-                ))}
-              </div>
-
-              {/* Testimonial Text */}
-              <p
-                className="mb-6"
-                style={{
-                  fontSize: '1rem',
-                  lineHeight: 1.8,
-                  color: '#2C2C2C',
-                  opacity: 0.8,
-                  margin: '0 0 24px 0'
-                }}
-              >
-                "{testimonial.text}"
-              </p>
-
-              {/* Customer Info Box */}
-              <div className="flex items-center gap-4 pt-4 border-t border-gray-100" style={{ borderTop: '1px solid #f3f4f6' }}>
-                <div 
-                  className="rounded-full overflow-hidden ring-2 ring-[#B76E79]/20"
-                  style={{
-                    width: '56px',
-                    height: '56px',
-                    borderRadius: '50%',
-                    overflow: 'hidden',
-                    flexShrink: 0
-                  }}
-                >
-                  <img
-                    src={testimonial.image}
-                    alt={testimonial.name}
-                    className="w-full h-full object-cover"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = fallbackAvatar;
-                    }}
-                  />
+              {/* UPPER HALF: STAR ROW & TESTIMONIAL COMMENT */}
+              <div className="space-y-4">
+                {/* Dynamic Star Layout Row */}
+                <div className="flex items-center gap-0.5 pt-1">
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`w-4 h-4 ${i < review.rating
+                          ? "text-[#e2b443] fill-[#e2b443]" // Filled gold star if index is less than rating
+                          : "text-stone-200 fill-stone-100"  // Empty grey star for lower ratings (like 4 stars)
+                        }`}
+                    />
+                  ))}
                 </div>
-                <div>
-                  <h4
-                    className="font-medium"
-                    style={{
-                      margin: 0,
-                      fontSize: '1rem',
-                      color: '#2C2C2C',
-                      fontWeight: 600
-                    }}
-                  >
-                    {testimonial.name}
-                  </h4>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: '0.875rem',
-                      color: '#B76E79',
-                    }}
-                  >
-                    {testimonial.role}
-                  </p>
+
+                {/* Review Commentary Body */}
+                <p className="text-[13px] text-stone-600 leading-relaxed font-normal min-h-[78px] line-clamp-4">
+                  "{review.comment}"
+                </p>
+              </div>
+
+              {/* LOWER HALF: PROFILE ASSIGNMENT SECTION */}
+              <div className="border-t border-stone-100 pt-4 mt-5 flex items-center gap-3.5">
+                {/* Round Avatar Framed Image Component */}
+                <img
+                  src={review.avatar}
+                  alt={review.name}
+                  className="w-11 h-11 rounded-full object-cover border border-stone-100 bg-stone-50"
+                  loading="lazy"
+                />
+
+                {/* Identity Block */}
+                <div className="flex flex-col">
+                  <h5 className="text-[13px] font-bold text-stone-800 tracking-wide">
+                    {review.name}
+                  </h5>
+                  <span className="text-[11px] text-[#B76E79] font-medium mt-0.5">
+                    {review.tag || "Verified Buyer"}, {review.location}
+                  </span>
                 </div>
               </div>
-
-              {/* Decorative gradient border outline on hover via absolute placement */}
-              <div 
-                className="gradient-border-overlay absolute inset-0 rounded-3xl pointer-events-none"
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  borderRadius: '1.5rem',
-                  border: '2px solid transparent',
-                  opacity: 0,
-                  transition: 'opacity 0.5s ease',
-                  zIndex: 1
-                }}
-              />
             </div>
           ))}
         </div>
-
-        {/* Trust Badges Footer Area */}
-        <div 
-          className="flex flex-wrap justify-center items-center gap-8 mt-16 pt-12"
-          style={{ borderTop: '1px solid #e5e7eb' }}
-        >
-          <div className="text-center min-w-[120px]">
-            <div className="font-serif text-[#B76E79]" style={{ fontSize: '2rem', fontWeight: 700 }}>
-              10,000+
-            </div>
-            <div style={{ fontSize: '0.875rem', color: '#2C2C2C', opacity: 0.7 }}>Happy Customers</div>
-          </div>
-          
-          <div className="w-px h-12 bg-gray-200 hidden sm:block" style={{ backgroundColor: '#e5e7eb', width: '1px', height: '48px' }} />
-          
-          <div className="text-center min-w-[120px]">
-            <div className="font-serif text-[#B76E79]" style={{ fontSize: '2rem', fontWeight: 700 }}>
-              4.9/5
-            </div>
-            <div style={{ fontSize: '0.875rem', color: '#2C2C2C', opacity: 0.7 }}>Average Rating</div>
-          </div>
-          
-          <div className="w-px h-12 bg-gray-200 hidden sm:block" style={{ backgroundColor: '#e5e7eb', width: '1px', height: '48px' }} />
-          
-          <div className="text-center min-w-[120px]">
-            <div className="font-serif text-[#B76E79]" style={{ fontSize: '2rem', fontWeight: 700 }}>
-              98%
-            </div>
-            <div style={{ fontSize: '0.875rem', color: '#2C2C2C', opacity: 0.7 }}>Satisfaction Rate</div>
-          </div>
-        </div>
-
       </div>
 
-      {/* Embedded High-Performance CSS Transitions */}
-      <style>{`
-        .luxury-testimonial-card {
-          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease !important;
-        }
-        .luxury-testimonial-card:hover {
-          transform: translateY(-10px);
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1) !important;
-        }
-        .luxury-testimonial-card:hover .gradient-border-overlay {
-          opacity: 1 !important;
-          border-image: linear-gradient(135deg, #B76E79 0%, #D4AF37 100%) 1;
-          border-radius: 1.5rem;
-        }
-      `}</style>
-    </section>
+      {/* Radial Blur Soft-Shadow Layout Shaders */}
+      <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-[#faf9f6] via-[#faf9f6]/30 to-transparent pointer-events-none z-10" />
+      <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-[#faf9f6] via-[#faf9f6]/30 to-transparent pointer-events-none z-10" />
+    </div>
   );
 }

@@ -5,14 +5,8 @@ import cloudinary from "../config/cloudinary.js";
 // ================= CREATE CATEGORY =================
 export const createCategory = async (req, res) => {
   try {
-    const {
-      name,
-      description,
-      isFeatured,
-      status,
-    } = req.body;
+    const { name, description, isFeatured, status } = req.body;
 
-    // Required field check
     if (!name) {
       return res.status(400).json({
         success: false,
@@ -20,22 +14,17 @@ export const createCategory = async (req, res) => {
       });
     }
 
-    // Handle Image Upload to Cloudinary
+    // Handle Image Upload to Cloudinary cleanly
     let imageUrl = "";
+    let imagePublicId = "";
+    
     if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: "imit/categories",
-      });
-      imageUrl = result.secure_url;
+      // If your storage configuration handles upload automatically:
+      imageUrl = req.file.path;
+      imagePublicId = req.file.filename;
     }
 
-    // Generate slug
-    const slug = slugify(name, {
-      lower: true,
-      strict: true,
-    });
-
-    // Check existing category
+    const slug = slugify(name, { lower: true, strict: true });
     const existingCategory = await Category.findOne({ slug });
 
     if (existingCategory) {
@@ -45,12 +34,12 @@ export const createCategory = async (req, res) => {
       });
     }
 
-    // Create category
     const category = await Category.create({
       name,
       slug,
       description,
       image: imageUrl,
+      imagePublicId: imagePublicId, // Tracking public_id explicitly
       isFeatured,
       status,
       createdBy: req.user._id,
@@ -63,15 +52,12 @@ export const createCategory = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
-
-
 
 // ================= GET ALL CATEGORIES =================
 export const getAllCategories = async (req, res) => {
@@ -86,46 +72,25 @@ export const getAllCategories = async (req, res) => {
       categories,
     });
   } catch (error) {
-    console.log(error);
-
-    res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
+    res.status(500).json({ success: false, message: error.message || "Server Error" });
   }
 };
-
-
 
 // ================= GET SINGLE CATEGORY =================
 export const getSingleCategory = async (req, res) => {
   try {
-    const category = await Category.findOne({
-      slug: req.params.slug,
-    }).populate("createdBy", "name email");
+    const category = await Category.findOne({ slug: req.params.slug })
+      .populate("createdBy", "name email");
 
     if (!category) {
-      return res.status(404).json({
-        success: false,
-        message: "Category not found",
-      });
+      return res.status(404).json({ success: false, message: "Category not found" });
     }
 
-    res.status(200).json({
-      success: true,
-      category,
-    });
+    res.status(200).json({ success: true, category });
   } catch (error) {
-    console.log(error);
-
-    res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
+    res.status(500).json({ success: false, message: error.message || "Server Error" });
   }
 };
-
-
 
 // ================= UPDATE CATEGORY =================
 export const updateCategory = async (req, res) => {
@@ -139,21 +104,33 @@ export const updateCategory = async (req, res) => {
       });
     }
 
-    // Update slug if name changes
-    if (req.body.name) {
-      req.body.slug = slugify(req.body.name, {
-        lower: true,
-        strict: true,
-      });
+    let updateData = { ...req.body };
+
+    if (updateData.name) {
+      updateData.slug = slugify(updateData.name, { lower: true, strict: true });
+    }
+
+    // Handle category image update and Cloudinary cleanup
+    if (req.file) {
+      // Destroy old asset from Cloudinary if it exists
+      if (category.image && category.image.includes("cloudinary.com")) {
+        const match = category.image.match(/\/v\d+\/(.+)\.[a-z0-9]+$/i);
+        const publicId = match ? match[1] : null;
+        if (publicId) {
+          await cloudinary.uploader.destroy(publicId).catch((err) =>
+            console.log("Cloudinary cleanup error during category update:", err)
+          );
+        }
+      }
+
+      // Assign newly uploaded file parameters
+      updateData.image = req.file.path;
     }
 
     const updatedCategory = await Category.findByIdAndUpdate(
       req.params.id,
-      req.body,
-      {
-        returnDocument: "after",
-        runValidators: true,
-      }
+      updateData,
+      { returnDocument: "after", runValidators: true }
     );
 
     res.status(200).json({
@@ -163,15 +140,12 @@ export const updateCategory = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
-
-
 
 // ================= DELETE CATEGORY =================
 export const deleteCategory = async (req, res) => {
@@ -185,6 +159,17 @@ export const deleteCategory = async (req, res) => {
       });
     }
 
+    // Wipe associated image off Cloudinary storage upon structural delete
+    if (category.image && category.image.includes("cloudinary.com")) {
+      const match = category.image.match(/\/v\d+\/(.+)\.[a-z0-9]+$/i);
+      const publicId = match ? match[1] : null;
+      if (publicId) {
+        await cloudinary.uploader.destroy(publicId).catch((err) =>
+          console.log("Cloudinary cleanup error during category deletion:", err)
+        );
+      }
+    }
+
     await category.deleteOne();
 
     res.status(200).json({
@@ -193,10 +178,9 @@ export const deleteCategory = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };

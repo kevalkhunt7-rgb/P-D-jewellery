@@ -129,9 +129,9 @@ export function BridalShowcase() {
                         {/* Features */}
                         <div className="space-y-4 pt-4">
                             {[
-                                { title: 'Customizable Designs', desc: 'Personalize your jewelry to match your vision' },
+                                { title: 'Luxury Designs', desc: 'Personalize your jewelry to match your vision' },
                                 { title: 'Premium Quality', desc: 'Crafted with the finest materials' },
-                                { title: 'Lifetime Warranty', desc: 'Protected for all your precious moments' },
+                                
                             ].map((feature, index) => (
                                 <motion.div
                                     key={index}
@@ -183,18 +183,7 @@ export function BridalShowcase() {
                             >
                                 Explore Bridal Collection
                             </motion.button>
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                className="px-8 py-4 rounded-full font-medium tracking-wide bg-white hover:bg-[#FAF9F6] transition-all duration-300"
-                                style={{
-                                    color: '#B76E79',
-                                    fontSize: '1rem',
-                                    border: '2px solid #B76E79',
-                                }}
-                            >
-                                Book Consultation
-                            </motion.button>
+                           
                         </div>
                     </motion.div>
                 </div>

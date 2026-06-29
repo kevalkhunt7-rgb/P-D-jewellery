@@ -1,12 +1,14 @@
 import React from 'react';
-import { 
-  ShieldCheck, 
-  Award, 
-  RefreshCw, 
-  Heart, 
-  Gem, 
-  Truck, 
-  CheckCircle2 
+import {
+  ShieldCheck,
+  Award,
+  RefreshCw,
+  Heart,
+  Gem,
+  Truck,
+  BadgeCheck,
+  Gift,
+  CheckCircle2
 } from 'lucide-react';
 
 function WhyChooseUs() {
@@ -22,14 +24,14 @@ function WhyChooseUs() {
       description: "Every diamond comes with an internationally recognized certificate of authenticity."
     },
     {
-      icon: <RefreshCw className="w-10 h-10 text-[#B76E79]" />,
-      title: "Lifetime Exchange",
-      description: "Exchange your jewellery for a lifetime with our flexible exchange policy."
+      icon: <BadgeCheck className="w-10 h-10 text-[#B76E79]" />,
+      title: "Quality Assured",
+      description: "Every piece undergoes rigorous quality checks before reaching you."
     },
     {
-      icon: <Heart className="w-10 h-10 text-[#B76E79]" />,
-      title: "Buyback Guarantee",
-      description: "Get the best value for your jewellery with our transparent buyback program."
+      icon: <Gift className="w-10 h-10 text-[#B76E79]" />,
+      title: "Perfect for Every Occasion",
+      description: "Celebrate life's special moments with timeless gold jewellery."
     },
     {
       icon: <Gem className="w-10 h-10 text-[#B76E79]" />,
@@ -60,8 +62,8 @@ function WhyChooseUs() {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature, index) => (
-            <div 
-              key={index} 
+            <div
+              key={index}
               className="bg-white/60 backdrop-blur-md p-8 rounded-3xl border border-stone-200/60 shadow-sm hover:shadow-md transition-shadow"
             >
               <div className="mb-6">

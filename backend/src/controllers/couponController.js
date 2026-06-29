@@ -1,4 +1,9 @@
 import Coupon from "../model/couponModel.js";
+import Cart from "../model/cartModel.js";
+import Product from "../model/productModel.js";
+import { calculatePriceBreakdown } from "../utils/pricingCalculator.js";
+import { getStoreSettingsCached } from "../utils/settingsCache.js";
+import { getCurrencyContext } from "../utils/currencyHelper.js";
 
 
 
@@ -76,7 +81,7 @@ export const createCoupon = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
@@ -88,21 +93,42 @@ export const createCoupon = async (req, res) => {
 // ================= APPLY COUPON =================
 export const applyCoupon = async (req, res) => {
   try {
-
-    const {
-      code,
-      cartTotal,
-    } = req.body;
-
+    const { code } = req.body;
 
     // Validation
-    if (!code || !cartTotal) {
+    if (!code) {
       return res.status(400).json({
         success: false,
-        message: "Coupon code and cart total are required",
+        message: "Coupon code is required",
       });
     }
 
+    // Resolve user cart to calculate real cartTotal in INR
+    const cart = await Cart.findOne({ user: req.user._id }).populate("cartItems.product");
+    if (!cart || !cart.cartItems || cart.cartItems.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Your cart is empty",
+      });
+    }
+
+    const storeSettings = await getStoreSettingsCached();
+    const goldRate24kt = storeSettings.goldRate24kt;
+
+    let recalculatedCartTotalINR = 0;
+    for (const item of cart.cartItems) {
+      if (item.product) {
+        const breakdown = calculatePriceBreakdown({
+          goldRate24kt,
+          purity: item.product.purity || "22KT",
+          netWeight: item.product.netWeight || 0,
+          makingChargeType: item.product.makingChargeType || "per_gram",
+          makingChargeValue: item.product.makingChargeValue || 0,
+          discountPercentage: item.product.discountPercentage || 0,
+        });
+        recalculatedCartTotalINR += breakdown.salePrice * item.quantity;
+      }
+    }
 
     // Find Coupon
     const coupon = await Coupon.findOne({
@@ -110,14 +136,12 @@ export const applyCoupon = async (req, res) => {
       isActive: true,
     });
 
-
     if (!coupon) {
       return res.status(404).json({
         success: false,
         message: "Invalid coupon code",
       });
     }
-
 
     // Expiry Check
     if (new Date() > new Date(coupon.expiryDate)) {
@@ -127,87 +151,78 @@ export const applyCoupon = async (req, res) => {
       });
     }
 
+    const context = await getCurrencyContext(req);
 
-    // Minimum Order Check
-    if (cartTotal < coupon.minimumOrderAmount) {
+    // Minimum Order Check (INR threshold checks)
+    if (recalculatedCartTotalINR < coupon.minimumOrderAmount) {
+      const minAmountMsg = context.currency === "USD" 
+        ? `$${(coupon.minimumOrderAmount / context.conversionRate).toFixed(2)}` 
+        : `₹${coupon.minimumOrderAmount.toLocaleString('en-IN')}`;
       return res.status(400).json({
         success: false,
-        message: `Minimum order amount is ₹${coupon.minimumOrderAmount}`,
+        message: `Minimum order amount is ${minAmountMsg}`,
       });
     }
 
-
     // Per User Usage Count
     const userUsageCount = coupon.usedBy.filter(
-      (id) =>
-        id.toString() === req.user._id.toString()
+      (id) => id.toString() === req.user._id.toString()
     ).length;
 
-
     // Per Customer Usage Limit Check
-    if (
-      coupon.usageLimit > 0 &&
-      userUsageCount >= coupon.usageLimit
-    ) {
+    if (coupon.usageLimit > 0 && userUsageCount >= coupon.usageLimit) {
       return res.status(400).json({
         success: false,
         message: `You can only use this coupon ${coupon.usageLimit} times`,
       });
     }
 
-
-    // Calculate Discount
-    let discountAmount = 0;
-
+    // Calculate Discount in INR
+    let discountAmountINR = 0;
 
     // Percentage Discount
     if (coupon.discountType === "percentage") {
-
-      discountAmount =
-        (cartTotal * coupon.discountValue) / 100;
-
+      discountAmountINR = (recalculatedCartTotalINR * coupon.discountValue) / 100;
 
       // Maximum Discount Limit
-      if (
-        coupon.maximumDiscountAmount > 0 &&
-        discountAmount > coupon.maximumDiscountAmount
-      ) {
-        discountAmount =
-          coupon.maximumDiscountAmount;
+      if (coupon.maximumDiscountAmount > 0 && discountAmountINR > coupon.maximumDiscountAmount) {
+        discountAmountINR = coupon.maximumDiscountAmount;
       }
-
     } else {
-
       // Fixed Discount
-      discountAmount = coupon.discountValue;
+      discountAmountINR = coupon.discountValue;
     }
-
 
     // Prevent Negative Total
-    if (discountAmount > cartTotal) {
-      discountAmount = cartTotal;
+    if (discountAmountINR > recalculatedCartTotalINR) {
+      discountAmountINR = recalculatedCartTotalINR;
     }
 
+    const finalAmountINR = recalculatedCartTotalINR - discountAmountINR;
 
-    const finalAmount =
-      cartTotal - discountAmount;
+    // Convert values for client presentation
+    let responseDiscountAmount = discountAmountINR;
+    let responseFinalAmount = finalAmountINR;
 
+    if (context.currency === "USD") {
+      responseDiscountAmount = Number((discountAmountINR / context.conversionRate).toFixed(2));
+      responseFinalAmount = Number((finalAmountINR / context.conversionRate).toFixed(2));
+    }
 
     res.status(200).json({
       success: true,
       couponCode: coupon.code,
       discountType: coupon.discountType,
       discountValue: coupon.discountValue,
-      discountAmount,
-      finalAmount,
+      discountAmount: responseDiscountAmount,
+      finalAmount: responseFinalAmount,
     });
-
   } catch (error) {
     console.log(error);
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
@@ -233,7 +248,7 @@ export const getAllCoupons = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
@@ -271,7 +286,7 @@ export const deleteCoupon = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
@@ -322,7 +337,7 @@ export const updateCoupon = async (req, res) => {
     console.log(error);
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };

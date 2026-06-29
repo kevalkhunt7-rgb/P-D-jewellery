@@ -78,7 +78,7 @@ export const sendOTP = async (req, res) => {
     console.error("sendOTP Error:", error);
     res.status(500).json({
       success: false,
-      message: "Server Error: Failed to generate or send OTP",
+      message: error.message || "Server Error",
     });
   }
 };
@@ -155,7 +155,7 @@ export const verifyOTP = async (req, res) => {
     console.error("verifyOTP Error:", error);
     res.status(500).json({
       success: false,
-      message: "Server Error: Verification failed",
+      message: error.message || "Server Error",
     });
   }
 };

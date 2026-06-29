@@ -73,7 +73,7 @@ export const createBanner = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
@@ -116,7 +116,7 @@ export const getAllBanners = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
@@ -144,7 +144,7 @@ export const getAdminBanners = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
@@ -232,7 +232,7 @@ export const updateBanner = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
@@ -282,7 +282,7 @@ export const deleteBanner = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
@@ -307,7 +307,7 @@ export const getBannerById = async (req, res) => {
     console.log(error);
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };

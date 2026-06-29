@@ -5,7 +5,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useAuth } from '../context/AuthContext';
-import logo from '../assets/logo.png';
+import { useSettings } from '../context/SettingsContext';
+import staticLogo from '../assets/logo.png';
 
 const MotionLink = motion(Link);
 
@@ -19,6 +20,7 @@ function Navbar() {
     const { getCartCount } = useCart();
     const { wishlistCount } = useWishlist();
     const { isAuthenticated } = useAuth();
+    const { settings } = useSettings();
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -36,6 +38,10 @@ function Navbar() {
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
+
+    // Get store name or default to "P&D"
+    const storeName = settings.general?.storeName || "P&D";
+    const logoUrl = settings.general?.logo?.url || staticLogo;
 
     return (
         <>
@@ -63,8 +69,8 @@ function Navbar() {
                                 className="flex items-center gap-2"
                             >
                                 <motion.img
-                                    src={logo}
-                                    alt="P&D Luxury Jewellery"
+                                    src={logoUrl}
+                                    alt={storeName}
                                     className="h-15 w-auto object-contain"
                                     variants={{
                                         initial: { rotate: 0 },
@@ -75,6 +81,10 @@ function Navbar() {
                                                 ease: "easeInOut",
                                             },
                                         },
+                                    }}
+                                    onError={(e) => {
+                                        // Fallback to static logo if the settings logo fails
+                                        e.target.src = staticLogo;
                                     }}
                                 />
 
@@ -89,7 +99,7 @@ function Navbar() {
                                             WebkitTextFillColor: "transparent",
                                         }}
                                     >
-                                        P&D
+                                        {storeName}
                                     </h1>
 
                                     <h1
@@ -136,7 +146,7 @@ function Navbar() {
                                 className={`transition-colors p-1 rounded-full ${isSearchOpen ? 'text-[#B76E79]' : 'text-[#2C2C2C] hover:text-[#B76E79]'}`}
                                 aria-label="Toggle Search"
                             >
-                                {isSearchOpen ? <X className="w-5 h-5" /> : <Search className="w-5 h-5" />}
+                                {isSearchOpen ? <X className="w-5 cursor-pointer h-5" /> : <Search className="w-5 cursor-pointer h-5" />}
                             </button>
 
                             {/* Profile Icon (Now visible on all screens) */}

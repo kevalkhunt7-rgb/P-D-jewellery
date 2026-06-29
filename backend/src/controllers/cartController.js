@@ -1,19 +1,107 @@
 import Cart from "../model/cartModel.js";
 import Product from "../model/productModel.js";
+import { calculatePriceBreakdown } from "../utils/pricingCalculator.js";
+import { getStoreSettingsCached } from "../utils/settingsCache.js";
+import { getCurrencyContext } from "../utils/currencyHelper.js";
 
+// ================= LOCALIZED CART SERIALIZATION =================
+const serializeCart = async (cart, req) => {
+  if (!cart) return cart;
+  
+  const context = await getCurrencyContext(req);
+  const cartObj = cart.toObject ? cart.toObject() : cart;
 
+  cartObj.currency = context.currency;
+  cartObj.currencySymbol = context.currencySymbol;
 
+  if (context.currency === "USD") {
+    cartObj.totalPrice = Number((cartObj.totalPrice / context.conversionRate).toFixed(2));
+    if (cartObj.cartItems) {
+      cartObj.cartItems = cartObj.cartItems.map(item => {
+        item.price = Number((item.price / context.conversionRate).toFixed(2));
+        if (item.product) {
+          item.product.price = Number((item.product.price / context.conversionRate).toFixed(2));
+          if (item.product.originalPrice) {
+            item.product.originalPrice = Number((item.product.originalPrice / context.conversionRate).toFixed(2));
+          }
+          item.product.currency = context.currency;
+          item.product.currencySymbol = context.currencySymbol;
+          if (item.product.pricing) {
+            item.product.pricing.metalValue = Number((item.product.pricing.metalValue / context.conversionRate).toFixed(2));
+            item.product.pricing.makingCharge = Number((item.product.pricing.makingCharge / context.conversionRate).toFixed(2));
+            if (item.product.pricing.cgst) item.product.pricing.cgst = Number((item.product.pricing.cgst / context.conversionRate).toFixed(2));
+            if (item.product.pricing.sgst) item.product.pricing.sgst = Number((item.product.pricing.sgst / context.conversionRate).toFixed(2));
+            item.product.pricing.originalPrice = Number((item.product.pricing.originalPrice / context.conversionRate).toFixed(2));
+            item.product.pricing.salePrice = Number((item.product.pricing.salePrice / context.conversionRate).toFixed(2));
+          }
+        }
+        return item;
+      });
+    }
+  } else {
+    if (cartObj.cartItems) {
+      cartObj.cartItems = cartObj.cartItems.map(item => {
+        if (item.product) {
+          item.product.currency = context.currency;
+          item.product.currencySymbol = context.currencySymbol;
+        }
+        return item;
+      });
+    }
+  }
 
+  return cartObj;
+};
+
+// ================= DYNAMIC CART RECALCULATION =================
+const recalculateCartPrices = async (cart) => {
+  if (!cart || !cart.cartItems || cart.cartItems.length === 0) {
+    if (cart) {
+      cart.totalItems = 0;
+      cart.totalPrice = 0;
+    }
+    return cart;
+  }
+
+  const storeSettings = await getStoreSettingsCached();
+  const goldRate24kt = storeSettings.goldRate24kt;
+
+  let totalItems = 0;
+  let totalPrice = 0;
+
+  for (const item of cart.cartItems) {
+    const product = item.product;
+    if (product) {
+      const calculation = calculatePriceBreakdown({
+        goldRate24kt,
+        purity: product.purity || "22KT",
+        netWeight: product.netWeight || 0,
+        makingChargeType: product.makingChargeType || "per_gram",
+        makingChargeValue: product.makingChargeValue || 0,
+        discountPercentage: product.discountPercentage || 0,
+      });
+
+      // Update in-memory item price
+      item.price = calculation.salePrice;
+      totalPrice += calculation.salePrice * item.quantity;
+      totalItems += item.quantity;
+    }
+  }
+
+  // Format pricing values to 2 decimal places at summary boundaries
+  cart.totalItems = totalItems;
+  cart.totalPrice = Number(totalPrice.toFixed(2));
+  return cart;
+};
+
+// ================= ADD TO CART =================
 export const addToCart = async (req, res) => {
   try {
+    const { productId, quantity } = req.body;
 
-    const {
-      productId,
-      quantity,
-    } = req.body;
-
-console.log("REQ BODY:", req.body);
-console.log("USER:", req.user);
+    console.log("REQ BODY:", req.body);
+    console.log("USER:", req.user);
+    
     // Product Check
     const product = await Product.findById(productId);
 
@@ -24,7 +112,6 @@ console.log("USER:", req.user);
       });
     }
 
-
     // Stock Check
     if (product.stock < quantity) {
       return res.status(400).json({
@@ -33,137 +120,120 @@ console.log("USER:", req.user);
       });
     }
 
-
     // Find User Cart
     let cart = await Cart.findOne({
       user: req.user._id,
     });
 
-
     // If Cart Not Exists
     if (!cart) {
-
       cart = await Cart.create({
         user: req.user._id,
         cartItems: [],
       });
     }
 
-
     // Check Existing Product
     const itemIndex = cart.cartItems.findIndex(
-      (item) =>
-        item.product.toString() === productId
+      (item) => item.product.toString() === productId
     );
 
+    const storeSettings = await getStoreSettingsCached();
+    const goldRate24kt = storeSettings.goldRate24kt;
+    const calculation = calculatePriceBreakdown({
+      goldRate24kt,
+      purity: product.purity || "22KT",
+      netWeight: product.netWeight || 0,
+      makingChargeType: product.makingChargeType || "per_gram",
+      makingChargeValue: product.makingChargeValue || 0,
+      discountPercentage: product.discountPercentage || 0,
+    });
 
     // Product Already Exists
     if (itemIndex > -1) {
-
       cart.cartItems[itemIndex].quantity += quantity;
-
+      cart.cartItems[itemIndex].price = calculation.salePrice;
     } else {
-
       // Add New Product
       cart.cartItems.push({
         product: product._id,
         name: product.name,
         image: product.images[0]?.url || product.images[0] || "",
-        price: product.price,
+        price: calculation.salePrice,
         quantity,
         stock: product.stock,
       });
     }
 
-
     // Recalculate Totals
-    cart.totalItems = cart.cartItems.reduce(
-      (acc, item) => acc + item.quantity,
-      0
-    );
-
-    cart.totalPrice = cart.cartItems.reduce(
-      (acc, item) => acc + item.price * item.quantity,
-      0
-    );
-
-
+    await cart.populate("cartItems.product");
+    await recalculateCartPrices(cart);
     await cart.save();
 
-    // Populate product details for the frontend
-    const updatedCart = await Cart.findById(cart._id).populate("cartItems.product");
-
+    const serializedCart = await serializeCart(cart, req);
     res.status(200).json({
       success: true,
       message: "Product added to cart",
-      cart: updatedCart,
+      cart: serializedCart,
     });
 
   } catch (error) {
     console.error(error);
-
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
-
-
-
-
 
 // ================= GET MY CART =================
 export const getMyCart = async (req, res) => {
   try {
-
-    const cart = await Cart.findOne({
+    let cart = await Cart.findOne({
       user: req.user._id,
     }).populate("cartItems.product");
 
-
     if (!cart) {
+      const context = await getCurrencyContext(req);
       return res.status(200).json({
         success: true,
-        cartItems: [],
-        totalItems: 0,
-        totalPrice: 0,
+        cart: {
+          cartItems: [],
+          totalItems: 0,
+          totalPrice: 0,
+          currency: context.currency,
+          currencySymbol: context.currencySymbol,
+        }
       });
     }
 
+    // Dynamically recalculate prices against current gold rate
+    await recalculateCartPrices(cart);
+    await cart.save();
 
+    const serializedCart = await serializeCart(cart, req);
     res.status(200).json({
       success: true,
-      cart,
+      cart: serializedCart,
     });
 
   } catch (error) {
     console.log(error);
-
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
 
-
-
-
-
 // ================= UPDATE CART ITEM =================
 export const updateCartItem = async (req, res) => {
   try {
+    const { quantity } = req.body;
 
-    const {
-      quantity,
-    } = req.body;
-
-
-    const cart = await Cart.findOne({
+    let cart = await Cart.findOne({
       user: req.user._id,
     });
-
 
     if (!cart) {
       return res.status(404).json({
@@ -172,12 +242,9 @@ export const updateCartItem = async (req, res) => {
       });
     }
 
-
     const item = cart.cartItems.find(
-      (item) =>
-        item.product.toString() === req.params.productId
+      (item) => item.product.toString() === req.params.productId
     );
-
 
     if (!item) {
       return res.status(404).json({
@@ -186,53 +253,35 @@ export const updateCartItem = async (req, res) => {
       });
     }
 
-
     item.quantity = quantity;
 
-
     // Recalculate Totals
-    cart.totalItems = cart.cartItems.reduce(
-      (acc, item) => acc + item.quantity,
-      0
-    );
-
-    cart.totalPrice = cart.cartItems.reduce(
-      (acc, item) => acc + item.price * item.quantity,
-      0
-    );
-
-
+    await cart.populate("cartItems.product");
+    await recalculateCartPrices(cart);
     await cart.save();
 
-
+    const serializedCart = await serializeCart(cart, req);
     res.status(200).json({
       success: true,
       message: "Cart updated",
-      cart,
+      cart: serializedCart,
     });
 
   } catch (error) {
     console.log(error);
-
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
-
-
-
-
 
 // ================= REMOVE CART ITEM =================
 export const removeCartItem = async (req, res) => {
   try {
-
-    const cart = await Cart.findOne({
+    let cart = await Cart.findOne({
       user: req.user._id,
     });
-
 
     if (!cart) {
       return res.status(404).json({
@@ -241,56 +290,37 @@ export const removeCartItem = async (req, res) => {
       });
     }
 
-
     cart.cartItems = cart.cartItems.filter(
-      (item) =>
-        item.product.toString() !== req.params.productId
+      (item) => item.product.toString() !== req.params.productId
     );
-
 
     // Recalculate Totals
-    cart.totalItems = cart.cartItems.reduce(
-      (acc, item) => acc + item.quantity,
-      0
-    );
-
-    cart.totalPrice = cart.cartItems.reduce(
-      (acc, item) => acc + item.price * item.quantity,
-      0
-    );
-
-
+    await cart.populate("cartItems.product");
+    await recalculateCartPrices(cart);
     await cart.save();
 
-
+    const serializedCart = await serializeCart(cart, req);
     res.status(200).json({
       success: true,
       message: "Item removed from cart",
-      cart,
+      cart: serializedCart,
     });
 
   } catch (error) {
     console.log(error);
-
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
 
-
-
-
-
 // ================= CLEAR CART =================
 export const clearCart = async (req, res) => {
   try {
-
     const cart = await Cart.findOne({
       user: req.user._id,
     });
-
 
     if (!cart) {
       return res.status(404).json({
@@ -298,15 +328,12 @@ export const clearCart = async (req, res) => {
         message: "Cart not found",
       });
     }
-
 
     cart.cartItems = [];
     cart.totalItems = 0;
     cart.totalPrice = 0;
 
-
     await cart.save();
-
 
     res.status(200).json({
       success: true,
@@ -315,10 +342,9 @@ export const clearCart = async (req, res) => {
 
   } catch (error) {
     console.log(error);
-
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };

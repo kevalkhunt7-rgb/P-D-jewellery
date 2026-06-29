@@ -28,11 +28,16 @@ export const AuthProvider = ({ children }) => {
           return;
         }
         
-        // Optionally, you can hit a /api/users/profile or /api/auth/me to validate token
-        // For now, if we have user info stored locally we can parse it, or we rely on token validity
         const storedAdmin = localStorage.getItem('adminInfo');
         if (storedAdmin) {
-          setAdmin(JSON.parse(storedAdmin));
+          const parsedAdmin = JSON.parse(storedAdmin);
+          // Also normalize the role when loading from localStorage
+          const normalizedRole = parsedAdmin.role 
+            ? parsedAdmin.role.toLowerCase() === 'superadmin' 
+              ? 'superAdmin' 
+              : 'admin' 
+            : '';
+          setAdmin({ ...parsedAdmin, role: normalizedRole });
         }
       } catch (error) {
         console.error("Auth initialization error:", error);
@@ -47,7 +52,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await axios.post('https://p-d-jewellery.onrender.com/api/auth/login', {
+      const response = await axios.post('http://localhost:5001/api/auth/login', {
         email,
         password
       });
@@ -55,15 +60,25 @@ export const AuthProvider = ({ children }) => {
       if (response.data.success) {
         const { token, user } = response.data;
         
-        if (user.role !== 'admin') {
+        // 🛠️ Normalizing the role string to camelCase to handle 'SuperAdmin' or 'superAdmin' or 'superadmin'
+        const normalizedRole = user.role 
+          ? user.role.toLowerCase() === 'superadmin' 
+            ? 'superAdmin' 
+            : 'admin' 
+          : '';
+        
+        if (normalizedRole !== 'admin' && normalizedRole !== 'superAdmin') {
           throw new Error('Access Denied. Admins only.');
         }
 
+        // Create a copy of the user object with the normalized role
+        const updatedUser = { ...user, role: normalizedRole };
+
         setToken(token);
-        setAdmin(user);
+        setAdmin(updatedUser);
         
         localStorage.setItem('adminToken', token);
-        localStorage.setItem('adminInfo', JSON.stringify(user));
+        localStorage.setItem('adminInfo', JSON.stringify(updatedUser));
         
         return { success: true };
       } else {
@@ -91,7 +106,9 @@ export const AuthProvider = ({ children }) => {
     loading,
     login,
     logout,
-    isAuthenticated: !!token && admin?.role === 'admin'
+    // 🔐 Check against lowercase versions to ensure strict match consistency
+    isAuthenticated: !!token && (admin?.role === 'admin' || admin?.role === 'superAdmin'),
+    isSuperAdmin: admin?.role === 'superAdmin'
   };
 
   return (

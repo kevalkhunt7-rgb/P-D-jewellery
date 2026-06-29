@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL:'https://p-d-jewellery.onrender.com',
+  baseURL:'http://localhost:5001/api',
 });
 
 // Add a request interceptor to include the token in headers

@@ -13,7 +13,9 @@ import {
   ArrowLeft,
   Loader2,
   ShieldCheck,
-  XCircle
+  XCircle,
+  X,
+  AlertTriangle
 } from 'lucide-react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
@@ -32,6 +34,9 @@ export default function OrderDetailPage() {
   const navigate = useNavigate();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isCancellationModalOpen, setIsCancellationModalOpen] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState("");
+  const [isSubmittingCancellation, setIsSubmittingCancellation] = useState(false);
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -66,10 +71,40 @@ export default function OrderDetailPage() {
     fetchOrderDetails();
   }, [id]);
 
+  // Handle cancellation request
+  const handleRequestCancellation = async () => {
+    if (!cancellationReason.trim()) {
+      toast.error("Please enter a cancellation reason");
+      return;
+    }
+
+    setIsSubmittingCancellation(true);
+    try {
+      const { data } = await api.post(`/orders/${id}/request-cancellation`, {
+        cancellationReason
+      });
+      if (data.success) {
+        setOrder(data.order);
+        toast.success("Cancellation request submitted successfully!");
+        setIsCancellationModalOpen(false);
+        setCancellationReason("");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.message || "Failed to submit cancellation request");
+    } finally {
+      setIsSubmittingCancellation(false);
+    }
+  };
+
   // Handle order status variables
   const normalizedStatus = order?.orderStatus ? order.orderStatus.toUpperCase() : 'PENDING';
   const currentStepIndex = STATUS_STEPS.findIndex(step => step.id === normalizedStatus);
   const isCancelled = normalizedStatus === 'CANCELLED';
+  
+  // Check if cancellation is eligible
+  const eligibleStatuses = ["PENDING", "CONFIRMED", "PACKED"];
+  const isEligibleForCancellation = order && eligibleStatuses.includes(normalizedStatus) && order.cancellationStatus === "None";
   
   // Calculate loading bar width percentage
   const progressLinePercent = isCancelled || currentStepIndex === -1 
@@ -116,21 +151,71 @@ export default function OrderDetailPage() {
         {/* Order Header Summary Card */}
         <div className="bg-white/70 backdrop-blur-xl border border-stone-200/80 rounded-2xl p-6 sm:p-8 shadow-xl shadow-stone-200/30 mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex flex-wrap items-center gap-3 mb-2">
               <span className={`text-[10px] font-bold tracking-widest uppercase px-3 py-1 rounded-full ${
                 isCancelled ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-stone-900 text-[#FDF8F3]'
               }`}>
                 {order.orderStatus || 'PENDING'}
               </span>
+              
+              {/* Cancellation & Refund Status Badges */}
+              {order.cancellationStatus === "Requested" && (
+                <span className="text-[10px] font-bold tracking-widest uppercase px-3 py-1 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
+                  Cancellation Requested
+                </span>
+              )}
+              {order.cancellationStatus === "Approved" && (
+                <span className="text-[10px] font-bold tracking-widest uppercase px-3 py-1 rounded-full bg-red-100 text-red-700 border border-red-200">
+                  Cancellation Approved
+                </span>
+              )}
+              {order.cancellationStatus === "Rejected" && (
+                <span className="text-[10px] font-bold tracking-widest uppercase px-3 py-1 rounded-full bg-orange-100 text-orange-700 border border-orange-200">
+                  Cancellation Rejected
+                </span>
+              )}
+              {order.refundStatus === "Pending" && (
+                <span className="text-[10px] font-bold tracking-widest uppercase px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 border border-yellow-200">
+                  Refund Pending
+                </span>
+              )}
+              {order.refundStatus === "Processing" && (
+                <span className="text-[10px] font-bold tracking-widest uppercase px-3 py-1 rounded-full bg-blue-100 text-blue-700 border border-blue-200">
+                  Refund Processing
+                </span>
+              )}
+              {order.refundStatus === "Completed" && (
+                <span className="text-[10px] font-bold tracking-widest uppercase px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                  Refund Completed
+                </span>
+              )}
+              {order.refundStatus === "Failed" && (
+                <span className="text-[10px] font-bold tracking-widest uppercase px-3 py-1 rounded-full bg-red-100 text-red-700 border border-red-200">
+                  Refund Failed
+                </span>
+              )}
+              
+              {order.currency === 'USD' && <span className="text-sm">✈️</span>}
               <p className="text-xs font-mono text-stone-400 uppercase tracking-wider">ID: {order.razorpayOrderId || order._id}</p>
             </div>
             <h1 className="font-serif text-2xl tracking-wide text-stone-900">Order Summary</h1>
           </div>
-          <div className="flex sm:flex-col items-baseline sm:items-end gap-2 text-left sm:text-right">
+          <div className="flex flex-col sm:flex-col items-baseline sm:items-end gap-2 text-left sm:text-right">
             <span className="text-xs text-stone-400 font-light uppercase tracking-wider">Total Paid</span>
             <span className="font-serif text-2xl font-semibold bg-gradient-to-r from-[#B76E79] to-[#D4AF37] bg-clip-text text-transparent">
-              ₹{Math.round(order.totalPrice).toLocaleString()}
+              {order.currencySymbol || '₹'}{order.totalPrice?.toLocaleString(order.currency === 'USD' ? 'en-US' : 'en-IN', { minimumFractionDigits: order.currency === 'USD' ? 2 : 0, maximumFractionDigits: 2 })}
+              {order.currency === 'USD' ? ' USD' : ' INR'}
             </span>
+            
+            {/* Cancellation Button */}
+            {isEligibleForCancellation && (
+              <button
+                onClick={() => setIsCancellationModalOpen(true)}
+                className="mt-2 px-4 py-1.5 border border-red-200 text-red-700 text-[10px] font-bold uppercase tracking-wider rounded-full hover:bg-red-50 transition-colors"
+              >
+                Request Cancellation
+              </button>
+            )}
           </div>
         </div>
 
@@ -143,8 +228,8 @@ export default function OrderDetailPage() {
             <div className="flex items-center gap-4 p-5 bg-red-50/50 rounded-xl border border-red-100 max-w-xl mx-auto">
               <XCircle className="w-8 h-8 text-red-500 flex-shrink-0" />
               <div>
-                <h3 className="text-sm font-semibold text-red-900">Order Cancelled</h3>
-                <p className="text-xs text-red-600/80 font-light mt-0.5">
+                <h3 className="text-2xl font-semibold text-red-900">Order Cancelled</h3>
+                <p className="text-xl text-red-600/80 font-semibold mt-0.5">
                   This order has been cancelled. Any payments made will be automatically refunded to your original payment method.
                 </p>
               </div>
@@ -231,7 +316,7 @@ export default function OrderDetailPage() {
                         <p className="text-[10px] text-stone-400 font-light mt-0.5">Qty: {item.quantity || 1}</p>
                       </div>
                       <span className="font-serif text-xs font-medium text-stone-900">
-                        ₹{(item.price * (item.quantity || 1)).toLocaleString()}
+                        {order.currencySymbol || '₹'}{(item.price * (item.quantity || 1)).toLocaleString(order.currency === 'USD' ? 'en-US' : 'en-IN', { minimumFractionDigits: order.currency === 'USD' ? 2 : 0, maximumFractionDigits: 2 })}
                       </span>
                     </div>
                   </div>
@@ -243,21 +328,21 @@ export default function OrderDetailPage() {
             <div className="pt-4 border-t border-stone-100 space-y-2.5 text-xs text-stone-500 font-light">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span className="font-serif">₹{order.itemsPrice?.toLocaleString()}</span>
+                <span className="font-serif">{order.currencySymbol || '₹'}{order.itemsPrice?.toLocaleString(order.currency === 'USD' ? 'en-US' : 'en-IN', { minimumFractionDigits: order.currency === 'USD' ? 2 : 0, maximumFractionDigits: 2 })}</span>
               </div>
               {order.discountAmount > 0 && (
                 <div className="flex justify-between text-emerald-700">
                   <span>Discount {order.couponCode && `(${order.couponCode})`}</span>
-                  <span className="font-serif">-₹{order.discountAmount?.toLocaleString()}</span>
+                  <span className="font-serif">-{order.currencySymbol || '₹'}{order.discountAmount?.toLocaleString(order.currency === 'USD' ? 'en-US' : 'en-IN', { minimumFractionDigits: order.currency === 'USD' ? 2 : 0, maximumFractionDigits: 2 })}</span>
                 </div>
               )}
               <div className="flex justify-between">
                 <span>Shipping</span>
-                <span className="font-serif">{order.shippingPrice === 0 ? 'Free Shipping' : `₹${order.shippingPrice}`}</span>
+                <span className="font-serif">{order.shippingPrice === 0 ? 'Free Shipping' : `${order.currencySymbol || '₹'}${order.shippingPrice?.toLocaleString(order.currency === 'USD' ? 'en-US' : 'en-IN', { minimumFractionDigits: order.currency === 'USD' ? 2 : 0, maximumFractionDigits: 2 })}`}</span>
               </div>
               <div className="flex justify-between">
                 <span>Estimated Tax (8.5%)</span>
-                <span className="font-serif">₹{Math.round(order.taxPrice || 0).toLocaleString()}</span>
+                <span className="font-serif">{order.currencySymbol || '₹'}{order.taxPrice?.toLocaleString(order.currency === 'USD' ? 'en-US' : 'en-IN', { minimumFractionDigits: order.currency === 'USD' ? 2 : 0, maximumFractionDigits: 2 })}</span>
               </div>
             </div>
           </div>
@@ -318,6 +403,63 @@ export default function OrderDetailPage() {
         </div>
 
       </main>
+
+      {/* Cancellation Request Modal */}
+      {isCancellationModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-[#FDF8F3] rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+          >
+            <div className="flex items-center justify-between p-6 border-b border-stone-100">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-5 h-5 text-[#B76E79]" />
+                <h3 className="font-serif text-lg tracking-wide text-stone-900">Request Order Cancellation</h3>
+              </div>
+              <button
+                onClick={() => setIsCancellationModalOpen(false)}
+                className="p-1 hover:bg-stone-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-stone-500" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-xs text-stone-600 leading-relaxed">
+                Please provide a reason for cancelling your order. This helps us improve our service.
+              </p>
+
+              <textarea
+                value={cancellationReason}
+                onChange={(e) => setCancellationReason(e.target.value)}
+                placeholder="Enter your cancellation reason..."
+                className="w-full h-32 bg-white border border-stone-200 rounded-xl px-4 py-3 text-xs text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-[#B76E79] resize-none"
+              />
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setIsCancellationModalOpen(false)}
+                  className="flex-1 px-4 py-2.5 border border-stone-200 text-stone-700 text-[10px] font-bold uppercase tracking-widest rounded-full hover:bg-stone-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRequestCancellation}
+                  disabled={isSubmittingCancellation || !cancellationReason.trim()}
+                  className="flex-1 px-4 py-2.5 bg-red-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-full hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                >
+                  {isSubmittingCancellation ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    "Confirm Cancellation"
+                  )}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

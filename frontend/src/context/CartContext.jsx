@@ -2,14 +2,35 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../utils/api';
 import { useAuth } from './AuthContext';
 import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom'; // 1. Import useNavigate
+import { useNavigate } from 'react-router-dom';
 
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
   const { user } = useAuth();
   const [cart, setCart] = useState([]);
-  const navigate = useNavigate(); // 2. Initialize the navigation hook
+  const navigate = useNavigate();
+
+  // Helper to update cart state from server data
+  const updateCartFromServer = (serverCart) => {
+    if (serverCart && serverCart.cartItems) {
+      setCart(
+        serverCart.cartItems
+          .filter(item => item.product)
+          .map(item => ({
+            id: item.product._id,
+            title: item.name || item.product.name,
+            price: item.price,
+            image: item.image || item.product?.images?.[0]?.url || "",
+            quantity: item.quantity,
+            stock: item.stock,
+            selectedFinish: item.selectedFinish || null,
+          }))
+      );
+    } else {
+      setCart([]);
+    }
+  };
 
   // Fetch cart from backend if user is logged in
   useEffect(() => {
@@ -17,26 +38,15 @@ export function CartProvider({ children }) {
       if (user) {
         try {
           const { data } = await api.get('/cart/my-cart');
-          if (data.success && data.cart) {
-            setCart(
-              data.cart.cartItems
-                .filter(item => item.product)
-                .map(item => ({
-                  id: item.product._id,
-                  title: item.name || item.product.name,
-                  price: item.price,
-                  image:
-                    item.image ||
-                    item.product?.images?.[0]?.url ||
-                    "",
-                  quantity: item.quantity,
-                  stock: item.stock,
-                  selectedFinish: item.selectedFinish || null,
-                }))
-            );
+          
+          // FIX: Explicitly handle cases where user exists but has an empty/null cart document
+          if (data.success) {
+            updateCartFromServer(data.cart);
           }
         } catch (error) {
           console.error('Failed to fetch cart:', error);
+          // Fallback reset on request failure to prevent data cross-contamination
+          setCart([]);
         }
       } else {
         const savedCart = localStorage.getItem('atelier_cart');
@@ -58,13 +68,11 @@ export function CartProvider({ children }) {
     quantity = 1,
     selectedFinish = null
   ) => {
-    // 3. AUTH GUARD: Check if user is logged out
+    // AUTH GUARD: Check if user is logged out
     if (!user) {
       toast.error("Please sign in to add items to your cart");
-      
-      // Redirect to login page and preserve the current path so they can return seamlessly
       navigate('/login', { state: { from: window.location.pathname } });
-      return; // Break execution to avoid making an unauthenticated API call
+      return; 
     }
 
     try {
@@ -79,59 +87,7 @@ export function CartProvider({ children }) {
       );
 
       if (data.success) {
-        const newItem = {
-          id: product._id || product.id,
-          title: product.name || product.title,
-          price: product.price,
-          image:
-            product.images?.[0]?.url ||
-            product.image ||
-            "",
-          quantity,
-          stock: product.stock,
-          selectedFinish,
-        };
-
-        setCart((prevCart) => {
-          const existingItem = prevCart.find(
-            (item) =>
-              item.id === newItem.id &&
-              item.selectedFinish?.name ===
-                selectedFinish?.name
-          );
-
-          let updatedCart;
-
-          if (existingItem) {
-            updatedCart = prevCart.map((item) =>
-              item.id === newItem.id &&
-              item.selectedFinish?.name ===
-                selectedFinish?.name
-                ? {
-                    ...item,
-                    quantity:
-                      item.quantity + quantity,
-                  }
-                : item
-            );
-          } else {
-            updatedCart = [
-              ...prevCart,
-              newItem,
-            ];
-          }
-
-          // sync localStorage for guest users (Fallback safety)
-          if (!user) {
-            localStorage.setItem(
-              'atelier_cart',
-              JSON.stringify(updatedCart)
-            );
-          }
-
-          return updatedCart;
-        });
-
+        updateCartFromServer(data.cart);
         toast.success("Added to cart");
       }
     } catch (error) {
@@ -145,7 +101,7 @@ export function CartProvider({ children }) {
       try {
         const { data } = await api.delete(`/cart/remove/${id}`);
         if (data.success) {
-          setCart(prev => prev.filter(item => item.id !== id));
+          updateCartFromServer(data.cart);
         }
       } catch (error) {
         toast.error('Failed to remove item');
@@ -163,7 +119,7 @@ export function CartProvider({ children }) {
       try {
         const { data } = await api.put(`/cart/update/${id}`, { quantity: newQty });
         if (data.success) {
-          setCart(prev => prev.map(item => item.id === id ? { ...item, quantity: newQty } : item));
+          updateCartFromServer(data.cart);
         }
       } catch (error) {
         toast.error('Failed to update quantity');

@@ -8,13 +8,15 @@ import {
   FiXCircle,
   FiChevronDown,
   FiCalendar,
-  FiX
+  FiX,
+  
 } from "react-icons/fi";
 import api from "../utils/api";
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { DeleteModal } from "../components/DeleteModal";
+import { IoAirplane } from "react-icons/io5";
 
 const getStatusBadge = (status) => {
   const configs = {
@@ -123,14 +125,20 @@ export function Orders() {
 
   const exportPDF = () => {
     const doc = new jsPDF();
-    const tableColumn = ["Order ID", "Customer", "Amount", "Payment", "Status", "Date"];
+    const tableColumn = ["Order ID", "Customer", "Amount (INR)", "Paid In", "Payment", "Status", "Date"];
     const tableRows = [];
 
     filteredOrders.forEach(order => {
+      const isForeign = order.paidCurrency === 'USD' || order.displayCurrency === 'USD';
+      // Amount is always in INR for admin
+      const formattedAmount = `₹${order.totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      const paidIn = isForeign ? `USD ($${order.paidAmount?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})` : 'INR';
+
       const orderData = [
-        order._id.slice(-8).toUpperCase(),
+        order._id.slice(-8).toUpperCase() + (isForeign ? " ✈️" : ""),
         order.user?.name || "Guest",
-        `₹${order.totalPrice}`,
+        formattedAmount,
+        paidIn,
         order.paymentStatus || (order.isPaid ? "Paid" : "Pending"),
         (order.orderStatus || "PENDING").toUpperCase(),
         new Date(order.createdAt).toLocaleDateString()
@@ -139,7 +147,7 @@ export function Orders() {
     });
 
     doc.autoTable(tableColumn, tableRows, { startY: 20 });
-    doc.text("Filtered Orders Report", 14, 15);
+    doc.text("Filtered Orders Report (All amounts in INR)", 14, 15);
     doc.save(`orders_report_${new Date().toISOString().split('T')[0]}.pdf`);
     toast.success("PDF Report Exported");
   };
@@ -374,7 +382,14 @@ export function Orders() {
                 filteredOrders.map((order) => (
                   <tr key={order._id} className="hover:bg-slate-800/10 transition-colors group">
                     <td className="py-3.5 px-5 font-mono text-amber-500 font-medium tracking-tight">
-                      {order._id.slice(-8).toUpperCase()}
+                      <div className="flex items-center gap-1.5">
+                        <span>{order._id.slice(-8).toUpperCase()}</span>
+                        {(order.paymentMethod === 'PAYPAL' || order.displayCurrency === 'USD') && (
+                          <span title="Foreign Order" className="text-sky-400">
+                            <IoAirplane className="w-3.5 h-3.5" />
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3.5 px-4">
                       <div>
@@ -384,7 +399,19 @@ export function Orders() {
                     </td>
                     <td className="py-3.5 px-4 text-slate-300">{order.orderItems?.length || 0} items</td>
                     <td className="py-3.5 px-4 font-semibold text-slate-200">
-                      ₹{order.totalPrice.toLocaleString()}
+                      <div className="flex flex-col">
+                        <span>
+                          ₹{order.totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-normal">
+                          INR
+                        </span>
+                        {order.paidCurrency === 'USD' && (
+                          <span className="text-[9px] text-sky-400 font-normal mt-0.5">
+                            Paid: ${order.paidAmount?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3.5 px-4">{getPaymentBadge(order.paymentStatus || (order.isPaid ? "paid" : "pending"))}</td>
                     <td className="py-3.5 px-4">{getStatusBadge(order.orderStatus)}</td>

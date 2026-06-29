@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   SlidersHorizontal,
   Search,
@@ -12,30 +12,46 @@ import {
   Sliders,
   Check
 } from 'lucide-react';
-import api from '../utils/api';
 
 // Dynamic integration using global product context
 import { useProducts } from '../context/ProductContext';
-import { ProductCard } from '../components/ProductCard';// Preserving your intact component logic
-import { useLocation } from 'react-router-dom';
+import { ProductCard } from '../components/ProductCard';
+import { useSettings } from '../context/SettingsContext';
 
 // Luxury Category Pill Metadata Matrix
 const CATEGORIES = [
   { id: 'all', name: 'All Collections' },
-  { id: 'necklaces', name: 'Necklaces' },
-  { id: 'rings', name: 'Rings' },
+  { id: 'neckleces', name: 'Necklaces' },
+  { id: 'ring', name: 'Rings' },
   { id: 'earrings', name: 'Earrings' },
-  { id: 'bangles', name: 'Bangles & Bracelets' },
-  { id: 'bridal', name: 'The Bridal Vault' }
+  { id: 'bangle', name: 'Bangles' },
+  
 ];
 
-const PRICE_RANGES = [
-  { id: 'all', name: 'All Valuations' },
-  { id: 'under-2500', name: 'Under ₹2,500', min: 0, max: 2500 },
-  { id: '2500-5000', name: '₹2,500 – ₹5,000', min: 2500, max: 5000 },
-  { id: '5000-10000', name: '₹5,000 – ₹10,000', min: 5000, max: 10000 },
-  { id: 'above-10000', name: 'Above ₹10,000', min: 10000, max: Infinity }
+
+
+const OCCASIONS = [
+  { id: 'all', name: 'All Occasions' },
+  { id: 'wedding', name: 'Wedding' },
+  { id: 'party', name: 'Party' },
+  { id: 'casual', name: 'Casual' },
+  { id: 'festive', name: 'Festive' },
+  { id: 'daily wear', name: 'Daily Wear' }
 ];
+
+const GENDERS = [
+  { id: 'all', name: 'All Genders' },
+  { id: 'male', name: 'Men' },
+  { id: 'female', name: 'Women' },
+  { id: 'unisex', name: 'Unisex' }
+];
+
+const sortLabelMap = {
+  featured: 'Curated Masterpieces',
+  newest: 'Recent Additions',
+  'price-low': 'Value: Low to High',
+  'price-high': 'Value: High to Low'
+};
 
 // Framer Motion Fine-Art Animations
 const containerVariants = {
@@ -56,73 +72,104 @@ const cardItemVariants = {
 };
 
 export default function CollectionsPage() {
-  const { products, loading, fetchProducts } = useProducts();
+  // 🌟 FIX: Pulling filteredProducts and searchProducts directly from your context file
+  const { filteredProducts, loading, searchProducts } = useProducts();
+  const { settings } = useSettings();
+  const currencySymbol = settings?.general?.currencySymbol || '₹';
+  const currency = settings?.general?.currency || 'INR';
+
+  const priceRanges = useMemo(() => {
+    if (currency === 'USD') {
+      return [
+        { id: 'all', name: 'All Valuations' },
+        { id: 'under-2500', name: 'Under $50', min: 0, max: 50 },
+        { id: '2500-5000', name: '$50 – $100', min: 50, max: 100 },
+        { id: '5000-10000', name: '$100 – $200', min: 100, max: 200 },
+        { id: 'above-10000', name: 'Above $200', min: 200, max: Infinity }
+      ];
+    }
+    return [
+      { id: 'all', name: 'All Valuations' },
+      { id: 'under-2500', name: 'Under ₹2,500', min: 0, max: 2500 },
+      { id: '2500-5000', name: '₹2,500 – ₹5,000', min: 2500, max: 5000 },
+      { id: '5000-10000', name: '₹5,000 – ₹10,000', min: 5000, max: 10000 },
+      { id: 'above-10000', name: 'Above ₹10,000', min: 10000, max: Infinity }
+    ];
+  }, [currency]);
   const location = useLocation();
-  const [categories, setCategories] = useState([{ id: 'all', name: 'All Collections' }]);
+  const navigate = useNavigate();
+
+  // --- Parse URL Parameters ---
+  const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  
+  const searchQuery = queryParams.get('search') || '';
+  const selectedCategory = queryParams.get('category')?.toLowerCase() || 'all';
+  const selectedOccasion = queryParams.get('occasion')?.toLowerCase() || 'all';
+  const selectedPriceRange = queryParams.get('price')?.toLowerCase() || 'all';
+  const selectedGender = queryParams.get('gender')?.toLowerCase() || 'all';
+  const sortBy = queryParams.get('sort')?.toLowerCase() || 'featured';
 
   // --- UI Layout and Interaction States ---
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedOccasion, setSelectedOccasion] = useState('all');
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-
-    const q = params.get('search') || '';
-    const cat = params.get('category');
-    const occ = params.get('occasion');
-
-    setSearchQuery(q);
-    setSelectedCategory(cat ? cat.toLowerCase() : 'all');
-    setSelectedOccasion(occ ? occ.toLowerCase() : 'all');
-
-    // Call backend API when search query changes in URL
-    fetchProducts(q);
-
-  }, [location.search, fetchProducts]);
-  const [selectedPriceRange, setSelectedPriceRange] = useState('all');
-  const [sortBy, setSortBy] = useState('featured');
-  const [visibleCount, setVisibleCount] = useState(8); // Initially stream 8 premium elements
+  const [visibleCount, setVisibleCount] = useState(8);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
 
+  // --- Pipeline to sync local user actions to URL ---
+  const updateUrlParams = (key, value) => {
+    const params = new URLSearchParams(location.search);
+    if (!value || value === 'all' || value === '') {
+      params.delete(key);
+    } else {
+      params.set(key, value);
+    }
+    setVisibleCount(8); // Always reset grid pagination limits on filter changes
+    navigate({ search: params.toString() }, { replace: true });
+  };
+
+  // --- 🌟 FETCH PRODUCTS FROM MONGO BACKEND VIA ATLAS SEARCH INDEX ---
+  useEffect(() => {
+    searchProducts(searchQuery);
+  }, [searchQuery, searchProducts]);
+
   // --- Dynamic Matrix Filtering Processing Engine ---
-  const filteredAndSortedProducts = useMemo(() => {
-    let result = [...(products || [])];
+  const displayedProducts = useMemo(() => {
+    // 🌟 Start directly from the context's search result array
+    let result = [...(filteredProducts || [])];
 
-    // 1. Backend handles search via fetchProducts, but we keep local filtering 
-    // for immediate UI response if needed or for other criteria.
-    // However, the prompt specifically asks for backend filtering.
-    // The products array already contains the backend-filtered results.
-
-    // 2. High-Tier Category Segmenting
+    // 1. High-Tier Category Segmenting
     if (selectedCategory !== 'all') {
-      result = result.filter(p => p.category?.toLowerCase() === selectedCategory.toLowerCase());
+      result = result.filter(p => 
+        p.category?.toLowerCase() === selectedCategory
+      );
     }
 
-    // 2b. Occasion Segmenting
+    // 2. Occasion Segmenting
     if (selectedOccasion !== 'all') {
       result = result.filter(p => {
         if (Array.isArray(p.occasion)) {
-          return p.occasion.some(occ => occ.toLowerCase() === selectedOccasion.toLowerCase());
+          return p.occasion.some(occ => occ.toLowerCase() === selectedOccasion);
         }
-        return p.occasion?.toLowerCase() === selectedOccasion.toLowerCase();
+        return p.occasion?.toLowerCase() === selectedOccasion;
       });
     }
 
-    // 3. Financial Valuations Filtering Layer
+    // 3. Gender Segmenting
+    if (selectedGender !== 'all') {
+      result = result.filter(p => p.gender?.toLowerCase() === selectedGender);
+    }
+
+    // 4. Financial Valuations Filtering Layer
     if (selectedPriceRange !== 'all') {
-      const activeRange = PRICE_RANGES.find(r => r.id === selectedPriceRange);
+      const activeRange = priceRanges.find(r => r.id === selectedPriceRange);
       if (activeRange) {
         result = result.filter(p => p.price >= activeRange.min && p.price <= activeRange.max);
       }
     }
 
-    // 4. Luxury Sorting Matrix Sorting Schemes
+    // 4. Luxury Sorting Matrix Schemes
     switch (sortBy) {
       case 'newest':
-        // Safe check for item metadata or sequential indexing
-        result.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));
+        result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         break;
       case 'price-low':
         result.sort((a, b) => a.price - b.price);
@@ -132,39 +179,26 @@ export default function CollectionsPage() {
         break;
       case 'featured':
       default:
-        result.sort((a, b) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0));
+        // 🌟 If running an active search query, sort strictly by Atlas Search ranking scores
+        if (searchQuery) {
+          result.sort((a, b) => (b.searchScore || 0) - (a.searchScore || 0));
+        } else {
+          result.sort((a, b) => (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0));
+        }
         break;
     }
 
     return result;
-  }, [
-    searchQuery,
-    selectedCategory,
-    selectedOccasion,
-    selectedPriceRange,
-    sortBy,
-    products
-  ]);
+  }, [filteredProducts, searchQuery, selectedCategory, selectedOccasion, selectedPriceRange, selectedGender, sortBy]);
 
   // --- Load More / Pagination Controllers ---
   const streamedProducts = useMemo(() => {
-    return filteredAndSortedProducts.slice(0, visibleCount);
-  }, [filteredAndSortedProducts, visibleCount]);
+    return displayedProducts.slice(0, visibleCount);
+  }, [displayedProducts, visibleCount]);
 
   const handleResetFilters = () => {
-    setSearchQuery('');
-    setSelectedCategory('all');
-    setSelectedOccasion('all');
-    setSelectedPriceRange('all');
-    setSortBy('featured');
     setVisibleCount(8);
-  };
-
-  const sortLabelMap = {
-    featured: 'Curated Masterpieces',
-    newest: 'Recent Additions',
-    'price-low': 'Value: Low to High',
-    'price-high': 'Value: High to Low'
+    navigate({ search: '' });
   };
 
   return (
@@ -174,11 +208,8 @@ export default function CollectionsPage() {
       <div className="absolute top-[-10%] left-[-20%] w-[60vw] h-[60vw] bg-gradient-to-tr from-[#FFF0EB] to-[#E8C7B7]/10 rounded-full blur-[140px] pointer-events-none mix-blend-multiply" />
       <div className="absolute top-[30%] right-[-10%] w-[50vw] h-[50vw] bg-gradient-to-bl from-[#F7E7CE]/10 to-[#FFF0EB] rounded-full blur-[160px] pointer-events-none" />
 
-      {/* ==========================================
-          LUXURY HERO BANNER & BREADCRUMBS
-          ========================================== */}
+      {/* LUXURY HERO BANNER & BREADCRUMBS */}
       <section className="relative pt-20 pb-16 text-center px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        {/* Fine Art Breadcrumb Trail */}
         <nav className="text-[10px] tracking-[0.25em] uppercase font-bold text-stone-400 mb-6 flex items-center justify-center gap-2">
           <Link to="/" className="hover:text-[#B76E79] transition-colors">Home</Link>
           <span className="text-stone-300">/</span>
@@ -194,24 +225,43 @@ export default function CollectionsPage() {
           >
             The Atelier Collection
           </motion.h1>
-         </div>
+        </div>
       </section>
 
-      {/* ==========================================
-          DYNAMIC PILL INTERFACE ROW (Trending Selection Strip)
-          ========================================== */}
+      {/* DYNAMIC PILL INTERFACE ROW - GENDER */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
+        <div className="flex items-center justify-start lg:justify-center gap-3 overflow-x-auto pb-2 pt-1 no-scrollbar mask-image-horizontal">
+          {GENDERS.map((g) => {
+            const isSelected = selectedGender === g.id;
+            return (
+              <button
+                key={g.id}
+                onClick={() => updateUrlParams('gender', g.id)}
+                className={`px-6 py-2.5 rounded-full text-[11px] font-bold uppercase tracking-widest whitespace-nowrap border transition-all duration-500 ${isSelected
+                  ? 'bg-[#B76E79] text-[#FDF8F3] border-[#B76E79] shadow-md scale-105'
+                  : 'bg-white/80 text-stone-500 border-stone-200/60 hover:text-stone-900 hover:border-stone-400 backdrop-blur-3xs'
+                }`}
+              >
+                {g.name}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* DYNAMIC PILL INTERFACE ROW - CATEGORIES */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
         <div className="flex items-center justify-start lg:justify-center gap-3 overflow-x-auto pb-4 pt-1 no-scrollbar mask-image-horizontal">
-          {categories.map((cat) => {
+          {CATEGORIES.map((cat) => {
             const isSelected = selectedCategory === cat.id;
             return (
               <button
                 key={cat.id}
-                onClick={() => { setSelectedCategory(cat.id); setVisibleCount(8); }}
+                onClick={() => updateUrlParams('category', cat.id)}
                 className={`px-6 py-2.5 rounded-full text-[11px] font-bold uppercase tracking-widest whitespace-nowrap border transition-all duration-500 ${isSelected
                   ? 'bg-stone-950 text-[#FDF8F3] border-stone-950 shadow-md scale-105'
                   : 'bg-white/80 text-stone-500 border-stone-200/60 hover:text-stone-900 hover:border-stone-400 backdrop-blur-3xs'
-                  }`}
+                }`}
               >
                 {cat.name}
               </button>
@@ -220,16 +270,14 @@ export default function CollectionsPage() {
         </div>
       </section>
 
-      {/* ==========================================
-          STICKY CODES TOP CONTROL BOARD
-          ========================================== */}
+      {/* STICKY CODES TOP CONTROL BOARD */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-10 sticky top-0 z-30">
         <div className="bg-white/70 backdrop-blur-xl border border-stone-200/60 rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between shadow-lg shadow-stone-950/5">
 
           {/* Left Element Counter Segment */}
           <div className="text-xs tracking-wider text-stone-500 font-light flex items-center gap-2">
             <Grid className="w-4 h-4 text-[#B76E79]/80 stroke-[1.5]" />
-            Showing <span className="font-semibold text-stone-900">{filteredAndSortedProducts.length}</span> Sovereign Pieces
+            Showing <span className="font-semibold text-stone-900">{displayedProducts.length}</span> Sovereign Pieces
           </div>
 
           {/* Right Controls Interacting Core */}
@@ -241,12 +289,12 @@ export default function CollectionsPage() {
                 type="text"
                 placeholder="Search vaults..."
                 value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setVisibleCount(8); }}
+                onChange={(e) => updateUrlParams('search', e.target.value)}
                 className="w-full bg-white border border-stone-200/80 rounded-full pl-9 pr-4 py-2 text-xs font-medium focus:outline-none focus:border-[#B76E79] focus:ring-1 focus:ring-[#B76E79]/20 tracking-wide transition-all"
               />
               <Search className="w-3.5 h-3.5 text-stone-400 absolute left-3 top-3" />
               {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="absolute right-3 top-3 text-stone-400 hover:text-stone-900">
+                <button onClick={() => updateUrlParams('search', '')} className="absolute right-3 top-3 text-stone-400 hover:text-stone-900">
                   <X className="w-3 h-3" />
                 </button>
               )}
@@ -260,14 +308,14 @@ export default function CollectionsPage() {
               <SlidersHorizontal className="w-3.5 h-3.5" /> Filters
             </button>
 
-            {/* Premium Sophisticated Sort Custom Select Dropdown */}
+            {/* Premium Sophisticated Sort Dropdown */}
             <div className="relative">
               <button
                 onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
                 className="flex items-center gap-2 px-5 py-2 bg-white border border-stone-200/80 rounded-full text-xs font-bold tracking-wider text-stone-700 hover:text-stone-950 focus:outline-none transition-all"
               >
                 <span className="text-stone-400 font-light uppercase tracking-widest text-[10px]">Sort:</span>
-                <span>{sortLabelMap[sortBy]}</span>
+                <span>{sortLabelMap[sortBy] || sortLabelMap.featured}</span>
                 <ChevronDown className={`w-3.5 h-3.5 text-stone-400 transition-transform duration-300 ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
 
@@ -286,14 +334,13 @@ export default function CollectionsPage() {
                         <button
                           key={key}
                           onClick={() => {
-                            setSortBy(key);
+                            updateUrlParams('sort', key);
                             setIsSortDropdownOpen(false);
-                            setVisibleCount(8);
                           }}
                           className={`w-full text-left px-4 py-2.5 text-xs tracking-wide transition-colors flex items-center justify-between ${sortBy === key
                             ? 'bg-[#FFF0EB]/50 text-[#B76E79] font-semibold'
                             : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
-                            }`}
+                          }`}
                         >
                           <span>{sortLabelMap[key]}</span>
                           {sortBy === key && <Check className="w-3.5 h-3.5 text-[#B76E79]" />}
@@ -309,21 +356,17 @@ export default function CollectionsPage() {
         </div>
       </section>
 
-      {/* ==========================================
-          FILTER SIDEBAR & MAIN PRODUCT MATRIX GRID
-          ========================================== */}
+      {/* FILTER SIDEBAR & MAIN PRODUCT MATRIX GRID */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
 
           {/* DESKTOP PERMANENT FILTER SIDEBAR NODE */}
           <aside className="hidden lg:block lg:col-span-3 sticky top-28 space-y-8 bg-white/40 backdrop-blur-xl border border-stone-200/40 rounded-2xl p-6 shadow-sm">
-
-            {/* Header Reset Node */}
             <div className="flex items-center justify-between pb-4 border-b border-stone-200/60">
               <h3 className="font-serif text-lg tracking-wide text-stone-900 flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-[#D4AF37]" /> Filter Atelier
               </h3>
-              {(selectedCategory !== 'all' || selectedOccasion !== 'all' || selectedPriceRange !== 'all') && (
+              {(selectedCategory !== 'all' || selectedOccasion !== 'all' || selectedPriceRange !== 'all' || selectedGender !== 'all' || searchQuery !== '') && (
                 <button
                   onClick={handleResetFilters}
                   className="text-[10px] font-bold tracking-widest text-[#B76E79] uppercase hover:text-stone-950 flex items-center gap-1 transition-colors"
@@ -333,18 +376,42 @@ export default function CollectionsPage() {
               )}
             </div>
 
+            {/* Gender Selection Section */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold tracking-[0.2em] uppercase text-stone-400">Gender</h4>
+              <div className="space-y-2.5">
+                {GENDERS.map((g) => {
+                  const isChecked = selectedGender === g.id;
+                  return (
+                    <label
+                      key={g.id}
+                      className="flex items-center gap-3 group cursor-pointer text-xs font-medium text-stone-600 hover:text-stone-900 transition-colors"
+                    >
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${isChecked
+                        ? 'border-[#B76E79] bg-[#B76E79] text-white shadow-3xs'
+                        : 'border-stone-300 bg-white group-hover:border-stone-400'
+                      }`}>
+                        {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                      </div>
+                      <input
+                        type="radio"
+                        name="desktopGender"
+                        checked={isChecked}
+                        onChange={() => updateUrlParams('gender', g.id)}
+                        className="sr-only"
+                      />
+                      <span>{g.name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Occasion Selection Section */}
             <div className="space-y-4">
               <h4 className="text-xs font-bold tracking-[0.2em] uppercase text-stone-400">Occasion</h4>
               <div className="space-y-2.5">
-                {[
-                  { id: 'all', name: 'All Occasions' },
-                  { id: 'wedding', name: 'Wedding' },
-                  { id: 'party', name: 'Party' },
-                  { id: 'casual', name: 'Casual' },
-                  { id: 'festive', name: 'Festive' },
-                  { id: 'daily wear', name: 'Daily Wear' }
-                ].map((occ) => {
+                {OCCASIONS.map((occ) => {
                   const isChecked = selectedOccasion === occ.id;
                   return (
                     <label
@@ -354,14 +421,14 @@ export default function CollectionsPage() {
                       <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${isChecked
                         ? 'border-[#B76E79] bg-[#B76E79] text-white shadow-3xs'
                         : 'border-stone-300 bg-white group-hover:border-stone-400'
-                        }`}>
+                      }`}>
                         {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
                       </div>
                       <input
                         type="radio"
                         name="desktopOccasion"
                         checked={isChecked}
-                        onChange={() => { setSelectedOccasion(occ.id); setVisibleCount(8); }}
+                        onChange={() => updateUrlParams('occasion', occ.id)}
                         className="sr-only"
                       />
                       <span>{occ.name}</span>
@@ -375,7 +442,7 @@ export default function CollectionsPage() {
             <div className="space-y-4">
               <h4 className="text-xs font-bold tracking-[0.2em] uppercase text-stone-400">Valuation Tier</h4>
               <div className="space-y-2.5">
-                {PRICE_RANGES.map((range) => {
+                {priceRanges.map((range) => {
                   const isChecked = selectedPriceRange === range.id;
                   return (
                     <label
@@ -385,14 +452,14 @@ export default function CollectionsPage() {
                       <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${isChecked
                         ? 'border-[#B76E79] bg-[#B76E79] text-white shadow-3xs'
                         : 'border-stone-300 bg-white group-hover:border-stone-400'
-                        }`}>
+                      }`}>
                         {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
                       </div>
                       <input
                         type="radio"
                         name="desktopPrice"
                         checked={isChecked}
-                        onChange={() => { setSelectedPriceRange(range.id); setVisibleCount(8); }}
+                        onChange={() => updateUrlParams('price', range.id)}
                         className="sr-only"
                       />
                       <span>{range.name}</span>
@@ -402,7 +469,6 @@ export default function CollectionsPage() {
               </div>
             </div>
 
-            {/* Static Luxury Certificate Tag Panel */}
             <div className="pt-6 border-t border-stone-200/60 space-y-3">
               <div className="flex items-center gap-2 text-xs font-medium text-stone-700">
                 <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
@@ -419,11 +485,9 @@ export default function CollectionsPage() {
             <AnimatePresence mode="wait">
               {loading ? (
                 <div className="text-center py-24 text-stone-500 font-medium tracking-widest animate-pulse">
-                  LOADING ATELIER COLLECTION...
+                  LOADING ATELIER VAULTS...
                 </div>
               ) : streamedProducts.length === 0 ? (
-
-                // LUXURY EMPTY OUTCOME VIEW LAYOUT
                 <motion.div
                   key="empty-state"
                   initial={{ opacity: 0, y: 20 }}
@@ -434,7 +498,7 @@ export default function CollectionsPage() {
                   <Sparkles className="w-10 h-10 text-[#D4AF37]/50 mx-auto mb-4 stroke-[1.2]" />
                   <h3 className="font-serif text-2xl font-light tracking-wide text-stone-900 mb-2">No Pieces Found</h3>
                   <p className="text-stone-500 text-xs font-light max-w-xs mx-auto leading-relaxed mb-8">
-                    Our current vault ledgers do not match the specified constraints. Broaden your search filters to expose remaining options.
+                    Our current vault ledgers do not match the specified criteria. Broaden your search text or clear filters to locate remaining options.
                   </p>
                   <button
                     onClick={handleResetFilters}
@@ -443,10 +507,7 @@ export default function CollectionsPage() {
                     Reset Filter Parameters
                   </button>
                 </motion.div>
-
               ) : (
-
-                // MAIN GRID RENDER BLOCK WITH SCROLL STAGGER HOOKS
                 <div className="space-y-16" key="products-content">
                   <motion.div
                     variants={containerVariants}
@@ -456,14 +517,13 @@ export default function CollectionsPage() {
                   >
                     {streamedProducts.map((product) => (
                       <motion.div key={product.id} variants={cardItemVariants} className="h-full">
-                        {/* UNCHANGED INTACT INHERITED SYSTEM PROP HOOK */}
+                        {/* 🌟 Spreading fields natively cleanly */}
                         <ProductCard {...product} />
                       </motion.div>
                     ))}
                   </motion.div>
 
-                  {/* HIGH-END INTERACTIVE LOAD MORE MECHANISM CONTROLLER */}
-                  {filteredAndSortedProducts.length > visibleCount && (
+                  {displayedProducts.length > visibleCount && (
                     <div className="text-center pt-4">
                       <motion.button
                         whileHover={{ scale: 1.02, boxShadow: '0 10px 25px -5px rgba(183, 110, 121, 0.15)' }}
@@ -471,7 +531,6 @@ export default function CollectionsPage() {
                         onClick={() => setVisibleCount(prev => prev + 4)}
                         className="px-10 py-4 relative group rounded-full text-[11px] font-bold uppercase tracking-[0.25em] bg-white border border-stone-200/80 text-stone-800 transition-all duration-300"
                       >
-                        {/* Elegant Shimmer Inner Overlay Glow */}
                         <div className="absolute inset-0 bg-gradient-to-r from-[#FFF0EB]/0 via-[#FFF0EB]/40 to-[#FFF0EB]/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out rounded-full" />
                         <span className="relative z-10 group-hover:text-[#B76E79] transition-colors">
                           Load More Masterpieces
@@ -487,13 +546,10 @@ export default function CollectionsPage() {
         </div>
       </section>
 
-      {/* ==========================================
-          MOBILE OVERLAY FILTERS DRAWER COMPONENT
-          ========================================== */}
+      {/* MOBILE OVERLAY FILTERS DRAWER COMPONENT */}
       <AnimatePresence>
         {isMobileFilterOpen && (
           <>
-            {/* Dark Mask Shield Overlay */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.4 }}
@@ -502,7 +558,6 @@ export default function CollectionsPage() {
               className="fixed inset-0 bg-black z-50 backdrop-blur-3xs"
             />
 
-            {/* Sliding Drawer Architecture Sheet */}
             <motion.div
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
@@ -517,9 +572,8 @@ export default function CollectionsPage() {
                 </button>
               </div>
 
-              {/* Mobile Drawer Form Configurations */}
               <div className="space-y-8 flex-1">
-                {/* Categories Component Mapping Drawer Section */}
+                {/* Collections Component Mapping Drawer Section */}
                 <div className="space-y-3">
                   <h4 className="text-[10px] font-bold tracking-[0.2em] uppercase text-stone-400">Collections</h4>
                   <div className="flex flex-col gap-1.5">
@@ -528,7 +582,7 @@ export default function CollectionsPage() {
                       return (
                         <button
                           key={cat.id}
-                          onClick={() => { setSelectedCategory(cat.id); setVisibleCount(8); }}
+                          onClick={() => updateUrlParams('category', cat.id)}
                           className={`text-left py-2 px-3 text-xs rounded-lg transition-colors flex items-center justify-between ${isSelected ? 'bg-white text-[#B76E79] font-bold shadow-3xs' : 'text-stone-600 hover:bg-stone-100/50'
                             }`}
                         >
@@ -540,23 +594,37 @@ export default function CollectionsPage() {
                   </div>
                 </div>
 
+                {/* Gender Section */}
+                <div className="space-y-3">
+                  <h4 className="text-[10px] font-bold tracking-[0.2em] uppercase text-stone-400">Gender</h4>
+                  <div className="flex flex-col gap-1.5">
+                    {GENDERS.map((g) => {
+                      const isSelected = selectedGender === g.id;
+                      return (
+                        <button
+                          key={g.id}
+                          onClick={() => updateUrlParams('gender', g.id)}
+                          className={`text-left py-2 px-3 text-xs rounded-lg transition-colors flex items-center justify-between ${isSelected ? 'bg-white text-[#B76E79] font-bold shadow-3xs' : 'text-stone-600 hover:bg-stone-100/50'
+                            }`}
+                        >
+                          <span>{g.name}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {/* Mobile Occasion Section */}
                 <div className="space-y-3">
                   <h4 className="text-[10px] font-bold tracking-[0.2em] uppercase text-stone-400">Occasion</h4>
                   <div className="flex flex-col gap-1.5">
-                    {[
-                      { id: 'all', name: 'All Occasions' },
-                      { id: 'wedding', name: 'Wedding' },
-                      { id: 'party', name: 'Party' },
-                      { id: 'casual', name: 'Casual' },
-                      { id: 'festive', name: 'Festive' },
-                      { id: 'daily wear', name: 'Daily Wear' }
-                    ].map((occ) => {
+                    {OCCASIONS.map((occ) => {
                       const isSelected = selectedOccasion === occ.id;
                       return (
                         <button
                           key={occ.id}
-                          onClick={() => { setSelectedOccasion(occ.id); setVisibleCount(8); }}
+                          onClick={() => updateUrlParams('occasion', occ.id)}
                           className={`text-left py-2 px-3 text-xs rounded-lg transition-colors flex items-center justify-between ${isSelected ? 'bg-white text-[#B76E79] font-bold shadow-3xs' : 'text-stone-600 hover:bg-stone-100/50'
                             }`}
                         >
@@ -572,10 +640,10 @@ export default function CollectionsPage() {
                 <div className="space-y-3">
                   <h4 className="text-[10px] font-bold tracking-[0.2em] uppercase text-stone-400">Valuations</h4>
                   <div className="space-y-2.5">
-                    {PRICE_RANGES.map((range) => {
+                    {priceRanges.map((range) => {
                       const isChecked = selectedPriceRange === range.id;
                       return (
-                        <label key={range.id} className="flex items-center gap-3 text-xs font-medium text-stone-600">
+                        <label key={range.id} className="flex items-center gap-3 text-xs font-medium text-stone-600 cursor-pointer">
                           <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${isChecked ? 'border-[#B76E79] bg-[#B76E79] text-white' : 'border-stone-300 bg-white'
                             }`}>
                             {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
@@ -584,7 +652,7 @@ export default function CollectionsPage() {
                             type="radio"
                             name="mobilePrice"
                             checked={isChecked}
-                            onChange={() => { setSelectedPriceRange(range.id); setVisibleCount(8); }}
+                            onChange={() => updateUrlParams('price', range.id)}
                             className="sr-only"
                           />
                           <span>{range.name}</span>
@@ -595,7 +663,6 @@ export default function CollectionsPage() {
                 </div>
               </div>
 
-              {/* Lower Overlay Execution Action Nodes */}
               <div className="pt-6 border-t border-stone-200/80 mt-auto space-y-3">
                 <button
                   onClick={() => setIsMobileFilterOpen(false)}
@@ -616,7 +683,7 @@ export default function CollectionsPage() {
         )}
       </AnimatePresence>
 
-      {/* STICKY FLOATING MOBILE FILTER INVOKER (Visible only during scrolling viewports) */}
+      {/* STICKY FLOATING MOBILE FILTER INVOKER */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 lg:hidden">
         <motion.button
           whileHover={{ scale: 1.05 }}

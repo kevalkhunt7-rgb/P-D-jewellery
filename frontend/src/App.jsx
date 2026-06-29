@@ -11,12 +11,16 @@ import { CartProvider } from './context/CartContext'
 import { WishlistProvider } from './context/WishlistContext'
 import { ProductProvider } from './context/ProductContext'
 import { AuthProvider } from './context/AuthContext'
+import { SettingsProvider } from './context/SettingsContext'
 import { Toaster } from 'react-hot-toast'
 
 // Components
 import ScrollToTop from './components/ScrollToTop'
 import { Footer } from './components/Footer'
 import OrderDetailPage from './pages/OrderDetailPage'
+
+// 🚀 Import the Favicon Manager utility
+import { FaviconManager } from './components/FaviconManager'
 
 // 2. Change standard imports to Lazy Imports for smooth page transition loaders
 const Home = lazy(() => import("./pages/Home"))
@@ -41,45 +45,50 @@ function App() {
   return (
     <div className="w-full min-h-screen overflow-x-hidden bg-[#FAF9F6] relative">
       <AuthProvider>
-        <Toaster position="top-right" reverseOrder={false} />
         <ProductProvider>
-          <WishlistProvider>
-            <CartProvider>
-              <Navbar />
+          <SettingsProvider>
+            {/* 🚀 Mount FaviconManager here so it can use the settings context */}
+            <FaviconManager />
 
-              <main className="pt-16 w-full overflow-x-hidden">
-                <ScrollToTop />
-                
-                {/* 3. Wrap your Routes in Suspense and pass your custom <Loading /> component */}
-                <Suspense fallback={<Loading />}>
-                  <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/cart" element={<Cart />} />
-                    <Route path="/about" element={<AboutPage />} />
-                    <Route path='/product/:slug' element={<ProductDetailPage />} />
-                    <Route path='checkout' element={<PremiumCheckoutPage />} />
-                    <Route path='/collections' element={<CollectionsPage />} />
-                    <Route path='/lookbook' element={<LookBookPage />} />
-                    <Route path='/give-review/:productId' element={<GiveReview />} />
-                    <Route path='/new-arrivals' element={<NewArrivalsPage />} />
-                    <Route path="/certification-policy" element={<CertificationPolicy />} />
-                    <Route path="/hallmark-info" element={<HallmarkInfo />} />
-                    <Route path="/buyback-policy" element={<BuybackPolicy />} />
-                    <Route path="/exchange-policy" element={<ExchangePolicy />} />
-                    <Route path="/jewellery-care-guide" element={<JewelleryCareGuide />} />
-                    <Route path="/order-detail/:id" element={<OrderDetailPage />} />
+            <Toaster position="top-right" reverseOrder={false} />
+            <WishlistProvider>
+              <CartProvider>
+                <Navbar />
+
+                <main className="pt-16 w-full overflow-x-hidden">
+                  <ScrollToTop />
                   
-                    <Route path='/*' element={<NotFoundPage />} />
-                  </Routes>
-                </Suspense>
+                  {/* 3. Wrap your Routes in Suspense and pass your custom <Loading /> component */}
+                  <Suspense fallback={<Loading />}>
+                    <Routes>
+                      <Route path="/" element={<Home />} />
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/profile" element={<Profile />} />
+                      <Route path="/cart" element={<Cart />} />
+                      <Route path="/about" element={<AboutPage />} />
+                      <Route path='/product/:slug' element={<ProductDetailPage />} />
+                      <Route path='checkout' element={<PremiumCheckoutPage />} />
+                      <Route path='/collections' element={<CollectionsPage />} />
+                      <Route path='/lookbook' element={<LookBookPage />} />
+                      <Route path='/give-review/:productId' element={<GiveReview />} />
+                      <Route path='/new-arrivals' element={<NewArrivalsPage />} />
+                      <Route path="/certification-policy" element={<CertificationPolicy />} />
+                      <Route path="/hallmark-info" element={<HallmarkInfo />} />
+                      <Route path="/buyback-policy" element={<BuybackPolicy />} />
+                      <Route path="/exchange-policy" element={<ExchangePolicy />} />
+                      <Route path="/jewellery-care-guide" element={<JewelleryCareGuide />} />
+                      <Route path="/order-detail/:id" element={<OrderDetailPage />} />
+                    
+                      <Route path='/*' element={<NotFoundPage />} />
+                    </Routes>
+                  </Suspense>
 
-              </main>
-             <Footer/> 
-            
-            </CartProvider>
-          </WishlistProvider>
+                </main>
+                <Footer/> 
+              
+              </CartProvider>
+            </WishlistProvider>
+          </SettingsProvider>
         </ProductProvider>
       </AuthProvider>
     </div>

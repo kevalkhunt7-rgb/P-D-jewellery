@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router-dom";
 import { FiArrowLeft, FiPercent, FiDollarSign } from "react-icons/fi";
 import api from "../utils/api";
 import toast from "react-hot-toast";

@@ -1,20 +1,21 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../utils/api";
 import { FiArrowLeft, FiUpload, FiX, FiPlus } from "react-icons/fi";
 import toast from "react-hot-toast";
+import { calculatePriceBreakdown } from "../utils/pricingCalculator";
 
 export function AddProduct() {
   const navigate = useNavigate();
   const [images, setImages] = useState([null, null, null, null, null]);
   const [previews, setPreviews] = useState([null, null, null, null, null]);
+  const [goldRate24kt, setGoldRate24kt] = useState(8000);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     category: "",
     sku: "",
-    price: "",
-    originalPrice: "",
+    discountPercentage: 0,
     stock: "",
     weight: "",
     material: "",
@@ -30,6 +31,7 @@ export function AddProduct() {
     metaDesc: "",
     tags: "",
     defaultRating: 0,
+    gender: "unisex",
     // New premium jewellery fields
     metalType: "Gold",
     purity: "22KT",
@@ -40,10 +42,11 @@ export function AddProduct() {
     diamondPieces: 0,
     bisHallmarkNumber: "",
     certificateDetails: "",
-    makingCharges: 0,
+    makingChargeType: "per_gram",
+    makingChargeValue: 0,
     gst: 3,
-    warranty: "Lifetime",
-    buybackEligibility: true
+    cgstRate: 1.5,
+    sgstRate: 1.5,
   });
   const [variants, setVariants] = useState([{ color: "", size: "", stock: 0 }]);
   const [categories, setCategories] = useState([]);
@@ -60,7 +63,18 @@ export function AddProduct() {
         console.error("Failed to fetch categories", error);
       }
     };
+    const fetchGoldRate = async () => {
+      try {
+        const { data } = await api.get("/settings/gold-rate/public");
+        if (data.success) {
+          setGoldRate24kt(data.goldRate24kt);
+        }
+      } catch (error) {
+        console.error("Failed to fetch gold rate", error);
+      }
+    };
     fetchCategories();
+    fetchGoldRate();
   }, []);
 
   const handleInputChange = (e) => {
@@ -156,6 +170,23 @@ export function AddProduct() {
     setVariants(variants.filter((_, i) => i !== index));
   };
 
+  const pricePreview = useMemo(() => {
+    try {
+      return calculatePriceBreakdown({
+        goldRate24kt,
+        purity: formData.purity || "22KT",
+        netWeight: parseFloat(formData.netWeight) || 0,
+        makingChargeType: formData.makingChargeType || "per_gram",
+        makingChargeValue: parseFloat(formData.makingChargeValue) || 0,
+        cgstRate: parseFloat(formData.cgstRate) || 1.5,
+        sgstRate: parseFloat(formData.sgstRate) || 1.5,
+        discountPercentage: parseFloat(formData.discountPercentage) || 0,
+      });
+    } catch (e) {
+      return { originalPrice: 0, salePrice: 0, metalValue: 0, makingCharge: 0, cgst: 0, sgst: 0 };
+    }
+  }, [goldRate24kt, formData.purity, formData.netWeight, formData.makingChargeType, formData.makingChargeValue, formData.cgstRate, formData.sgstRate, formData.discountPercentage]);
+
   return (
     <div className="space-y-6 max-w-5xl text-slate-200 p-1">
       {/* Page Header Header */}
@@ -204,7 +235,7 @@ export function AddProduct() {
               />
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-1.5">
                 <label htmlFor="category" className="text-xs font-semibold text-slate-300">Category *</label>
                 <select
@@ -230,6 +261,20 @@ export function AddProduct() {
                   placeholder="JWL-NCK-001"
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-colors"
                 />
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="gender" className="text-xs font-semibold text-slate-300">Gender</label>
+                <select
+                  id="gender"
+                  value={formData.gender}
+                  onChange={handleInputChange}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50 transition-colors appearance-none"
+                >
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="unisex">Unisex</option>
+                </select>
               </div>
             </div>
           </div>
@@ -281,39 +326,45 @@ export function AddProduct() {
           <div className="bg-slate-900 border border-slate-800/80 rounded-2xl p-5 shadow-sm space-y-4">
             <h2 className="text-sm font-bold text-white tracking-wide border-b border-slate-800 pb-2">Pricing & Inventory</h2>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label htmlFor="price" className="text-xs font-semibold text-slate-300">Price *</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">₹</span>
-                  <input
-                    id="price"
-                    type="number"
-                    value={formData.price}
-                    onChange={handleInputChange}
-                    placeholder="0.00"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-7 pr-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-colors"
-                  />
+            {/* Live Pricing Preview Module */}
+            <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-850 space-y-3">
+              <h3 className="text-xs font-bold text-white tracking-wider uppercase">Live Pricing Preview (Automatic)</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <span className="text-[15px] font-bold text-slate-400 uppercase block">Original Price</span>
+                  <span className="text-lg font-bold text-white">₹{pricePreview.originalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[15px] font-bold text-slate-400 uppercase block">Sale Price</span>
+                  <span className="text-lg font-bold text-amber-500">₹{pricePreview.salePrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                 </div>
               </div>
-
-              <div className="space-y-1.5">
-                <label htmlFor="originalPrice" className="text-xs font-semibold text-slate-300">Original Price</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">₹</span>
-                  <input
-                    id="originalPrice"
-                    type="number"
-                    value={formData.originalPrice}
-                    onChange={handleInputChange}
-                    placeholder="0.00"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-7 pr-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-colors"
-                  />
-                </div>
+              <div className="grid grid-cols-2 gap-2 text-[15px] text-slate-500 border-t border-slate-900 pt-2.5">
+                <div>Metal Value: <span className="text-slate-400 font-semibold">₹{pricePreview.metalValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                <div>Making Charges: <span className="text-slate-400 font-semibold">₹{pricePreview.makingCharge.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                <div>CGST: <span className="text-slate-400 font-semibold">₹{pricePreview.cgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                <div>SGST: <span className="text-slate-400 font-semibold">₹{pricePreview.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
               </div>
+              <p className="text-[9px] text-slate-600">
+                Calculated on-the-fly using 24KT Gold Rate: <strong>₹{goldRate24kt}/g</strong>.
+              </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label htmlFor="discountPercentage" className="text-xs font-semibold text-slate-300">Discount Percentage (%)</label>
+                <input
+                  id="discountPercentage"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={formData.discountPercentage}
+                  onChange={handleInputChange}
+                  placeholder="0"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-colors"
+                />
+              </div>
+
               <div className="space-y-1.5">
                 <label htmlFor="stock" className="text-xs font-semibold text-slate-300">Stock Quantity *</label>
                 <input
@@ -325,7 +376,9 @@ export function AddProduct() {
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-colors"
                 />
               </div>
+            </div>
 
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-1.5">
                 <label htmlFor="weight" className="text-xs font-semibold text-slate-300">Weight (grams)</label>
                 <input
@@ -374,6 +427,7 @@ export function AddProduct() {
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50 transition-colors appearance-none pr-10"
                   >
                     <option value="" disabled>Select purity</option>
+                    <option value="9KT">9KT Gold</option>
                     <option value="14KT">14KT Gold</option>
                     <option value="18KT">18KT Gold</option>
                     <option value="22KT">22KT Gold</option>
@@ -507,30 +561,64 @@ export function AddProduct() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label htmlFor="makingCharges" className="text-xs font-semibold text-slate-300">Making Charges (₹)</label>
+                <label htmlFor="makingChargeType" className="text-xs font-semibold text-slate-300">Making Charge Type</label>
+                <select
+                  id="makingChargeType"
+                  value={formData.makingChargeType}
+                  onChange={handleInputChange}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50 transition-colors appearance-none"
+                >
+                  <option value="per_gram">Per Gram (₹/g)</option>
+                  <option value="percentage">Percentage (%)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="makingChargeValue" className="text-xs font-semibold text-slate-300">
+                  {formData.makingChargeType === "per_gram" ? "Making Charges (₹/g)" : "Making Charges (%)"}
+                </label>
                 <input
-                  id="makingCharges"
+                  id="makingChargeValue"
                   type="number"
-                  value={formData.makingCharges}
+                  step="0.01"
+                  value={formData.makingChargeValue}
                   onChange={handleInputChange}
                   placeholder="0"
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-colors"
                 />
               </div>
+            </div>
 
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-1.5">
-                <label htmlFor="gst" className="text-xs font-semibold text-slate-300">GST (%)</label>
+                <label htmlFor="cgstRate" className="text-xs font-semibold text-slate-300">CGST (%)</label>
                 <input
-                  id="gst"
+                  id="cgstRate"
                   type="number"
                   step="0.1"
-                  value={formData.gst}
+                  value={formData.cgstRate}
                   onChange={handleInputChange}
-                  placeholder="3"
+                  placeholder="1.5"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-colors"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="sgstRate" className="text-xs font-semibold text-slate-300">SGST (%)</label>
+                <input
+                  id="sgstRate"
+                  type="number"
+                  step="0.1"
+                  value={formData.sgstRate}
+                  onChange={handleInputChange}
+                  placeholder="1.5"
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-colors"
                 />
               </div>
             </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+                          </div>
 
             <div className="space-y-1.5">
               <label htmlFor="certificateDetails" className="text-xs font-semibold text-slate-300">Certificate Details</label>

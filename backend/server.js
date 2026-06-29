@@ -3,6 +3,7 @@ dotenv.config();
 import { rateLimit } from "express-rate-limit";
 import express from 'express';
 import cors from 'cors';
+import cron from 'node-cron';
 import connectDB from './src/config/db.js';
 import authRoutes from './src/routes/authRoutes.js';
 import productRoutes from './src/routes/productRoute.js';
@@ -17,6 +18,7 @@ import adminRoutes from './src/routes/adminRoutes.js';
 import settingsRoutes from './src/routes/settingsRoutes.js';
 import paymentRoutes from './src/routes/paymentRoutes.js'
 import dns from "dns";
+import { fetchAndUpdateExchangeRate } from './src/utils/exchangeRateService.js';
 
 // Force stable DNS lookups to avoid connection resets with DB clusters/APIs
 dns.setServers(["1.1.1.1", "8.8.8.8"]);
@@ -24,11 +26,20 @@ dns.setServers(["1.1.1.1", "8.8.8.8"]);
 // Connect Database
 connectDB();
 
+// Fetch exchange rate on server start
+fetchAndUpdateExchangeRate();
+
+// Schedule exchange rate update every 6 hours
+cron.schedule('0 */6 * * *', async () => {
+  console.log('Running scheduled exchange rate update...');
+  await fetchAndUpdateExchangeRate();
+});
+
 const app = express();
 
 // 1. FIXED: Explicit CORS Policy to prevent ERR_CONNECTION_RESET
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174' ,'https://p-d-jewellery.vercel.app'],
+  origin: ['http://localhost:5173', 'http://localhost:5174' ,'http://localhost:5001'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']

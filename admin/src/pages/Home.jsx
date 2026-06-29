@@ -7,7 +7,8 @@ import {
   FiShoppingCart,
   FiUsers,
   FiPackage,
-  FiAlertTriangle
+  FiAlertTriangle,
+
 } from "react-icons/fi";
 import {
   AreaChart,
@@ -20,6 +21,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+
+import { IoAirplane } from "react-icons/io5";
 
 const getStatusStyles = (status) => {
   const styles = {
@@ -104,7 +107,7 @@ export default function Home() {
         <div className="bg-slate-900 border border-slate-800/80 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between pb-2">
             <span className="text-xs font-medium text-slate-400 tracking-wide">Total Revenue</span>
-            <FiDollarSign className="w-4 h-4 text-amber-500" />
+            <span className="w-4 h-4 text-amber-500"> ₹</span> 
           </div>
           <div className="text-2xl font-bold tracking-tight text-white">₹{stats.totalRevenue.toLocaleString()}</div>
           <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-1.5">
@@ -235,14 +238,32 @@ export default function Home() {
               <tbody className="divide-y divide-slate-800/60 text-xs">
                 {recentOrders.map((order) => (
                   <tr key={order._id} className="hover:bg-slate-800/20 transition-colors">
-                    <td className="py-3.5 pl-1 font-semibold text-amber-500/90">{order._id.slice(-6)}</td>
+                    <td className="py-3.5 pl-1 font-semibold text-amber-500/90">
+                      <div className="flex items-center gap-1.5">
+                        <span>{order._id.slice(-6).toUpperCase()}</span>
+                        {(order.paymentMethod === 'PAYPAL' || order.displayCurrency === 'USD') && (
+                          <span title="Foreign Order" className="text-sky-400">
+                            <IoAirplane className="w-3 h-3" />
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="py-3.5">
                       <div className="font-medium text-slate-200">{order.user?.name || 'Guest'}</div>
                       <div className="text-[10px] text-slate-500 mt-0.5 max-w-[180px] truncate">
                         {order.orderItems.map(item => item.name).join(", ")}
                       </div>
                     </td>
-                    <td className="py-3.5 font-medium text-slate-300">₹{order.totalPrice.toLocaleString()}</td>
+                    <td className="py-3.5 font-medium text-slate-300">
+                      <div className="flex flex-col">
+                        <span>
+                          ₹{order.totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-normal">
+                          INR
+                        </span>
+                      </div>
+                    </td>
                     <td className="py-3.5 text-right pr-1">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium tracking-wide border uppercase ${getStatusStyles(order.orderStatus)}`}>
                         {order.orderStatus}
@@ -328,8 +349,15 @@ export default function Home() {
             {recentCustomers.map((customer, index) => (
               <div key={index} className="flex items-center gap-3.5 p-1">
                 {/* Fallback avatar block */}
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-slate-800 to-slate-700 border border-slate-700 flex items-center justify-center flex-shrink-0 font-bold text-xs text-amber-500 tracking-wider">
-                  {customer.name.split(' ').map(n => n[0]).join('')}
+                <div className="w-9 h-9 rounded-xl overflow-hidden bg-slate-800 border border-slate-700 flex items-center justify-center flex-shrink-0">
+                  <img
+                    src={customer.avatar?.url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(customer.name || '')}`}
+                    alt={customer.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(customer.name || '')}`;
+                    }}
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-xs text-slate-200 truncate">{customer.name}</p>

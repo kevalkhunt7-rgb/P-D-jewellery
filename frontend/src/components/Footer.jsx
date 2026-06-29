@@ -2,10 +2,47 @@ import React from 'react';
 import { Mail, Phone, MapPin, Heart } from 'lucide-react';
 import { FaFacebookSquare, FaInstagram, FaYoutube } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
-import logo from "../assets/logo.png";
-import { motion, AnimatePresence } from 'framer-motion';
+import staticLogo from "../assets/logo.png";
+import { motion } from 'framer-motion';
+import { useSettings } from '../context/SettingsContext';
+
+const QUICK_LINKS = [
+  { label: 'About Us', href: '/about' },
+  { label: 'Collections', href: '/collections' },
+  { label: 'New Arrivals', href: '/new-arrivals' },
+  { label: 'Bridal', href: '/collections?occasion=wedding' },
+];
+
+const CUSTOMER_CARE_LINKS = [
+  { label: 'Contact Us', href: '/contact' },
+  { label: 'Shipping Info', href: '/shipping' },
+  { label: 'Lookbook', href: '/lookbook' },
+];
+
+const LEGAL_LINKS = [
+  { label: 'Privacy Policy', href: '/privacy' },
+  { label: 'Terms of Service', href: '/terms' },
+];
+
+const PAYMENT_METHODS = ['VISA', 'MASTERCARD', 'NET BANKING', 'UPI', 'PAY LATER'];
+
 export function Footer() {
   const currentYear = new Date().getFullYear();
+  const { settings } = useSettings();
+
+  const storeName = settings.general?.storeName || "P&D";
+  const logoUrl = settings.general?.logo?.url || staticLogo;
+  const storeAddress = settings.general?.address || "123 Jewelry Lane, Fashion District\nNew York, NY 10001";
+  const storePhone = settings.general?.phone;
+  const storeEmail = settings.general?.storeEmail || "hello@lumiere.com";
+  const storeDescription = settings.general?.tagline || "Crafting timeless elegance through exquisite gold jewellery.";
+
+  const socialLinks = [
+    { icon: FaFacebookSquare, href: settings.social?.facebook || 'https://facebook.com/lumiere' },
+    { icon: FaInstagram, href: settings.social?.instagram || 'https://instagram.com/lumiere' },
+    { icon: FaXTwitter, href: settings.social?.twitter || 'https://twitter.com/lumiere' },
+    { icon: FaYoutube, href: settings.social?.youtube || 'https://youtube.com/lumiere' },
+  ];
 
   return (
     <footer className="bg-gradient-to-b from-[#2C2C2C] to-[#1a1a1a] text-white pt-16 pb-8">
@@ -15,28 +52,29 @@ export function Footer() {
           {/* Brand Column */}
           <div>
             <motion.img
-              src={logo}
-              alt="P&D Luxury Jewellery"
+              src={logoUrl}
+              alt={`${storeName} Luxury Jewellery`}
               className="h-25 cursor-pointer mb-5 w-auto object-contain scale-[1] origin-center"
               whileHover={{ rotate: 360 }}
               transition={{
                 duration: 0.8,
                 ease: "easeInOut",
               }}
+              onClick={() => window.location.href = '/'}
+              onError={(e) => {
+                e.target.src = staticLogo;
+              }}
             />
             <p className="mb-6 opacity-80" style={{ fontSize: '0.875rem', lineHeight: 1.7 }}>
-              Crafting timeless elegance through exquisite imitation jewelry. Every piece tells a story of beauty, grace, and sophistication.
+              {storeDescription}
             </p>
             <div className="flex gap-3">
-              {[
-                { icon: FaFacebookSquare, href: '#' },
-                { icon: FaInstagram, href: '#' },
-                { icon: FaXTwitter, href: '#' },
-                { icon: FaYoutube, href: '#' },
-              ].map((social, index) => (
+              {socialLinks.map((social, index) => (
                 <a
                   key={index}
                   href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="social-footer-link w-10 h-10 rounded-full bg-white/10 flex items-center justify-center transition-all duration-300"
                   style={{ borderRadius: '50%' }}
                 >
@@ -46,42 +84,42 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Quick Links */}
+          {/* Dynamic Quick Links */}
           <div>
             <h4 className="font-serif mb-6" style={{ fontSize: '1.25rem', fontWeight: 600 }}>
               Quick Links
             </h4>
             <ul className="space-y-3" style={{ paddingLeft: 0, listStyle: 'none' }}>
-              {['About Us', 'Collections', 'New Arrivals', 'Bridal', 'Gift Guide', 'Size Guide'].map((link) => (
-                <li key={link}>
+              {QUICK_LINKS.map((link) => (
+                <li key={link.label}>
                   <a
-                    href="#"
+                    href={link.href}
                     className="opacity-80 hover:opacity-100 hover:text-[#B76E79] transition-all duration-300 inline-flex items-center gap-2"
                     style={{ fontSize: '0.875rem', textDecoration: 'none', color: 'inherit' }}
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]" style={{ width: '6px', height: '6px', borderRadius: '50%' }} />
-                    {link}
+                    {link.label}
                   </a>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Customer Care */}
+          {/* Dynamic Customer Care Links */}
           <div>
             <h4 className="font-serif mb-6" style={{ fontSize: '1.25rem', fontWeight: 600 }}>
               Customer Care
             </h4>
             <ul className="space-y-3" style={{ paddingLeft: 0, listStyle: 'none' }}>
-              {['Contact Us', 'Shipping Info', 'Returns & Exchanges', 'FAQ', 'Care Instructions', 'Warranty'].map((link) => (
-                <li key={link}>
+              {CUSTOMER_CARE_LINKS.map((link) => (
+                <li key={link.label}>
                   <a
-                    href="#"
+                    href={link.href}
                     className="opacity-80 hover:opacity-100 hover:text-[#B76E79] transition-all duration-300 inline-flex items-center gap-2"
                     style={{ fontSize: '0.875rem', textDecoration: 'none', color: 'inherit' }}
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]" style={{ width: '6px', height: '6px', borderRadius: '50%' }} />
-                    {link}
+                    {link.label}
                   </a>
                 </li>
               ))}
@@ -96,22 +134,20 @@ export function Footer() {
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-[#B76E79] flex-shrink-0 mt-1" />
-                <p className="opacity-80" style={{ fontSize: '0.875rem', lineHeight: 1.6, margin: 0 }}>
-                  123 Jewelry Lane, Fashion District
-                  <br />
-                  New York, NY 10001
+                <p className="opacity-80" style={{ fontSize: '0.875rem', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-line' }}>
+                  {storeAddress}
                 </p>
               </div>
               <div className="flex items-center gap-3">
                 <Phone className="w-5 h-5 text-[#B76E79] flex-shrink-0" />
-                <a href="tel:+1234567890" className="opacity-80 hover:opacity-100 transition-opacity" style={{ fontSize: '0.875rem', color: 'inherit', textDecoration: 'none' }}>
-                  +1 (234) 567-8900
+                <a href={`tel:${storePhone}`} className="opacity-80 hover:opacity-100 transition-opacity" style={{ fontSize: '0.875rem', color: 'inherit', textDecoration: 'none' }}>
+                  {storePhone}
                 </a>
               </div>
               <div className="flex items-center gap-3">
                 <Mail className="w-5 h-5 text-[#B76E79] flex-shrink-0" />
-                <a href="mailto:hello@lumiere.com" className="opacity-80 hover:opacity-100 transition-opacity" style={{ fontSize: '0.875rem', color: 'inherit', textDecoration: 'none' }}>
-                  hello@lumiere.com
+                <a href={`mailto:${storeEmail}`} className="opacity-80 hover:opacity-100 transition-opacity" style={{ fontSize: '0.875rem', color: 'inherit', textDecoration: 'none' }}>
+                  {storeEmail}
                 </a>
               </div>
             </div>
@@ -125,7 +161,7 @@ export function Footer() {
               className="opacity-70 text-center md:text-left"
               style={{ fontSize: '0.875rem', margin: 0 }}
             >
-              © {currentYear} LUMIÈRE. All rights reserved.
+              © {currentYear} {storeName} Luxury Jewellery. All rights reserved.
             </p>
 
             <div
@@ -138,12 +174,16 @@ export function Footer() {
             </div>
 
             <div className="flex gap-6">
-              <a href="#" className="opacity-70 hover:opacity-100 transition-opacity" style={{ fontSize: '0.875rem', color: 'inherit', textDecoration: 'none' }}>
-                Privacy Policy
-              </a>
-              <a href="#" className="opacity-70 hover:opacity-100 transition-opacity" style={{ fontSize: '0.875rem', color: 'inherit', textDecoration: 'none' }}>
-                Terms of Service
-              </a>
+              {LEGAL_LINKS.map((link) => (
+                <a 
+                  key={link.label}
+                  href={link.href} 
+                  className="opacity-70 hover:opacity-100 transition-opacity" 
+                  style={{ fontSize: '0.875rem', color: 'inherit', textDecoration: 'none' }}
+                >
+                  {link.label}
+                </a>
+              ))}
             </div>
           </div>
         </div>
@@ -154,7 +194,7 @@ export function Footer() {
             SECURE PAYMENT METHODS
           </p>
           <div className="flex justify-center items-center gap-4 flex-wrap opacity-60">
-            {['VISA', 'MASTERCARD', 'AMEX', 'PAYPAL', 'APPLE PAY'].map((payment) => (
+            {PAYMENT_METHODS.map((payment) => (
               <div
                 key={payment}
                 className="px-4 py-2 bg-white/10 rounded"
@@ -167,7 +207,7 @@ export function Footer() {
         </div>
       </div>
 
-      {/* Embedded High Performance CSS Transitions */}
+      {/* Embedded Style Segment */}
       <style>{`
         .social-footer-link {
           transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.3s ease !important;

@@ -13,14 +13,7 @@ import {
 
 import { useProducts } from '../context/ProductContext';
 import { ProductCard } from '../components/ProductCard';
-
-const PRICE_RANGES = [
-  { id: 'all', name: 'All Valuations' },
-  { id: 'under-2500', name: 'Under ₹2,500', min: 0, max: 2500 },
-  { id: '2500-5000', name: '₹2,500 – ₹5,000', min: 2500, max: 5000 },
-  { id: '5000-10000', name: '₹5,000 – ₹10,000', min: 5000, max: 10000 },
-  { id: 'above-10000', name: 'Above ₹10,000', min: 10000, max: Infinity }
-];
+import { useSettings } from '../context/SettingsContext';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -41,6 +34,28 @@ const cardItemVariants = {
 
 export default function NewArrivalsPage() {
   const { products, loading } = useProducts();
+  const { settings } = useSettings();
+  const currencySymbol = settings?.general?.currencySymbol || '₹';
+  const currency = settings?.general?.currency || 'INR';
+
+  const priceRanges = useMemo(() => {
+    if (currency === 'USD') {
+      return [
+        { id: 'all', name: 'All Valuations' },
+        { id: 'under-2500', name: 'Under $50', min: 0, max: 50 },
+        { id: '2500-5000', name: '$50 – $100', min: 50, max: 100 },
+        { id: '5000-10000', name: '$100 – $200', min: 100, max: 200 },
+        { id: 'above-10000', name: 'Above $200', min: 200, max: Infinity }
+      ];
+    }
+    return [
+      { id: 'all', name: 'All Valuations' },
+      { id: 'under-2500', name: 'Under ₹2,500', min: 0, max: 2500 },
+      { id: '2500-5000', name: '₹2,500 – ₹5,000', min: 2500, max: 5000 },
+      { id: '5000-10000', name: '₹5,000 – ₹10,000', min: 5000, max: 10000 },
+      { id: 'above-10000', name: 'Above ₹10,000', min: 10000, max: Infinity }
+    ];
+  }, [currency]);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPriceRange, setSelectedPriceRange] = useState('all');
@@ -65,7 +80,7 @@ export default function NewArrivalsPage() {
     }
 
     if (selectedPriceRange !== 'all') {
-      const activeRange = PRICE_RANGES.find(r => r.id === selectedPriceRange);
+      const activeRange = priceRanges.find(r => r.id === selectedPriceRange);
       if (activeRange) {
         result = result.filter(p => p.price >= activeRange.min && p.price <= activeRange.max);
       }
@@ -232,7 +247,7 @@ export default function NewArrivalsPage() {
             <div className="space-y-4">
               <h4 className="text-xs font-bold tracking-[0.2em] uppercase text-stone-400">Valuation Tier</h4>
               <div className="space-y-2.5">
-                {PRICE_RANGES.map((range) => {
+                {priceRanges.map((range) => {
                   const isChecked = selectedPriceRange === range.id;
                   return (
                     <label

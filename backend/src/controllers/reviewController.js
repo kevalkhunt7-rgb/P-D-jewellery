@@ -120,7 +120,7 @@ export const createReview = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
@@ -152,7 +152,7 @@ export const getProductReviews = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
@@ -224,7 +224,7 @@ export const deleteReview = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
@@ -254,7 +254,7 @@ export const getAllReviews = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };

@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useCallback
 } from 'react';
+import { useLocation } from 'react-router-dom';
 
 import api from '../utils/api';
 
@@ -15,6 +16,15 @@ export const useProducts = () => {
 };
 
 export const ProductProvider = ({ children }) => {
+  const location = useLocation();
+
+  // Active country code resolved dynamically
+  const [countryCode, setCountryCode] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("countryCode") || localStorage.getItem("countryCode") || "IN";
+    localStorage.setItem("countryCode", code);
+    return code;
+  });
 
   // MASTER PRODUCTS
   const [products, setProducts] = useState([]);
@@ -25,68 +35,47 @@ export const ProductProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Sync React Router location search params with countryCode state
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const codeFromUrl = params.get("countryCode");
+    if (codeFromUrl && codeFromUrl !== countryCode) {
+      setCountryCode(codeFromUrl);
+      localStorage.setItem("countryCode", codeFromUrl);
+    }
+  }, [location.search, countryCode]);
+
   // =========================================
-  // MAP PRODUCTS
+  // MAP PRODUCTS (CLEAN VERSION)
   // =========================================
 
   const mapProducts = (fetchedProducts) => {
-    return fetchedProducts.map((p) => {
-      const sellingPrice = p.price;
-      const originalPrice = p.originalPrice || (sellingPrice * 1.2);
+    return fetchedProducts
+      .map((p) => {
+        return {
+          ...p,
 
-      return {
-        // Keep all original product data
-        ...p,
-        // Standard fields
-        id: p._id,
-        slug: p.slug,
-        title: p.name,
-        subtitle: p.category?.name || p.category || "Exclusive Atelier Edition",
-        rating: p.ratings || p.defaultRating || 4.5,
-        reviewsCount: p.numOfReviews || 0,
-        price: sellingPrice,
-        originalPrice,
-        tag:
-          p.isFeatured
-            ? "FEATURED"
-            : p.isTrending
-              ? "TRENDING"
-              : p.isNewArrival
-                ? "NEW"
-                : "",
+          id: p._id,
+          slug: p.slug,
+          title: p.name,
 
-        description: p.description || "",
-        shortDesc: p.description
-          ? p.description.substring(0, 100) + "..."
-          : "",
+          // IMPORTANT: DO NOT MODIFY PRICING HERE
+          price: p.price,
+          originalPrice: p.originalPrice,
 
-        details: {
-          material: p.material || "Premium Base Alloy",
-          stones: p.stones || "Hand-set",
-          weight: p.weight || "N/A",
-          dimensions: p.dimensions || "N/A",
-          packaging: "Signature Ivory velvet storage casket"
-        },
+          searchScore: p.searchScore || 0,
 
-        images:
-          p.images?.length > 0
-            ? p.images.map(img =>
-              typeof img === 'string' ? img : img.url
-            )
-            : [
-              "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&q=80&w=1000"
-            ],
-
-        category: p.category?.name || p.category,
-        isFeatured: p.isFeatured,
-        isNew: p.isNewArrival,
-        isTrending: p.isTrending,
-        occasion: p.occasion || [],
-        tags: p.tags || [],
-        status: p.status || "active",
-        createdAt: p.createdAt
-      };
-    }).filter(p => p.status === "active");
+          category: p.category?.name || p.category,
+          isFeatured: p.isFeatured,
+          isNew: p.isNewArrival,
+          isTrending: p.isTrending,
+          occasion: p.occasion || [],
+          tags: p.tags || [],
+          status: p.status || "active",
+          createdAt: p.createdAt
+        };
+      })
+      .filter((p) => p.status === "active");
   };
 
   // =========================================
@@ -97,7 +86,9 @@ export const ProductProvider = ({ children }) => {
     setLoading(true);
 
     try {
-      const response = await api.get('/products/get-products');
+      const response = await api.get('/products/get-products', {
+        params: { countryCode }
+      });
 
       let fetchedProducts =
         response.data.products || response.data;
@@ -108,10 +99,7 @@ export const ProductProvider = ({ children }) => {
 
       const mappedProducts = mapProducts(fetchedProducts);
 
-      // STORE MASTER PRODUCTS
       setProducts(mappedProducts);
-
-      // RESET FILTERED PRODUCTS
       setFilteredProducts(mappedProducts);
 
       setLoading(false);
@@ -121,14 +109,13 @@ export const ProductProvider = ({ children }) => {
       setError(err.message);
       setLoading(false);
     }
-  }, []);
+  }, [countryCode]);
 
   // =========================================
   // SEARCH PRODUCTS
   // =========================================
 
-  const searchProducts = async (searchQuery = "") => {
-
+  const searchProducts = useCallback(async (searchQuery = "") => {
     if (!searchQuery.trim()) {
       setFilteredProducts(products);
       return;
@@ -137,10 +124,12 @@ export const ProductProvider = ({ children }) => {
     setLoading(true);
 
     try {
-
-      const response = await api.get(
-        `/products/get-products?search=${encodeURIComponent(searchQuery)}`
-      );
+      const response = await api.get('/products/get-products', {
+        params: {
+          search: searchQuery.trim(),
+          countryCode
+        }
+      });
 
       let fetchedProducts =
         response.data.products || response.data;
@@ -151,9 +140,7 @@ export const ProductProvider = ({ children }) => {
 
       const mappedProducts = mapProducts(fetchedProducts);
 
-      // ONLY UPDATE FILTERED PRODUCTS
       setFilteredProducts(mappedProducts);
-
       setLoading(false);
 
     } catch (err) {
@@ -161,7 +148,7 @@ export const ProductProvider = ({ children }) => {
       setError(err.message);
       setLoading(false);
     }
-  };
+  }, [products, countryCode]);
 
   // =========================================
   // RESET SEARCH
@@ -184,15 +171,12 @@ export const ProductProvider = ({ children }) => {
   // =========================================
 
   const value = {
-
-    // MASTER
     products,
-
-    // SEARCH RESULTS
     filteredProducts,
-
     loading,
     error,
+    countryCode,
+    setCountryCode,
 
     fetchProducts,
     searchProducts,

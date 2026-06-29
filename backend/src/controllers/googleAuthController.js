@@ -29,7 +29,7 @@ export const googleLogin = async (req, res) => {
     let user = await User.findOne({ email });
 
     if (!user) {
-      // FIX: Generate a strong, random 32-character temporary string fallback.
+      // Generate a strong, random 32-character temporary string fallback.
       // This satisfies Mongoose 'required: true' schema constraints cleanly.
       const fallbackPassword = crypto.randomBytes(16).toString('hex');
 
@@ -57,7 +57,7 @@ export const googleLogin = async (req, res) => {
       success: true,
       token: appToken,
       user: {
-        id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email,
         avatar: user.avatar || picture,

@@ -3,7 +3,9 @@ import { useState, useEffect, useRef } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../utils/api";
-import administrator from "../assets/administrator.png";
+import administrator from "../assets/logo.png";
+import { AnimatePresence, motion } from "framer-motion"; // 🚀 Added motion explicit import here
+import { HiCheck, HiOutlineBellAlert } from 'react-icons/hi2';
 
 // Clean, reliable icon packages from react-icons
 import {
@@ -19,7 +21,6 @@ import {
   HiOutlineChartBar,
   HiOutlineCog6Tooth,
   HiOutlineArrowLeftOnRectangle,
-  HiOutlineBell,
   HiOutlineEnvelope,
   HiOutlineChevronLeft,
   HiOutlineChevronRight,
@@ -33,13 +34,15 @@ const menuItems = [
   { icon: HiOutlineShoppingBag, label: "Products", path: "/products" },
   { icon: HiOutlineFolder, label: "Categories", path: "/categories" },
   { icon: HiOutlineShoppingCart, label: "Orders", path: "/orders" },
+  { icon: HiOutlineExclamationTriangle, label: "Cancellation Requests", path: "/cancellation-requests" },
   { icon: HiOutlineUsers, label: "Customers", path: "/customers" },
   { icon: HiOutlineTicket, label: "Coupons", path: "/coupons" },
   { icon: HiOutlineStar, label: "Reviews", path: "/reviews" },
   { icon: HiOutlinePhoto, label: "Banners", path: "/banners" },
   { icon: HiOutlineHomeModern, label: "Inventory", path: "/inventory" },
   { icon: HiOutlineChartBar, label: "Analytics", path: "/analytics" },
-  { icon: HiOutlineCog6Tooth, label: "Settings", path: "/settings" },
+  // 🔐 Added dynamic constraint key for access protection management
+  { icon: HiOutlineCog6Tooth, label: "Settings", path: "/settings", requiresSuperAdmin: true },
 ];
 
 export function AdminLayout() {
@@ -169,11 +172,10 @@ export function AdminLayout() {
           {(!sidebarCollapsed || isMobile) && (
             <div className="flex flex-col opacity-100 transition-opacity duration-300">
               <h1 className="text-sm font-semibold tracking-tight leading-none text-white">
-
                 P&d luxury Jewellery
               </h1>
               <span className="text-[10px] font-medium tracking-wider uppercase text-amber-500/70 mt-1">
-                Admin
+                {admin?.role === "superAdmin" ? "Super Admin" : "Admin"}
               </span>
             </div>
           )}
@@ -193,6 +195,11 @@ export function AdminLayout() {
       {/* Navigation Layout System */}
       <nav className="flex-1 p-3 overflow-y-auto space-y-1 scrollbar-none">
         {menuItems.map((item) => {
+          // 🔐 Enforce security bounds matching user profile payload rules
+          if (item.requiresSuperAdmin && admin?.role !== "superAdmin") {
+            return null;
+          }
+
           const Icon = item.icon;
           const isActive = isRouteActive(item.path);
           const showLabel = !sidebarCollapsed || isMobile;
@@ -222,7 +229,6 @@ export function AdminLayout() {
                 </div>
               )}
 
-              {/* Minimal Active Glow Bar */}
               {isActive && (
                 <div className="absolute right-2 w-1 h-4 rounded-full bg-slate-950/40" />
               )}
@@ -324,79 +330,122 @@ export function AdminLayout() {
               </button>
 
               {/* Notifications Dropdown Panel */}
-              {notificationsOpen && (
-                <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="p-4 border-b border-slate-800 bg-slate-950/40 flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-bold text-white tracking-tight">System Alerts</h3>
-                      <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">Live Intelligence Feed</p>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 text-[10px] font-bold">
-                      {notifications.length} New
-                    </span>
-                  </div>
-
-                  <div className="max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800">
-                    {notifications.length === 0 ? (
-                      <div className="p-10 text-center">
-                        <div className="w-12 h-12 bg-slate-800/50 rounded-full flex items-center justify-center mx-auto mb-3">
-                          <HiOutlineEnvelope className="w-6 h-6 text-slate-600" />
+              <AnimatePresence>
+                {notificationsOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -12, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                    transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute right-0 mt-3 w-85 sm:w-100 bg-slate-900/95 backdrop-blur-xl border border-slate-800/80 rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] z-50 overflow-hidden ring-1 ring-white/5"
+                  >
+                    {/* Header Section */}
+                    <div className="p-4 border-b border-slate-800/60 bg-slate-950/40 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                          <HiOutlineBellAlert className="w-4 h-4 text-amber-500 animate-pulse" />
                         </div>
-                        <p className="text-xs text-slate-500 font-medium">All systems clear. No active alerts.</p>
+                        <div>
+                          <h3 className="text-xs font-semibold text-slate-100 uppercase tracking-wider">
+                            System Alerts
+                          </h3>
+                          <p className="text-[9px] text-slate-500 uppercase tracking-[0.15em] font-medium mt-0.5">
+                            Live Intelligence Feed
+                          </p>
+                        </div>
                       </div>
-                    ) : (
-                      <div className="divide-y divide-slate-800/50">
-                        {notifications.map((notif) => {
-                          const Icon = notif.icon;
-                          return (
-                            <div key={notif.id} className="p-4 hover:bg-slate-800/40 transition-colors relative group">
-                              <div className="flex gap-4">
-                                <div className={`w-10 h-10 rounded-xl ${notif.bg} flex items-center justify-center flex-shrink-0 border border-white/5`}>
-                                  <Icon className={`w-5 h-5 ${notif.color}`} />
-                                </div>
-                                <div className="flex-1 min-w-0 pr-6">
-                                  <div className="flex items-center justify-between gap-2 mb-1">
-                                    <h4 className="text-xs font-bold text-slate-200 truncate">{notif.title}</h4>
-                                    <span className="text-[10px] font-medium text-slate-500 whitespace-nowrap">{notif.time}</span>
-                                  </div>
-                                  <p className="text-[11px] text-slate-400 leading-relaxed line-clamp-2">
-                                    {notif.message}
-                                  </p>
-                                </div>
-                              </div>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  removeNotification(notif.id);
-                                }}
-                                className="absolute top-4 right-4 p-1 rounded-md text-slate-500 hover:bg-slate-700 hover:text-white transition-all"
-                              >
-                                <HiOutlineXMark className="w-3 h-3" />
-                              </button>
+                      <span className="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700/50 text-slate-300 text-[10px] font-bold tracking-wide">
+                        {notifications.length} Active
+                      </span>
+                    </div>
+
+                    {/* Scrollable Notification List */}
+                    <div className="max-h-[380px] overflow-y-auto divide-y divide-slate-800/40 [scrollbar-width:thin] [scrollbar-color:#1e293b_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-slate-800 [&::-webkit-scrollbar-thumb]:rounded-full">
+                      <AnimatePresence initial={false}>
+                        {notifications.length === 0 ? (
+                          <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="p-12 text-center flex flex-col items-center justify-center"
+                          >
+                            <div className="w-12 h-12 bg-gradient-to-b from-slate-800/40 to-slate-900/60 border border-slate-800/50 rounded-2xl flex items-center justify-center mb-3.5 shadow-inner">
+                              <HiOutlineEnvelope className="w-5 h-5 text-slate-500" />
                             </div>
-                          );
-                        })}
+                            <p className="text-xs text-slate-300 font-medium tracking-wide">
+                              All Systems Clear
+                            </p>
+                            <p className="text-[11px] text-slate-500 mt-0.5 max-w-[200px]">
+                              No active network anomalies or pending operational tasks.
+                            </p>
+                          </motion.div>
+                        ) : (
+                          notifications.map((notif) => {
+                            const Icon = notif.icon || HiOutlineBellAlert;
+                            return (
+                              <motion.div
+                                key={notif.id}
+                                layout
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20, height: 0, transition: { duration: 0.2 } }}
+                                className="p-4 hover:bg-slate-800/30 transition-all duration-150 relative group border-l-2 border-transparent hover:border-amber-500/40"
+                              >
+                                <div className="flex gap-3.5">
+                                  <div className={`w-9 h-9 rounded-xl ${notif.bg || 'bg-slate-800'} flex items-center justify-center flex-shrink-0 border border-white/5 shadow-md relative`}>
+                                    <Icon className={`w-4 h-4 ${notif.color || 'text-slate-300'}`} />
+                                    <span className={`absolute inset-0 rounded-xl blur-sm opacity-20 ${notif.color}`} />
+                                  </div>
+
+                                  <div className="flex-1 min-w-0 pr-4">
+                                    <div className="flex items-baseline justify-between gap-2 mb-0.5">
+                                      <h4 className="text-xs font-semibold text-slate-200 tracking-wide truncate group-hover:text-white transition-colors">
+                                        {notif.title}
+                                      </h4>
+                                      <span className="text-[9px] font-medium text-slate-500 tracking-tight whitespace-nowrap">
+                                        {notif.time}
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-slate-400 leading-relaxed font-light">
+                                      {notif.message}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeNotification(notif.id);
+                                  }}
+                                  className="absolute top-4 right-4 p-1 rounded-lg text-slate-500 opacity-0 group-hover:opacity-100 hover:bg-slate-800 hover:text-slate-200 border border-transparent hover:border-slate-700/50 transition-all duration-150"
+                                >
+                                  <HiOutlineXMark className="w-3.5 h-3.5" />
+                                </button>
+                              </motion.div>
+                            );
+                          })
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    {/* Footer Control Strip */}
+                    {notifications.length > 0 && (
+                      <div className="p-3 bg-slate-950/60 border-t border-slate-800/60 text-center flex items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={clearAllNotifications}
+                          className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-400 hover:text-amber-400 uppercase tracking-wider transition-colors duration-150 py-1 px-3 rounded-lg hover:bg-amber-500/5 border border-transparent hover:border-amber-500/10"
+                        >
+                          <HiCheck className="w-3.5 h-3.5" />
+                          Clear Archive
+                        </button>
                       </div>
                     )}
-                  </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div> 
 
-                  {notifications.length > 0 && (
-                    <div className="p-3 bg-slate-950/40 border-t border-slate-800 text-center">
-                      <button
-                        onClick={clearAllNotifications}
-                        className="text-[10px] font-bold text-amber-500 hover:text-amber-400 uppercase tracking-widest transition-colors"
-                      >
-                        Clear All Notifications
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-          
-
-            {/* Vertical Split Line Spacer item layout divider */}
             <div className="w-[1px] h-5 bg-slate-800 mx-1 hidden sm:block" />
 
             {/* Custom Micro Dropdown Menu Framework */}
@@ -429,9 +478,15 @@ export function AdminLayout() {
                   <button className="w-full text-left text-xs px-3 py-2 text-slate-300 hover:bg-slate-800 hover:text-slate-100 transition-colors">
                     Profile
                   </button>
-                  <button className="w-full text-left text-xs px-3 py-2 text-slate-300 hover:bg-slate-800 hover:text-slate-100 transition-colors">
-                    Settings
-                  </button>
+                  {/* 🔐 Optional profile action role display check */}
+                  {admin?.role === "superAdmin" && (
+                    <button 
+                      onClick={() => { setProfileDropdownOpen(false); navigate('/settings'); }}
+                      className="w-full text-left text-xs px-3 py-2 text-slate-300 hover:bg-slate-800 hover:text-slate-100 transition-colors"
+                    >
+                      Settings
+                    </button>
+                  )}
 
                   <div className="h-[1px] bg-slate-800 my-1 mx-2" />
                   <button

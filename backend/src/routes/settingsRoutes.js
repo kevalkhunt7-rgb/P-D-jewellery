@@ -1,6 +1,6 @@
 import express from "express";
-import { getSettings, updateSettings } from "../controllers/settingsController.js";
-import { protect, adminOnly } from "../middleware/authMiddleware.js";
+import { getSettings, getPublicSettings, updateSettings, getGoldRate, updateGoldRate } from "../controllers/settingsController.js";
+import { protect, superAdminOnly, adminOnly } from "../middleware/authMiddleware.js";
 import upload from "../middleware/multer.js";
 
 const router = express.Router();
@@ -13,9 +13,15 @@ const settingsUpload = upload.fields([
   { name: "heroBanner", maxCount: 1 },
 ]);
 
-router.get("/", protect, adminOnly, getSettings);
+// Public route for frontend to fetch settings
+router.get("/public", getPublicSettings);
+router.get("/gold-rate/public", getGoldRate);
 
-// Update by section name (general, seo, order, etc.)
-router.put("/update/:section", protect, adminOnly, settingsUpload, updateSettings);
+// Admin routes
+router.get("/", protect, superAdminOnly, getSettings);
+router.put("/update/:section", protect, superAdminOnly, settingsUpload, updateSettings);
+
+router.get("/gold-rate", protect, adminOnly, getGoldRate);
+router.put("/gold-rate", protect, adminOnly, updateGoldRate);
 
 export default router;

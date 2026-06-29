@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams } from "react-router-dom";
 import api from "../utils/api";
 import toast from "react-hot-toast";
 import { 
@@ -12,9 +12,10 @@ import {
   FiMapPin, 
   FiMail, 
   FiPhone, 
-  FiCreditCard 
+  FiCreditCard,
+  
 } from "react-icons/fi";
-
+import { IoAirplane } from "react-icons/io5";
 export function OrderDetails() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -86,7 +87,14 @@ export function OrderDetails() {
             <FiArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">Order #{orderData._id.slice(-8).toUpperCase()}</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+              <span>Order #{orderData._id.slice(-8).toUpperCase()}</span>
+              {(orderData.paymentMethod === 'PAYPAL' || orderData.displayCurrency === 'USD') && (
+                <span title="Foreign Order" className="text-sky-400">
+                  <IoAirplane className="w-5 h-5" />
+                </span>
+              )}
+            </h1>
             <p className="text-xs text-slate-400 mt-0.5">
               Placed on {new Date(orderData.createdAt).toLocaleDateString()} at{" "}
               {new Date(orderData.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -143,6 +151,35 @@ export function OrderDetails() {
             </div>
           </div>
 
+          {/* Refund Status Display */}
+          {orderData.refundStatus !== "NotRequired" && (
+            <div className="bg-slate-900 border border-slate-800/80 rounded-2xl p-5 shadow-sm">
+              <h2 className="text-sm font-bold text-white tracking-wide border-b border-slate-800 pb-2 mb-4">Refund Status</h2>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500">
+                  <FiCreditCard className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className={`text-sm font-bold uppercase tracking-wider ${
+                    orderData.refundStatus === "Completed" ? "text-emerald-500" :
+                    orderData.refundStatus === "Failed" ? "text-red-500" :
+                    orderData.refundStatus === "Processing" ? "text-blue-500" : "text-amber-500"
+                  }`}>
+                    Refund {orderData.refundStatus}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Refund Amount: ₹{orderData.refundAmount?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} INR
+                  </p>
+                  {orderData.refundFailureReason && (
+                    <p className="text-xs text-red-400 mt-1">
+                      Reason: {orderData.refundFailureReason}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Checkout Itemized Inventory Product Breakout */}
           <div className="bg-slate-900 border border-slate-800/80 rounded-2xl p-5 shadow-sm space-y-4">
             <h2 className="text-sm font-bold text-white tracking-wide border-b border-slate-800 pb-2">Ordered Products</h2>
@@ -158,10 +195,10 @@ export function OrderDetails() {
                   <div className="flex-1">
                     <p className="text-xs font-bold text-white">{product.name}</p>
                     <p className="text-[11px] text-slate-400 mt-1">
-                      Qty: <span className="text-slate-200 font-semibold">{product.quantity}</span> × ₹{product.price.toLocaleString()}
+                      Qty: <span className="text-slate-200 font-semibold">{product.quantity}</span> × ₹{product.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
-                  <p className="text-xs font-bold text-slate-200">₹{(product.price * product.quantity).toLocaleString()}</p>
+                  <p className="text-xs font-bold text-slate-200">₹{(product.price * product.quantity).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
               ))}
             </div>
@@ -169,23 +206,49 @@ export function OrderDetails() {
             <div className="border-t border-slate-800 pt-4 mt-4 space-y-2">
               <div className="flex justify-between text-xs">
                 <span className="text-slate-400">Items Price</span>
-                <span className="text-slate-200 font-medium">₹{orderData.itemsPrice.toLocaleString()}</span>
+                <span className="text-slate-200 font-medium">
+                  ₹{orderData.itemsPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-slate-400">Shipping</span>
                 <span className="text-emerald-400 font-bold text-[11px] tracking-wide">
-                  {orderData.shippingPrice === 0 ? "FREE" : `₹${orderData.shippingPrice}`}
+                  {orderData.shippingPrice === 0 ? "FREE" : `₹${orderData.shippingPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                 </span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-slate-400">Tax</span>
-                <span className="text-slate-200 font-medium">₹{orderData.taxPrice.toLocaleString()}</span>
+                <span className="text-slate-200 font-medium">
+                  ₹{orderData.taxPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
               </div>
+              {orderData.discountAmount > 0 && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Discount {orderData.couponCode && `(${orderData.couponCode})`}</span>
+                  <span className="text-emerald-400 font-bold text-[11px] tracking-wide">
+                    -₹{orderData.discountAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+              )}
               
               <div className="border-t border-slate-800/80 pt-3 flex justify-between font-bold text-base text-white">
-                <span>Total</span>
-                <span className="text-amber-500">₹{orderData.totalPrice.toLocaleString()}</span>
+                <span>Total (INR)</span>
+                <span className="text-amber-500 font-bold flex items-center gap-1">
+                  ₹{orderData.totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <span className="text-xs text-slate-400 font-normal">(INR)</span>
+                </span>
               </div>
+              
+              {/* Show original paid amount for foreign orders */}
+              {orderData.paidCurrency === 'USD' && (
+                <div className="flex justify-between text-xs pt-2 border-t border-slate-800/50">
+                  <span className="text-sky-400">Originally Paid</span>
+                  <span className="text-sky-400 font-medium">
+                    ${orderData.paidAmount?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+                    <span className="text-[10px] text-slate-500 ml-1">@ {orderData.exchangeRate?.toFixed(2)} INR/USD</span>
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>

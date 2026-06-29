@@ -31,32 +31,35 @@ export function Customers() {
     customer.phone?.includes(searchQuery)
   );
 
-  // Helper to generate text initials for avatar fallback frames
-  const getInitials = (name = "") => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
+  // =========================================================
+  // SAFE METRICS ENGINE CALCULATIONS (Guarded against NaN/0)
+  // =========================================================
+  const totalCustomersCount = customersData.length;
 
-  // Analytics Summary Stats Grid Dashboard
+  const newCustomersThisMonth = customersData.filter((c) => {
+    if (!c.joinDate) return false;
+    const joinDate = new Date(c.joinDate);
+    const now = new Date();
+    return (
+      joinDate.getMonth() === now.getMonth() &&
+      joinDate.getFullYear() === now.getFullYear()
+    );
+  }).length;
+
+  // Safe Total Accumulators
+  const grandTotalSpent = customersData.reduce((acc, c) => acc + (c.totalSpent || 0), 0);
+  const grandTotalOrders = customersData.reduce((acc, c) => acc + (c.orders || 0), 0);
+  
+  // Guard against division by zero cleanly
+  const averageOrderValue = grandTotalOrders > 0 
+    ? Math.round(grandTotalSpent / grandTotalOrders) 
+    : 0;
+
+  // Analytics Summary Stats Grid Dashboard Configuration Array
   const stats = [
-    { label: "Total Customers", value: customersData.length.toLocaleString() },
-    { 
-      label: "New This Month", 
-      value: customersData.filter(c => {
-        const joinDate = new Date(c.joinDate);
-        const now = new Date();
-        return joinDate.getMonth() === now.getMonth() && joinDate.getFullYear() === now.getFullYear();
-      }).length.toLocaleString()
-    },
-    { 
-      label: "Avg. Order Value", 
-      value: `₹${Math.round(customersData.reduce((acc, c) => acc + (c.totalSpent || 0), 0) / 
-             (customersData.reduce((acc, c) => acc + (c.orders || 0), 0) || 1)).toLocaleString()}` 
-    },
+    { label: "Total Customers", value: totalCustomersCount.toLocaleString() },
+    { label: "New This Month", value: newCustomersThisMonth.toLocaleString() },
+    // { label: "Avg. Order Value", value: `₹${averageOrderValue.toLocaleString()}` },
   ];
 
   return (
@@ -130,18 +133,15 @@ export function Customers() {
                       <div className="flex items-center gap-3">
                         <div className="relative w-9 h-9 rounded-xl overflow-hidden bg-slate-800 border border-slate-700/60 flex items-center justify-center flex-shrink-0">
                           <img
-                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(customer.name || '')}`}
-                            alt={customer.name}
+                            src={customer.avatar?.url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(customer.name || '')}`}
+                            alt={customer.name || "Customer"}
                             className="w-full h-full object-cover z-10 relative"
                             onError={(e) => {
-                              e.target.style.display = 'none';
+                              e.target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(customer.name || '')}`;
                             }}
                           />
-                          <span className="absolute text-[10px] font-bold text-slate-400 tracking-tight">
-                            {getInitials(customer.name)}
-                          </span>
                         </div>
-                        <span className="font-semibold text-slate-200">{customer.name}</span>
+                        <span className="font-semibold text-slate-200">{customer.name || "Unknown"}</span>
                       </div>
                     </td>
 
@@ -185,7 +185,7 @@ export function Customers() {
                       }) : '—'}
                     </td>
 
-                    {/* New Actions Tab Layout Implementation */}
+                    {/* Actions Tab Layout Implementation */}
                     <td className="py-3.5 px-5">
                       <div className="flex items-center justify-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
                         <Link 

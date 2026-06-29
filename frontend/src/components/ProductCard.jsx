@@ -3,8 +3,15 @@ import { Heart, ShoppingBag, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext'; 
 import { useWishlist } from '../context/WishlistContext';
+import { useSettings } from '../context/SettingsContext';
 
 export function ProductCard(props) {
+  // 🛠️ HOOKS DECLARED FIRST (Ensures unconditional call order)
+  const navigate = useNavigate();
+  const { addToCart, cart } = useCart(); 
+  const { toggleWishlist, isInWishlist } = useWishlist();
+  const { settings } = useSettings();
+
   // 🌟 THE HYBRID FIX: Reads properties safely whether passed as an object (product={...}) or flat props!
   const target = props.product ? props.product : props;
 
@@ -12,6 +19,10 @@ export function ProductCard(props) {
   const title = target.name || target.title;
   const price = target.price;
   const originalPrice = target.originalPrice;
+  
+  const currency = target.currency || settings?.general?.currency || "INR"; 
+  const currencySymbol = target.currencySymbol || settings?.general?.currencySymbol || "₹"; 
+  
   const tag = target.tag;
   const rating = target.rating || target.defaultRating || 0;
   const slug = target.slug;
@@ -21,6 +32,21 @@ export function ProductCard(props) {
     return null;
   }
 
+  // ✅ NEW CLEAN PRICE FORMATTER
+  const formatPrice = (value) => {
+    if (value === null || value === undefined || value === "") return "";
+
+    const num = typeof value === "string" ? Number(value) : value;
+
+    if (isNaN(num)) return "";
+
+    if (currency === "USD") {
+      return `${currencySymbol}${num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
+    return `${currencySymbol}${num.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+  };
+
   // 🛠️ FALLBACK PLACEHOLDER: Prevents layout breaking if an image fails to load or process
   const fallbackPlaceholder =
     "https://placehold.co/500x500/f9fafb/cccccc?text=Image+Unavailable";
@@ -28,10 +54,6 @@ export function ProductCard(props) {
   // 🌟 DYNAMIC IMAGE PARSER: Safely uncoils nested multi-image matrices or standard product strings
   const displayImage = target.image || 
     (target.images && target.images.length > 0 ? (target.images[0].url || target.images[0]) : fallbackPlaceholder);
-
-  const navigate = useNavigate();
-  const { addToCart, cart } = useCart(); 
-  const { toggleWishlist, isInWishlist } = useWishlist();
   
   const liked = isInWishlist ? isInWishlist(id) : false;
   const isAlreadyInCart = cart?.some((item) => item.id === id) || false;
@@ -39,7 +61,7 @@ export function ProductCard(props) {
   // ⚡ BULLETPROOF URL SLUG GENERATOR
   const validSlug = slug || title?.toLowerCase()
     .replace(/[^a-z0-9]+/g, '-') // Replace spaces and special characters with hyphens
-    .replace(/(^-|-$)+/g, '')     // Trim dangling hyphens from either end
+    .replace(/(^-|-$)+/g, '')    // Trim dangling hyphens from either end
     || id;
 
   // REDIRECT TO PRODUCT DETAIL PAGE
@@ -301,7 +323,7 @@ export function ProductCard(props) {
                   backgroundClip: 'text'
                 }}
               >
-                {typeof price === 'number' ? `₹${price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : (price || '₹0.00')}
+                {formatPrice(price)}
               </span>
 
               {originalPrice && (
@@ -312,7 +334,7 @@ export function ProductCard(props) {
                     color: '#9ca3af'
                   }}
                 >
-                  {typeof originalPrice === 'number' ? `₹${originalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : originalPrice}
+                  {formatPrice(originalPrice)}
                 </span>
               )}
             </div>

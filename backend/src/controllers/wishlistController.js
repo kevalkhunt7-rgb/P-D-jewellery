@@ -79,7 +79,7 @@ export const addToWishlist = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
@@ -120,7 +120,7 @@ export const getMyWishlist = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
@@ -172,7 +172,7 @@ export const removeFromWishlist = async (
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };
@@ -217,7 +217,7 @@ export const clearWishlist = async (
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: error.message || "Server Error",
     });
   }
 };

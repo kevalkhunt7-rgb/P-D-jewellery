@@ -43,8 +43,7 @@ export function FeaturedCollections() {
           </h2>
 
           <p className="max-w-2xl mx-auto text-lg text-[#2C2C2C]/70 leading-relaxed font-light">
-            Handpicked collections that embody elegance,
-            craftsmanship, and timeless beauty.
+            Handpicked collections that embody elegance, craftsmanship, and timeless beauty.
           </p>
         </motion.div>
 
@@ -64,16 +63,8 @@ export function FeaturedCollections() {
               }}
               className="w-full will-change-transform"
             >
-              <ProductCard
-                id={product.id}
-                image={product.images?.[0]}
-                title={product.title}
-                slug={product.slug}
-                price={product.price}
-                originalPrice={product.originalPrice}
-                tag={product.tag}
-                rating={product.rating} // ✨ FIXED: Passing the rating down to show colored stars
-              />
+              {/* 🌟 FIX: Spread the product object cleanly so the image arrays line up perfectly */}
+              <ProductCard {...product} />
             </motion.div>
           ))}
 

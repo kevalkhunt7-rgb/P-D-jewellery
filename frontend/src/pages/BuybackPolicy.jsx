@@ -19,14 +19,7 @@ function BuybackPolicy() {
               </p>
             </section>
 
-            <section className="bg-white/60 backdrop-blur-md rounded-2xl p-6 md:p-8 border border-stone-200/60 shadow-sm">
-              <h2 className="font-serif text-2xl font-light mb-4 text-[#B76E79]">
-                Eligibility
-              </h2>
-              <p className="text-sm md:text-base leading-relaxed text-stone-700">
-                All our gold, diamond, platinum, and gemstone jewellery marked as "Buyback Eligible" can be sold back to us at the prevailing market rates of the precious metal, plus a portion of the making charges, if applicable.
-              </p>
-            </section>
+            
 
             <section className="bg-white/60 backdrop-blur-md rounded-2xl p-6 md:p-8 border border-stone-200/60 shadow-sm">
               <h2 className="font-serif text-2xl font-light mb-4 text-[#B76E79]">

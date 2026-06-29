@@ -17,25 +17,76 @@ const StarRating = ({ rating }) => (
   </div>
 );
 
+// Unified Avatar component with absolute fallback handling to avoid layout flashes
+const UserAvatar = ({ name, url }) => {
+  const [imgError, setImgError] = useState(false);
+  
+  const getInitials = (userName) => {
+    return userName
+      ?.split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase() || "U";
+  };
+
+  const seedName = encodeURIComponent(name || 'User');
+  const fallbackAvatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seedName}`;
+  const avatarSrc = url || fallbackAvatarUrl;
+
+  return (
+    <div className="relative w-8 h-8 rounded-xl overflow-hidden bg-slate-800 border border-slate-700/60 flex items-center justify-center flex-shrink-0">
+      {!imgError ? (
+        <img
+          src={avatarSrc}
+          alt={name || "User"}
+          className="w-full h-full object-cover z-10"
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <span className="text-[10px] font-bold text-slate-300 tracking-tight z-0">
+          {getInitials(name)}
+        </span>
+      )}
+    </div>
+  );
+};
+
 export function Reviews() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchReviews = async () => {
-      try {
-        const { data } = await api.get("/reviews/all");
-        if (data.success) {
-          setReviews(data.reviews);
-        }
-      } catch (error) {
-        console.error("Failed to fetch reviews", error);
-      } finally {
-        setLoading(false);
+  const fetchReviews = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get("/reviews/all");
+      if (data.success) {
+        setReviews(data.reviews);
       }
-    };
+    } catch (error) {
+      console.error("Failed to fetch reviews", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchReviews();
   }, []);
+
+  // Quick inline actions handling logic
+  const updateStatus = async (id, action) => {
+    try {
+      // Hit your back-end status update route mapping configuration
+      const isApproved = action === "approved";
+      const { data } = await api.put(`/reviews/${id}/status`, { isApproved });
+      if (data.success) {
+        // Refresh values or update state arrays dynamically locally
+        fetchReviews();
+      }
+    } catch (error) {
+      console.error(`Failed to update review status to ${action}`, error);
+    }
+  };
 
   const totalReviews = reviews.length;
   const avgRating = reviews.length > 0 
@@ -43,19 +94,6 @@ export function Reviews() {
     : "0.0";
   const pendingReviews = reviews.filter(r => !r.isApproved).length;
   const fiveStarReviews = reviews.filter(r => r.rating === 5).length;
-
-  // Quick inline actions handling logic
-  const updateStatus = async (id, newStatus) => {
-    // Implement update review status if needed
-  };
-
-  const getInitials = (name) => {
-    return name
-      ?.split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase() || "U";
-  };
 
   return (
     <div className="space-y-6 text-slate-200 p-1">
@@ -74,7 +112,7 @@ export function Reviews() {
             value: avgRating, 
             dynamic: <StarRating rating={Math.round(Number(avgRating))} /> 
           },
-          { label: "Pending Review", value: pendingReviews },
+          { label: "Pending Reviews", value: pendingReviews },
           { label: "5 Star Reviews", value: fiveStarReviews },
         ].map((stat, i) => (
           <div key={i} className="bg-slate-900 border border-slate-800/80 rounded-2xl p-5 shadow-sm">
@@ -108,103 +146,108 @@ export function Reviews() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/50 text-xs">
-              {reviews.map((review) => (
-                <tr key={review._id} className="hover:bg-slate-800/10 transition-colors">
-                  
-                  {/* User Profile Avatar Block Column */}
-                  <td className="py-3.5 px-5">
-                    <div className="flex items-center gap-3">
-                      <div className="relative w-8 h-8 rounded-xl overflow-hidden bg-slate-800 border border-slate-700/60 flex items-center justify-center flex-shrink-0">
-                        <img
-                          src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(review.user?.name || 'User')}`}
-                          alt={review.user?.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                          }}
-                        />
-                        <span className="absolute text-[10px] font-bold text-slate-300 tracking-tight">
-                          {getInitials(review.user?.name)}
-                        </span>
-                      </div>
-                      <span className="font-semibold text-slate-200">{review.user?.name || 'Guest'}</span>
-                    </div>
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-12 text-slate-500 font-medium">
+                    Loading dataset documentation...
                   </td>
-
-                  {/* Targeted Product Info Block */}
-                  <td className="py-3.5 px-4">
-                    <span className="text-slate-300 font-medium truncate max-w-[150px] inline-block">
-                      {review.product?.name || 'Deleted Product'}
-                    </span>
-                  </td>
-
-                  {/* Numerical Data Summary */}
-                  <td className="py-3.5 px-4">
-                    <StarRating rating={review.rating} />
-                  </td>
-
-                  {/* Review text content truncation row */}
-                  <td className="py-3.5 px-4 max-w-xs">
-                    <p className="text-slate-400 line-clamp-1 italic leading-relaxed">
-                      "{review.comment}"
-                    </p>
-                  </td>
-
-                  {/* Join Date Block */}
-                  <td className="py-3.5 px-4 text-slate-400 font-medium">
-                    {new Date(review.createdAt).toLocaleDateString(undefined, {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric'
-                    })}
-                  </td>
-
-                  {/* Status Badges Context */}
-                  <td className="py-3.5 px-4">
-                    {review.isApproved ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium tracking-wide bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase">
-                        Approved
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium tracking-wide bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase">
-                        Pending
-                      </span>
-                    )}
-                  </td>
-
-                  {/* Action Handlers */}
-                  <td className="py-3.5 px-5 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <button 
-                        className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-                        title="View Full Context"
-                      >
-                        <FiEye className="w-3.5 h-3.5" />
-                      </button>
-                      
-                      {review.status === "pending" && (
-                        <>
-                          <button
-                            onClick={() => updateStatus(review.id, "approved")}
-                            className="p-1.5 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
-                            title="Approve Review"
-                          >
-                            <FiThumbsUp className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => updateStatus(review.id, "rejected")}
-                            className="p-1.5 text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
-                            title="Reject Review"
-                          >
-                            <FiThumbsDown className="w-3.5 h-3.5" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-
                 </tr>
-              ))}
+              ) : reviews.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-12 text-slate-500 font-medium">
+                    No matching review components located.
+                  </td>
+                </tr>
+              ) : (
+                reviews.map((review) => (
+                  <tr key={review._id} className="hover:bg-slate-800/10 transition-colors group">
+                    
+                    {/* User Profile Avatar Block Column Using Clean Isolated Error Handles */}
+                    <td className="py-3.5 px-5">
+                      <div className="flex items-center gap-3">
+                        <UserAvatar 
+                          name={review.user?.name} 
+                          url={review.user?.avatar?.url || review.user?.avatar} 
+                        />
+                        <span className="font-semibold text-slate-200">{review.user?.name || 'Guest'}</span>
+                      </div>
+                    </td>
+
+                    {/* Targeted Product Info Block */}
+                    <td className="py-3.5 px-4">
+                      <span className="text-slate-300 font-medium truncate max-w-[150px] inline-block">
+                        {review.product?.name || 'Deleted Product'}
+                      </span>
+                    </td>
+
+                    {/* Numerical Data Summary */}
+                    <td className="py-3.5 px-4">
+                      <StarRating rating={review.rating} />
+                    </td>
+
+                    {/* Review text content truncation row */}
+                    <td className="py-3.5 px-4 max-w-xs">
+                      <p className="text-slate-400 line-clamp-1 italic leading-relaxed">
+                        "{review.comment}"
+                      </p>
+                    </td>
+
+                    {/* Datestamp Block */}
+                    <td className="py-3.5 px-4 text-slate-400 font-medium">
+                      {review.createdAt ? new Date(review.createdAt).toLocaleDateString(undefined, {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      }) : '—'}
+                    </td>
+
+                    {/* Status Badges Context */}
+                    <td className="py-3.5 px-4">
+                      {review.isApproved ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium tracking-wide bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase">
+                          Approved
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium tracking-wide bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase">
+                          Pending
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Action Handlers - Checking against !review.isApproved ensures pending ones display controls */}
+                    <td className="py-3.5 px-5 text-right">
+                      <div className="flex items-center justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                          title="View Full Context"
+                        >
+                          <FiEye className="w-3.5 h-3.5" />
+                        </button>
+                        
+                        {!review.isApproved && (
+                          <>
+                            <button
+                              onClick={() => updateStatus(review._id, "approved")}
+                              className="p-1.5 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                              title="Approve Review"
+                            >
+                              <FiThumbsUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => updateStatus(review._id, "rejected")}
+                              className="p-1.5 text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+                              title="Reject Review"
+                            >
+                              <FiThumbsDown className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
