@@ -39,7 +39,7 @@ const app = express();
 
 // 1. FIXED: Explicit CORS Policy to prevent ERR_CONNECTION_RESET
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174' ,'http://localhost:5001'],
+  origin: ['http://localhost:5173', 'http://localhost:5174' ,'http://localhost:5001' ,'https://p-d-jewellery.vercel.app'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
