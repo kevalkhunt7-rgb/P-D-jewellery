@@ -73,11 +73,11 @@ function AboutPage() {
             <Sparkles className="w-5 h-5 text-[#D4AF37] animate-pulse" />
             <span className="text-xs sm:text-sm uppercase tracking-[0.35em] text-[#E8C7B7] font-semibold">The Pure Gold, Timeless Beauty</span>
           </div>
-          <h1 className="font-serif text-white text-3xl sm:text-6xl md:text-7xl font-light tracking-wide leading-tight mb-6">
+          <h1 className="font-serif text-white text-3xl sm:text-6xl md:text-7xl font-bold tracking-wide leading-tight mb-6">
             Where Gold Becomes Art <br />
             <span className="italic text-[#FFF0EB] font-normal font-serif">Crafted for Life's Precious Moments</span>
           </h1>
-          <p className="text-white/80 font-light text-xs sm:text-lg tracking-wide max-w-2xl leading-relaxed animate-fade-in-delayed">
+          <p className="text-white/80 font-bold text-xs sm:text-lg tracking-wide max-w-2xl leading-relaxed animate-fade-in-delayed">
             Experience masterfully crafted gold jewellery inspired by timeless beauty. Every design is a symbol of refinement, authenticity, and lasting value.
           </p>
           <div className="mt-10 animate-fade-in-delayed">
@@ -110,16 +110,16 @@ function AboutPage() {
           <div className="col-span-12 lg:col-span-6 space-y-6 lg:space-y-8 reveal-on-scroll reveal-fade-right">
             <div className="space-y-3">
               <span className="text-xs uppercase tracking-[0.25em] text-[#B76E79] font-bold block">Born from Passion</span>
-              <h2 className="font-serif text-2xl sm:text-5xl text-[#2C2C2C] font-light tracking-wide leading-tight">
+              <h2 className="font-serif text-2xl sm:text-5xl text-[#2C2C2C] font-bold tracking-wide leading-tight">
                 An Evolution of <span className="italic font-normal text-[#B76E79]">Aesthetic Perfection</span>
               </h2>
             </div>
             
             <div className="bg-white/60 backdrop-blur-xl p-6 sm:p-8 rounded-3xl border border-white/80 space-y-4 sm:space-y-6 shadow-sm">
-              <p className="text-xs sm:text-base text-[#2C2C2C]/80 leading-relaxed font-light">
+              <p className="text-xs sm:text-base text-[#2C2C2C]/80 leading-relaxed font-bold">
                 Founded with a visionary purpose, our atelier was built to dismantle the barrier between high couture design and approachability. We believe that a woman’s radiance shouldn’t depend on a price tag, but on the soul of the craftsmanship she wears.
               </p>
-              <p className="text-xs sm:text-base text-[#2C2C2C]/80 leading-relaxed font-light">
+              <p className="text-xs sm:text-base text-[#2C2C2C]/80 leading-relaxed font-bold">
                 Every stone is hand-selected, every curve hand-carved, utilizing premium composite materials that mimic the light dispersion patterns of flawless diamonds and natural precious gemstones.
               </p>
             </div>

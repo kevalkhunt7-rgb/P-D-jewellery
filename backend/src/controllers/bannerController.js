@@ -73,7 +73,7 @@ export const createBanner = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -116,7 +116,7 @@ export const getAllBanners = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -144,7 +144,7 @@ export const getAdminBanners = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -232,7 +232,7 @@ export const updateBanner = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -282,7 +282,7 @@ export const deleteBanner = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -307,7 +307,7 @@ export const getBannerById = async (req, res) => {
     console.log(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };

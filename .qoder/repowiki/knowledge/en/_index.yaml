@@ -1,0 +1,34 @@
+# 知识卡导出索引文件
+schema_version: 1
+locale: en-US
+branch: main
+nodes_managed: true
+exported_at: "2026-07-01T04:51:32Z"
+modules:
+    admin:
+        dir_name: E-commerce Admin Dashboard
+        title: E-commerce Admin Dashboard
+        scope:
+            - admin/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    backend:
+        dir_name: backend
+        title: backend
+        scope:
+            - backend/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    frontend:
+        dir_name: frontend
+        title: frontend
+        scope:
+            - frontend/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []

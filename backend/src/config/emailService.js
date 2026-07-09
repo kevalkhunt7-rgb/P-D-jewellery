@@ -1,11 +1,15 @@
 import nodemailer from "nodemailer";
 
-const transporter = nodemailer.createTransport({
+export const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  // ADD THIS BLOCK TO BYPASS THE CERTIFICATE VERIFICATION ERROR
+  tls: {
+    rejectUnauthorized: false
+  }
 });
 
 transporter.verify((error) => {

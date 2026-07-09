@@ -51,12 +51,14 @@ export const registerUser = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const user = await User.create({
-      name,
+    console.log("[registerUser] Creating user:", { name, email: lowercaseEmail, phone });
+
+    const user = await User.create({ 
+      name,               // ← was missing, caused "name is required" validation error
       email: lowercaseEmail,
       password: hashedPassword,
       phone,
-      role: "user", // Explicit default assignment
+      role: "user",
       isVerified: true, 
     });
 
@@ -82,7 +84,7 @@ export const registerUser = async (req, res) => {
     console.log(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -135,7 +137,7 @@ export const loginUser = async (req, res) => {
     console.log(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -170,7 +172,7 @@ export const getUserProfile = async (req, res) => {
     console.log(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -226,7 +228,7 @@ export const updateProfile = async (req, res) => {
     });
   } catch (error) {
     console.error("Update profile error:", error);
-    res.status(500).json({ success: false, message: "Server Error: " + error.message });
+    res.status(500).json({ success: false, message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)) + error.message });
   }
 };
 
@@ -269,7 +271,7 @@ export const addAddress = async (req, res) => {
     });
   } catch (error) {
     console.error("Add address error:", error);
-    res.status(500).json({ success: false, message: "Server Error: " + error.message });
+    res.status(500).json({ success: false, message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)) + error.message });
   }
 };
 
@@ -301,6 +303,6 @@ export const deleteAddress = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message || "Server Error" });
+    res.status(500).json({ success: false, message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)) });
   }
 };

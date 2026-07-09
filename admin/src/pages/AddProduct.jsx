@@ -4,6 +4,32 @@ import api from "../utils/api";
 import { FiArrowLeft, FiUpload, FiX, FiPlus } from "react-icons/fi";
 import toast from "react-hot-toast";
 import { calculatePriceBreakdown } from "../utils/pricingCalculator";
+import {
+  buildLegacySpecificationPayload,
+  createDefaultSpecifications,
+  getSpecificationValue,
+} from "../utils/productSpecifications";
+
+const SPEC_FIELD_LABEL_MAP = {
+  material: "Base Material",
+  purity: "Purity",
+  metalColor: "Metal Color",
+  grossWeight: "Gross Weight",
+  netWeight: "Net Weight",
+  gender: "Gender",
+  occasion: "Occasion",
+  plating: "Plating Type",
+  diamondWeight: "Diamond Carat",
+  diamondPieces: "Number of Diamonds",
+  diamondColor: "Diamond Color",
+  bisHallmarkNumber: "BIS Hallmark Number",
+  certificateDetails: "Certificate Details",
+};
+
+// GIA diamond color grades run alphabetically from D (colorless) to Z (light color).
+const GIA_DIAMOND_COLOR_GRADES = Array.from({ length: 23 }, (_, i) =>
+  String.fromCharCode(68 + i)
+);
 
 export function AddProduct() {
   const navigate = useNavigate();
@@ -32,6 +58,7 @@ export function AddProduct() {
     tags: "",
     defaultRating: 0,
     gender: "unisex",
+    specifications: createDefaultSpecifications(),
     // New premium jewellery fields
     metalType: "Gold",
     purity: "22KT",
@@ -40,6 +67,7 @@ export function AddProduct() {
     metalColor: "Yellow Gold",
     diamondWeight: 0,
     diamondPieces: 0,
+    diamondColor: "",
     bisHallmarkNumber: "",
     certificateDetails: "",
     makingChargeType: "per_gram",
@@ -77,11 +105,117 @@ export function AddProduct() {
     fetchGoldRate();
   }, []);
 
+  const syncSpecificationValue = (specifications, label, value) =>
+    (() => {
+      const targetLabel = String(label || "").toLowerCase();
+      let updatedOnce = false;
+
+      return specifications.map((item) => {
+        const itemLabel = String(item?.label || "").toLowerCase();
+
+        if (!updatedOnce && itemLabel && itemLabel === targetLabel) {
+          updatedOnce = true;
+          return { ...item, value: String(value ?? "") };
+        }
+
+        // Always clone to avoid any accidental shared-reference bugs
+        return { ...item };
+      });
+    })();
+
+  // Keep the default specs in sync with the premium jewellery fields on initial load.
+  // (Without this, premium fields may have defaults like "22KT" but specs start empty.)
+  useEffect(() => {
+    setFormData((prev) => {
+      const nextSpecifications = Object.entries(SPEC_FIELD_LABEL_MAP).reduce(
+        (specs, [fieldId, label]) => syncSpecificationValue(specs, label, prev[fieldId]),
+        prev.specifications
+      );
+      return { ...prev, specifications: nextSpecifications };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleInputChange = (e) => {
     const { id, value, type, checked } = e.target;
+    const nextValue = type === "checkbox" ? checked : value;
+
+    setFormData((prev) => {
+      const nextFormData = {
+        ...prev,
+        [id]: nextValue,
+      };
+      const mappedLabel = SPEC_FIELD_LABEL_MAP[id];
+
+      if (mappedLabel) {
+        nextFormData.specifications = syncSpecificationValue(
+          prev.specifications,
+          mappedLabel,
+          nextValue
+        );
+      }
+
+      return nextFormData;
+    });
+  };
+
+  const handleSpecificationChange = (specId, field, value) => {
+    setFormData((prev) => {
+      const nextSpecifications = prev.specifications.map((item) =>
+        item?.id === specId ? { ...item, [field]: value } : { ...item }
+      );
+
+      if (field !== "value") {
+        return {
+          ...prev,
+          specifications: nextSpecifications,
+        };
+      }
+
+      const updatedItem = nextSpecifications.find((item) => item?.id === specId);
+      const nextFormData = {
+        ...prev,
+        specifications: nextSpecifications,
+      };
+      const labelKey = updatedItem?.label?.toLowerCase();
+
+      if (labelKey === "base material") nextFormData.material = value;
+      if (labelKey === "purity") nextFormData.purity = value;
+      if (labelKey === "metal color") nextFormData.metalColor = value;
+      if (labelKey === "gross weight") nextFormData.grossWeight = value;
+      if (labelKey === "net weight") nextFormData.netWeight = value;
+      if (labelKey === "gender") nextFormData.gender = value;
+      if (labelKey === "occasion") nextFormData.occasion = value;
+      if (labelKey === "plating type") nextFormData.plating = value;
+      if (labelKey === "diamond carat") nextFormData.diamondWeight = value;
+      if (labelKey === "number of diamonds") nextFormData.diamondPieces = value;
+      if (labelKey === "diamond color") nextFormData.diamondColor = value;
+      if (labelKey === "bis hallmark number") nextFormData.bisHallmarkNumber = value;
+      if (labelKey === "certificate details") nextFormData.certificateDetails = value;
+
+      return nextFormData;
+    });
+  };
+
+  const createSpecId = (label = "") =>
+    (globalThis.crypto?.randomUUID?.() ||
+      `spec_${Date.now()}_${Math.random().toString(16).slice(2)}`) +
+    (label ? `_${label.toLowerCase().replace(/[^a-z0-9]+/g, "_")}` : "");
+
+  const handleAddSpecification = () => {
     setFormData((prev) => ({
       ...prev,
-      [id]: type === "checkbox" ? checked : value,
+      specifications: [
+        ...prev.specifications,
+        { id: createSpecId(), label: "", value: "" },
+      ],
+    }));
+  };
+
+  const handleRemoveSpecification = (specId) => {
+    setFormData((prev) => ({
+      ...prev,
+      specifications: prev.specifications.filter((item) => item?.id !== specId),
     }));
   };
 
@@ -119,49 +253,54 @@ export function AddProduct() {
   };
 
   const handleAddProduct = async (e) => {
-  e.preventDefault();
-  setLoading(true);
+    e.preventDefault();
+    setLoading(true);
 
-  try {
-    const data = new FormData();
+    try {
+      const data = new FormData();
+      const specificationPayload = buildLegacySpecificationPayload(formData.specifications);
+      const payload = {
+        ...formData,
+        ...specificationPayload,
+      };
 
-    // Append basic fields dynamically
-    Object.keys(formData).forEach(key => {
-      // 🌟 FIX: Intercept complex structures so they don't turn into "[object Object]"
-      if (key === 'gemstoneDetails' || Array.isArray(formData[key])) {
-        data.append(key, JSON.stringify(formData[key]));
-      } else if (formData[key] !== undefined && formData[key] !== null) {
-        data.append(key, formData[key]);
+      // Append basic fields dynamically
+      Object.keys(payload).forEach(key => {
+        // 🌟 FIX: Intercept complex structures so they don't turn into "[object Object]"
+        if (key === 'gemstoneDetails' || key === "specifications" || Array.isArray(payload[key])) {
+          data.append(key, JSON.stringify(payload[key]));
+        } else if (payload[key] !== undefined && payload[key] !== null) {
+          data.append(key, payload[key]);
+        }
+      });
+
+      // Append images
+      images.forEach(img => {
+        if (img) {
+          data.append('images', img);
+        }
+      });
+
+      // Append variants as JSON string
+      data.append('variants', JSON.stringify(variants));
+
+      const response = await api.post("/products/add-product", data, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      if (response.data.success) {
+        toast.success("Product added successfully!");
+        navigate("/products");
       }
-    });
-
-    // Append images
-    images.forEach(img => {
-      if (img) {
-        data.append('images', img);
-      }
-    });
-
-    // Append variants as JSON string
-    data.append('variants', JSON.stringify(variants));
-
-    const response = await api.post("/products/add-product", data, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
-
-    if (response.data.success) {
-      toast.success("Product added successfully!");
-      navigate("/products");
+    } catch (error) {
+      console.error("Error adding product:", error);
+      toast.error(error.response?.data?.message || "Failed to add product");
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Error adding product:", error);
-    toast.error(error.response?.data?.message || "Failed to add product");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
   const handleAddVariant = () => {
     setVariants([...variants, { color: "", size: "", stock: 0 }]);
   };
@@ -171,11 +310,14 @@ export function AddProduct() {
   };
 
   const pricePreview = useMemo(() => {
+    const specPurity = getSpecificationValue(formData.specifications, "Purity");
+    const specNetWeight = getSpecificationValue(formData.specifications, "Net Weight");
+
     try {
       return calculatePriceBreakdown({
         goldRate24kt,
-        purity: formData.purity || "22KT",
-        netWeight: parseFloat(formData.netWeight) || 0,
+        purity: specPurity || formData.purity || "22KT",
+        netWeight: parseFloat(specNetWeight) || parseFloat(formData.netWeight) || 0,
         makingChargeType: formData.makingChargeType || "per_gram",
         makingChargeValue: parseFloat(formData.makingChargeValue) || 0,
         cgstRate: parseFloat(formData.cgstRate) || 1.5,
@@ -185,7 +327,7 @@ export function AddProduct() {
     } catch (e) {
       return { originalPrice: 0, salePrice: 0, metalValue: 0, makingCharge: 0, cgst: 0, sgst: 0 };
     }
-  }, [goldRate24kt, formData.purity, formData.netWeight, formData.makingChargeType, formData.makingChargeValue, formData.cgstRate, formData.sgstRate, formData.discountPercentage]);
+  }, [goldRate24kt, formData.specifications, formData.purity, formData.netWeight, formData.makingChargeType, formData.makingChargeValue, formData.cgstRate, formData.sgstRate, formData.discountPercentage]);
 
   return (
     <div className="space-y-6 max-w-5xl text-slate-200 p-1">
@@ -378,19 +520,7 @@ export function AddProduct() {
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label htmlFor="weight" className="text-xs font-semibold text-slate-300">Weight (grams)</label>
-                <input
-                  id="weight"
-                  type="number"
-                  value={formData.weight}
-                  onChange={handleInputChange}
-                  placeholder="0"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-colors"
-                />
-              </div>
-            </div>
+
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-1.5">
@@ -414,9 +544,9 @@ export function AddProduct() {
           <div className="bg-slate-900 border border-slate-800/80 rounded-2xl p-5 shadow-sm space-y-4">
             <h2 className="text-sm font-bold text-white tracking-wide border-b border-slate-800 pb-2">Premium Jewellery Details</h2>
 
+
+
             <div className="grid gap-4 md:grid-cols-2">
-
-
               <div className="space-y-1.5">
                 <label htmlFor="purity" className="text-xs font-semibold text-slate-300">Purity</label>
                 <div className="relative">
@@ -433,13 +563,33 @@ export function AddProduct() {
                     <option value="22KT">22KT Gold</option>
                     <option value="24KT">24KT Gold</option>
                     <option value="925 Sterling">925 Sterling Silver</option>
-
-                    {/* 🔴 FIX: Changed value from "950-platinum" to "950 Platinum" */}
                     <option value="950 Platinum">950 Platinum</option>
                     <option value="999 Platinum">999 Platinum</option>
                   </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
 
-                  {/* Chevron icon */}
+              <div className="space-y-1.5">
+                <label htmlFor="metalColor" className="text-xs font-semibold text-slate-300">Metal Color</label>
+                <div className="relative">
+                  <select
+                    id="metalColor"
+                    value={formData.metalColor}
+                    onChange={handleInputChange}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50 transition-colors appearance-none pr-10"
+                  >
+                    <option value="Yellow Gold">Yellow Gold</option>
+                    <option value="White Gold">White Gold</option>
+                    <option value="Rose Gold">Rose Gold</option>
+                    <option value="Silver">Silver</option>
+                    <option value="Platinum">Platinum</option>
+                    <option value="Two-Tone">Two-Tone</option>
+                  </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
@@ -478,8 +628,6 @@ export function AddProduct() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-
-
               <div className="space-y-1.5">
                 <label htmlFor="bisHallmarkNumber" className="text-xs font-semibold text-slate-300">BIS Hallmark Number</label>
                 <input
@@ -501,13 +649,35 @@ export function AddProduct() {
                   type="checkbox"
                   checked={formData.hasDiamonds || false}
                   onChange={(e) => {
+                    const checked = e.target.checked;
                     // Toggle the boolean, and optionally clear the values if unchecked
-                    setFormData({
-                      ...formData,
-                      hasDiamonds: e.target.checked,
-                      // Reset fields to default state if user unchecks it
-                      diamondWeight: e.target.checked ? formData.diamondWeight : "0",
-                      diamondPieces: e.target.checked ? formData.diamondPieces : "0",
+                    setFormData((prev) => {
+                      const nextFormData = {
+                        ...prev,
+                        hasDiamonds: checked,
+                        // Reset fields to default state if user unchecks it
+                        diamondWeight: checked ? prev.diamondWeight : "0",
+                        diamondPieces: checked ? prev.diamondPieces : "0",
+                        diamondColor: checked ? prev.diamondColor : "",
+                      };
+
+                      nextFormData.specifications = syncSpecificationValue(
+                        nextFormData.specifications,
+                        SPEC_FIELD_LABEL_MAP.diamondWeight,
+                        nextFormData.diamondWeight
+                      );
+                      nextFormData.specifications = syncSpecificationValue(
+                        nextFormData.specifications,
+                        SPEC_FIELD_LABEL_MAP.diamondPieces,
+                        nextFormData.diamondPieces
+                      );
+                      nextFormData.specifications = syncSpecificationValue(
+                        nextFormData.specifications,
+                        SPEC_FIELD_LABEL_MAP.diamondColor,
+                        nextFormData.diamondColor
+                      );
+
+                      return nextFormData;
                     });
                   }}
                   className="h-4 w-4 rounded border-slate-800 bg-slate-950 text-amber-500 focus:ring-amber-500/30 focus:ring-offset-slate-950 accent-amber-500 cursor-pointer"
@@ -522,7 +692,7 @@ export function AddProduct() {
 
               {/* 2. Conditional Grid Sections */}
               {formData.hasDiamonds && (
-                <div className="grid gap-4 md:grid-cols-2 animate-fadeIn">
+                <div className="grid gap-4 md:grid-cols-3 animate-fadeIn">
                   {/* Diamond Weight Input */}
                   <div className="space-y-1.5">
                     <label htmlFor="diamondWeight" className="text-xs font-semibold text-slate-300">
@@ -554,6 +724,31 @@ export function AddProduct() {
                       placeholder="0"
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-colors"
                     />
+                  </div>
+
+                  {/* Diamond Color (GIA Grade) Input */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="diamondColor" className="text-xs font-semibold text-slate-300">
+                      Diamond Color (GIA Grade)
+                    </label>
+                    <div className="relative">
+                      <select
+                        id="diamondColor"
+                        value={formData.diamondColor}
+                        onChange={handleInputChange}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50 transition-colors appearance-none pr-10"
+                      >
+                        <option value="" disabled>Select GIA color grade</option>
+                        {GIA_DIAMOND_COLOR_GRADES.map((grade) => (
+                          <option key={grade} value={grade}>{grade}</option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -618,32 +813,10 @@ export function AddProduct() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-                          </div>
-
-            <div className="space-y-1.5">
-              <label htmlFor="certificateDetails" className="text-xs font-semibold text-slate-300">Certificate Details</label>
-              <textarea
-                id="certificateDetails"
-                value={formData.certificateDetails}
-                onChange={handleInputChange}
-                placeholder="Enter certificate details (IGI, GIA, etc.)"
-                rows={2}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-colors resize-none"
-              />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-
-
-
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-1.5">
                 <label htmlFor="material" className="text-xs font-semibold text-slate-300">
                   Base Material
                 </label>
-
                 <div className="relative">
                   <select
                     id="material"
@@ -652,21 +825,15 @@ export function AddProduct() {
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50 transition-colors appearance-none pr-10"
                   >
                     <option value="" disabled>Select base material</option>
-
-                    {/* Precious Base Metals */}
                     <option value="solid-gold">Solid Gold</option>
                     <option value="925-sterling-silver">925 Sterling Silver</option>
                     <option value="platinum">Platinum</option>
-
-                    {/* Semi-Precious & Fashion Base Metals */}
                     <option value="brass">Brass</option>
                     <option value="stainless-steel">Stainless Steel</option>
                     <option value="copper">Copper</option>
                     <option value="premium-alloy">Premium Jewellery Alloy</option>
                     <option value="titanium">Titanium</option>
                   </select>
-
-                  {/* Custom Dropdown Chevron Arrow UI */}
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
@@ -711,6 +878,17 @@ export function AddProduct() {
                   </div>
                 </div>
               </div>
+              <div className="space-y-1.5">
+                <label htmlFor="certificateDetails" className="text-xs font-semibold text-slate-300">Certificate Details</label>
+                <textarea
+                  id="certificateDetails"
+                  value={formData.certificateDetails}
+                  onChange={handleInputChange}
+                  placeholder="Enter certificate details (IGI, GIA, etc.)"
+                  rows={2}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500/50 transition-colors resize-none"
+                />
+              </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -722,7 +900,7 @@ export function AddProduct() {
                   onChange={handleInputChange}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50 transition-colors appearance-none"
                 >
-                  <option value="" disabled selected>Select Metal Tone</option>
+                  <option value="" disabled>Select Metal Tone</option>
                   <option value="yellow-gold">Yellow Gold</option>
                   <option value="white-gold">White Gold</option>
                   <option value="rose-gold">Rose Gold</option>
@@ -748,11 +926,27 @@ export function AddProduct() {
                       key={idx}
                       type="button"
                       onClick={() => {
-                        const currentOccasions = formData.occasion ? formData.occasion.split(',').map(o => o.trim()) : [];
-                        if (!currentOccasions.includes(occ)) {
+                        setFormData((prev) => {
+                          const currentOccasions = prev.occasion
+                            ? prev.occasion.split(',').map((o) => o.trim())
+                            : [];
+
+                          if (currentOccasions.includes(occ)) {
+                            return prev;
+                          }
+
                           const newOccasions = [...currentOccasions, occ].join(', ');
-                          setFormData(prev => ({ ...prev, occasion: newOccasions }));
-                        }
+
+                          return {
+                            ...prev,
+                            occasion: newOccasions,
+                            specifications: syncSpecificationValue(
+                              prev.specifications,
+                              "Occasion",
+                              newOccasions
+                            ),
+                          };
+                        });
                       }}
                       className="bg-slate-950 border border-slate-800 px-2 py-1 text-[9px] font-bold tracking-wide rounded-md text-slate-400 uppercase hover:text-amber-500 transition-colors"
                     >
@@ -870,8 +1064,86 @@ export function AddProduct() {
                 </datalist>
               </div>
             </div>
-          </div>
 
+
+          </div>
+          <div className="bg-[#0f172b] p-8 rounded-2xl">
+
+            <hr className="border-gray-200" />
+            <h2 className="text-2xl font-bold px-10 py-4 text-gray-200">
+              Verify, Add, or Remove Details of This Product
+            </h2>
+            <hr className="border-gray-200 mb-5" />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-xs font-bold tracking-wide text-white uppercase">Product Specifications</h3>
+                  <p className="text-[11px] text-slate-500 mt-1">Default fields are preloaded and can be edited, removed, or extended with custom specifications.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddSpecification}
+                  className="inline-flex items-center gap-2 bg-slate-950 border border-slate-800 hover:border-amber-500/40 hover:text-amber-400 text-slate-300 text-xs font-semibold px-3 py-2 rounded-xl transition-colors"
+                >
+                  <FiPlus className="w-4 h-4" />
+                  Add Specification
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {formData.specifications.map((specification) => (
+                  <div
+                    key={specification.id}
+                    className="group grid gap-4 items-end sm:grid-cols-[1fr_1fr_auto] p-3 rounded-2xl bg-slate-900/40 border border-slate-900/60 hover:border-slate-800/80 transition-all duration-200"
+                  >
+                    {/* Label Field */}
+                    <div className="space-y-1.5 w-full">
+                      <label className="text-xs font-semibold text-slate-400 tracking-wide group-hover:text-slate-300 transition-colors">
+                        Label
+                      </label>
+                      <input
+                        type="text"
+                        value={specification.label}
+                        name={`spec_label_${specification.id}`}
+                        autoComplete="off"
+                        onChange={(e) => handleSpecificationChange(specification.id, "label", e.target.value)}
+                        placeholder="e.g., Diamond Color"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 transition-all"
+                      />
+                    </div>
+
+                    {/* Value Field */}
+                    <div className="space-y-1.5 w-full">
+                      <label className="text-xs font-semibold text-slate-400 tracking-wide group-hover:text-slate-300 transition-colors">
+                        Value
+                      </label>
+                      <input
+                        type="text"
+                        value={specification.value}
+                        name={`spec_value_${specification.id}`}
+                        autoComplete="off"
+                        onChange={(e) => handleSpecificationChange(specification.id, "value", e.target.value)}
+                        placeholder="e.g., G Color"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 transition-all"
+                      />
+                    </div>
+
+                    {/* Actions (Delete Button) */}
+                    <div className="flex justify-end h-[46px] items-center">
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSpecification(specification.id)}
+                        className="h-10 w-10 inline-flex items-center justify-center bg-slate-950 border border-slate-800 hover:border-rose-500/40 hover:bg-rose-950/20 text-slate-400 hover:text-rose-400 rounded-xl transition-all duration-200 active:scale-95 shadow-sm"
+                        aria-label={`Remove ${specification.label || "specification"}`}
+                      >
+                        <FiX className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
           {/* Complex Functional Dynamic Custom Variant Matrix */}
 
         </div>
@@ -956,4 +1228,4 @@ export function AddProduct() {
       </div>
     </div>
   );
-}
+} 

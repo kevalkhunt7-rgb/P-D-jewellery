@@ -1,5 +1,6 @@
 import React from 'react';
 import { Camera, Loader2 } from 'lucide-react';
+import { sanitizePhone } from '../utils/phoneValidation';
 
 export function ProfileTab({
   user,
@@ -19,7 +20,7 @@ export function ProfileTab({
           <h3 className="font-serif text-xl">Account Details</h3>
           <button
             onClick={() => setIsEditing(!isEditing)}
-            className="px-4 py-2 text-xs border rounded-full hover:bg-stone-50 transition-colors"
+            className="px-4 py-2 font-semibold text-sm border rounded-full hover:bg-stone-300 cursor-pointer transition-colors"
           >
             {isEditing ? 'Cancel' : 'Edit Profile'}
           </button>
@@ -39,7 +40,7 @@ export function ProfileTab({
           )}
 
           <div>
-            <span className="text-[10px] uppercase tracking-wider text-[#2C2C2C]/40 ml-1">
+            <span className="text-[10px] uppercase tracking-wider ml-1">
               Full Name
             </span>
             {isEditing ? (
@@ -57,7 +58,7 @@ export function ProfileTab({
           </div>
 
           <div>
-            <span className="text-[10px] uppercase tracking-wider text-[#2C2C2C]/40 ml-1">
+            <span className="text-[10px] uppercase tracking-wider ml-1">
               Email Address
             </span>
             <p className="py-3 px-4 bg-[#FDF8F3]/60 rounded-xl border border-[#E8C7B7]/20 opacity-60">
@@ -66,14 +67,15 @@ export function ProfileTab({
           </div>
 
           <div>
-            <span className="text-[10px] uppercase tracking-wider text-[#2C2C2C]/40 ml-1">
+            <span className="text-[10px] uppercase tracking-wider ml-1">
               Phone Number
             </span>
             {isEditing ? (
               <input
-                type="text"
+                type="tel"
+                maxLength={10}
                 value={editData.phone}
-                onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
+                onChange={(e) => setEditData({ ...editData, phone: sanitizePhone(e.target.value) })}
                 className="w-full mt-1 py-3 px-4 bg-[#FDF8F3]/60 rounded-xl border border-[#B76E79]/30 outline-none focus:border-[#B76E79]"
               />
             ) : (

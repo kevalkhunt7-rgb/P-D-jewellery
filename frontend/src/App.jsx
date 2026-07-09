@@ -17,13 +17,14 @@ import { Toaster } from 'react-hot-toast'
 // Components
 import ScrollToTop from './components/ScrollToTop'
 import { Footer } from './components/Footer'
-import OrderDetailPage from './pages/OrderDetailPage'
 
 // 🚀 Import the Favicon Manager utility
 import { FaviconManager } from './components/FaviconManager'
 
+
 // 2. Change standard imports to Lazy Imports for smooth page transition loaders
 const Home = lazy(() => import("./pages/Home"))
+const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage'))
 const Login = lazy(() => import('./pages/Login'))
 const Profile = lazy(() => import('./pages/Profile'))
 const Cart = lazy(() => import('./pages/Cart'))
@@ -37,10 +38,11 @@ const GiveReview = lazy(() => import('./pages/GiveReview'))
 const NewArrivalsPage = lazy(() => import('./pages/NewArrivals'))
 const CertificationPolicy = lazy(() => import('./pages/CertificationPolicy'))
 const HallmarkInfo = lazy(() => import('./pages/HallmarkInfo'))
+const ContactUs = lazy(() => import('./pages/ContactUs'))
 const BuybackPolicy = lazy(() => import('./pages/BuybackPolicy'))
 const ExchangePolicy = lazy(() => import('./pages/ExchangePolicy'))
 const JewelleryCareGuide = lazy(() => import('./pages/JewelleryCareGuide'))
-
+const PoliciesPage = lazy(() => import('./pages/PolicyPage'))
 function App() {
   return (
     <div className="w-full min-h-screen overflow-x-hidden bg-[#FAF9F6] relative">
@@ -74,11 +76,12 @@ function App() {
                       <Route path='/new-arrivals' element={<NewArrivalsPage />} />
                       <Route path="/certification-policy" element={<CertificationPolicy />} />
                       <Route path="/hallmark-info" element={<HallmarkInfo />} />
+                      <Route path="/contact" element={<ContactUs />} />
                       <Route path="/buyback-policy" element={<BuybackPolicy />} />
                       <Route path="/exchange-policy" element={<ExchangePolicy />} />
                       <Route path="/jewellery-care-guide" element={<JewelleryCareGuide />} />
                       <Route path="/order-detail/:id" element={<OrderDetailPage />} />
-                    
+                      <Route path="/policies" element={<PoliciesPage />} /> 
                       <Route path='/*' element={<NotFoundPage />} />
                     </Routes>
                   </Suspense>

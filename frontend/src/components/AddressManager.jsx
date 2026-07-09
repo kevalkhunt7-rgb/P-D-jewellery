@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MapPin, Plus, Trash2, CheckCircle2, Loader2, X } from 'lucide-react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import { sanitizePhone, isValidPhone, PHONE_ERROR_MESSAGE } from '../utils/phoneValidation';
 
 export function AddressManager({ addresses, onUpdate }) {
   const [showAddForm, setShowAddForm] = useState(false);
@@ -16,17 +17,25 @@ export function AddressManager({ addresses, onUpdate }) {
     country: 'India',
     isDefault: false
   });
+  const [formErrors, setFormErrors] = useState({});
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : (name === 'phone' ? sanitizePhone(value) : value)
     }));
+    if (formErrors[name]) {
+      setFormErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isValidPhone(formData.phone)) {
+      setFormErrors(prev => ({ ...prev, phone: PHONE_ERROR_MESSAGE }));
+      return;
+    }
     setLoading(true);
     try {
       const { data } = await api.post('/auth/address/add', formData);
@@ -92,7 +101,16 @@ export function AddressManager({ addresses, onUpdate }) {
             </div>
             <div>
               <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">Phone Number</label>
-              <input required name="phone" value={formData.phone} onChange={handleInputChange} className="w-full mt-1 px-4 py-2.5 bg-[#FDF8F3] border rounded-xl outline-none focus:border-[#B76E79]" />
+              <input
+                required
+                name="phone"
+                type="tel"
+                maxLength={10}
+                value={formData.phone}
+                onChange={handleInputChange}
+                className={`w-full mt-1 px-4 py-2.5 bg-[#FDF8F3] border rounded-xl outline-none focus:border-[#B76E79] ${formErrors.phone ? 'border-red-400' : ''}`}
+              />
+              {formErrors.phone && <p className="text-[10px] text-red-500 mt-1 ml-1">{formErrors.phone}</p>}
             </div>
             <div>
               <label className="text-[10px] uppercase font-bold text-gray-400 ml-1">ZIP Code</label>

@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 import { rateLimit } from "express-rate-limit";
+import helmet from "helmet";
 import express from 'express';
 import cors from 'cors';
 import cron from 'node-cron';
@@ -17,11 +18,13 @@ import whishlistRoutes from './src/routes/wishlistRoutes.js';
 import adminRoutes from './src/routes/adminRoutes.js';
 import settingsRoutes from './src/routes/settingsRoutes.js';
 import paymentRoutes from './src/routes/paymentRoutes.js'
-import dns from "dns";
+import contactRoutes from './src/routes/contactRoutes.js';
+import dns from 'dns';
 import { fetchAndUpdateExchangeRate } from './src/utils/exchangeRateService.js';
 
 // Force stable DNS lookups to avoid connection resets with DB clusters/APIs
-dns.setServers(["1.1.1.1", "8.8.8.8"]);
+// Force Node to prioritize IPv4 over IPv6 to fix SMTP & Fetch connection resets
+dns.setDefaultResultOrder('ipv4first');
 
 // Connect Database
 connectDB();
@@ -36,6 +39,9 @@ cron.schedule('0 */6 * * *', async () => {
 });
 
 const app = express();
+
+// Load Helmet for HTTP header security
+app.use(helmet());
 
 // 1. FIXED: Explicit CORS Policy to prevent ERR_CONNECTION_RESET
 app.use(cors({
@@ -74,6 +80,20 @@ const otpLimiter = rateLimit({
 app.use("/api/auth/send-otp", otpLimiter);
 app.use("/api/auth/verify-otp", otpLimiter);
 
+// Rate Limiter for Login and Registration to prevent brute-force
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // Limit each IP to 20 login/register requests per windowMs
+  message: {
+    success: false,
+    message: "Too many login/registration attempts. Please try again after 15 minutes."
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/register", authLimiter);
+
 // API Route Bindings
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
@@ -87,6 +107,7 @@ app.use("/api/wishlist", whishlistRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/contact", contactRoutes);
 
 // Error Handling Middleware Fallback (Keeps server alive if routes throw errors)
 app.use((err, req, res, next) => {

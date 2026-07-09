@@ -1,70 +1,41 @@
-import React, { useEffect, useRef } from 'react';
-import api from '../utils/api';
+import React, { useState } from 'react';
+import { PayPalButtons as PayPalSDKButtons } from "@paypal/react-paypal-js";
 
-const PayPalButtons = ({ amount, onSuccess, onError, currency = 'USD' }) => {
-  const paypalRef = useRef(null);
+const PayPalButtons = ({ onCreateOrder, onApprove, onError }) => {
+  const [isPending, setIsPending] = useState(true);
 
-  useEffect(() => {
-    // Load PayPal SDK
-    const loadPayPal = async () => {
-      try {
-        const response = await api.get('/settings/public'); // This is just to get client ID? Or wait, let's get it from .env
-        const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID || 'test'; // We'll add this to .env
-        const script = document.createElement('script');
-        script.src = `https://www.paypal.com/sdk/js?client-id=${paypalClientId}&currency=${currency}`;
-        script.addEventListener('load', () => {
-          if (window.paypal) {
-            window.paypal.Buttons({
-              createOrder: async (data, actions) => {
-                try {
-                  const response = await api.post('/payment/paypal/create-order', { amount });
-                  if (response.data.success) {
-                    return response.data.orderID;
-                  }
-                  throw new Error('Failed to create PayPal order');
-                } catch (err) {
-                  console.error('Create PayPal order error:', err);
-                  onError(err);
-                }
-              },
-              onApprove: async (data, actions) => {
-                try {
-                  const response = await api.post('/payment/paypal/capture-order', { orderID: data.orderID });
-                  if (response.data.success) {
-                    onSuccess({
-                      paymentId: response.data.captureID,
-                      paypalOrderId: data.orderID
-                    });
-                  } else {
-                    throw new Error('Failed to capture PayPal order');
-                  }
-                } catch (err) {
-                  console.error('Capture PayPal order error:', err);
-                  onError(err);
-                }
-              },
-              onError: (err) => {
-                console.error('PayPal error:', err);
-                onError(err);
-              }
-            }).render(paypalRef.current);
-          }
-        });
-        document.body.appendChild(script);
-      } catch (err) {
-        console.error('Failed to load PayPal:', err);
-        onError(err);
-      }
-    };
+  return (
+    <div className="relative w-full min-h-[150px]">
+      {/* 1. ELEGANT SKELETON LOADING STATE */}
+      {isPending && (
+        <div className="absolute inset-0 flex flex-col space-y-3 w-full animate-pulse z-10 bg-[#FDFCFB]">
+          <div className="h-11 bg-amber-400/20 rounded-full w-full" />
+          <div className="h-11 bg-blue-600/10 rounded-full w-full" />
+          <div className="h-4 bg-stone-200 rounded w-1/3 mx-auto mt-2" />
+        </div>
+      )}
 
-    loadPayPal();
-
-    return () => {
-      // Clean up script if needed
-    };
-  }, [amount, onSuccess, onError, currency]);
-
-  return <div ref={paypalRef} className="w-full"></div>;
+      {/* 2. STATE-MANAGED PAYPAL BUTTON LAYER */}
+      <PayPalSDKButtons
+        style={{
+          layout: "vertical",
+          shape: "pill",
+          label: "paypal",
+          height: 44
+        }}
+        onInit={() => {
+          // Removes loading overlay as soon as buttons render completely
+          setIsPending(false); 
+        }}
+        createOrder={onCreateOrder}
+        onApprove={onApprove}
+        onError={(err) => {
+          console.error('PayPal core SDK error:', err);
+          onError(err);
+        }}
+      />
+    </div>
+  );
 };
 
 export default PayPalButtons;

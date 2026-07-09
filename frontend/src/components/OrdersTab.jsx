@@ -29,7 +29,7 @@ export function OrdersTab({ orders, ordersLoading, navigate }) {
       <div className="flex justify-between items-end pb-2 border-b border-stone-100">
         <div>
           <h3 className="font-serif text-2xl text-stone-800 tracking-wide">Order History</h3>
-          <p className="text-xs text-stone-400 mt-1">Manage and track your recent purchases</p>
+          <p className="text-xs text-stone-800 mt-1">Manage and track your recent purchases</p>
         </div>
         <span className="text-xs font-medium bg-stone-100 text-stone-600 px-3 py-1 rounded-full">
           {orders.length} {orders.length === 1 ? 'Order' : 'Orders'}
@@ -58,14 +58,14 @@ export function OrdersTab({ orders, ordersLoading, navigate }) {
               {/* Upper Section: Order Metadata */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 border-b border-stone-100 pb-4 mb-4 text-left">
                 <div className="flex items-center gap-2">
-                  <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-0.5">Order ID</p>
+                  <p className="text-[10px] font-semibold text-stone-800 uppercase tracking-wider mb-0.5">Order ID</p>
                   <p className="text-sm font-mono font-medium text-stone-800 truncate max-w-[140px]">
                     #{order._id?.slice(-8) || index}
                   </p>
                   {order.currency === 'USD' && <span className="text-xs">✈️</span>}
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-0.5">Date Placed</p>
+                  <p className="text-[10px] font-semibold text-stone-800 uppercase tracking-wider mb-0.5">Date Placed</p>
                   <p className="text-sm text-stone-600 font-medium">
                     {new Date(order.createdAt).toLocaleDateString('en-IN', {
                       day: 'numeric',
@@ -75,7 +75,7 @@ export function OrdersTab({ orders, ordersLoading, navigate }) {
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider mb-0.5">Total Paid</p>
+                  <p className="text-[10px] font-semibold text-stone-800 uppercase tracking-wider mb-0.5">Total Paid</p>
                   <p className="text-sm font-bold text-stone-900">
                     {order.currencySymbol || '₹'}{order.totalPrice?.toLocaleString(order.currency === 'USD' ? 'en-US' : 'en-IN', { minimumFractionDigits: order.currency === 'USD' ? 2 : 0, maximumFractionDigits: 2 })}
                     {order.currency === 'USD' ? ' USD' : ' INR'}
@@ -125,7 +125,7 @@ export function OrdersTab({ orders, ordersLoading, navigate }) {
                         plus {order.orderItems.length - 1} more item{order.orderItems.length > 2 ? 's' : ''}
                       </p>
                     )}
-                    <p className="text-xs text-stone-400 mt-1 flex items-center gap-1.5">
+                    <p className="text-xs text-stone-800 mt-1 flex items-center gap-1.5">
                       <span className="inline-block w-1.5 h-1.5 rounded-full bg-stone-200"></span>
                       Payment via {order.paymentMethod}
                     </p>

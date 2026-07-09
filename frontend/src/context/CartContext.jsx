@@ -25,6 +25,7 @@ export function CartProvider({ children }) {
             quantity: item.quantity,
             stock: item.stock,
             selectedFinish: item.selectedFinish || null,
+            lockedPricing: item.lockedPricing || null,
           }))
       );
     } else {

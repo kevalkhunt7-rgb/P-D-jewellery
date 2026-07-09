@@ -120,7 +120,7 @@ export const createReview = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -152,7 +152,7 @@ export const getProductReviews = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -224,7 +224,7 @@ export const deleteReview = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -254,7 +254,7 @@ export const getAllReviews = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };

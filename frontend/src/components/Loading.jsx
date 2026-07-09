@@ -74,11 +74,11 @@ export default function Loading() {
       </div>
 
       {/* Luxury Loading Typography */}
-      <h2 className="text-xl font-light tracking-[0.25em] text-amber-400 uppercase mb-2 animate-pulse">
+      <h2 className="text-xl font-bold tracking-[0.25em] text-amber-400 uppercase mb-2 animate-pulse">
         P & D Luxury Jewellery
       </h2>
       
-      <p className="text-xs font-mono tracking-widest text-stone-400 h-4 transition-all duration-500">
+      <p className="text-xs font-mono tracking-widest text-stone-800 h-4 transition-all duration-500">
         {jewelryItems[currentIcon].text}
       </p>
 

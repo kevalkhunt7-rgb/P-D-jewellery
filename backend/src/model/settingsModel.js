@@ -4,61 +4,64 @@ const settingsSchema = new mongoose.Schema(
   {
     // General Settings
     general: {
-      storeName: { type: String, default: "Imit Jewelry" },
+      storeName: {
+        type: String, default: "P&D Luxury Jewellery" },
       storeEmail: { type: String, default: "admin@imit.com" },
-      phone: { type: String, default: "+91 9876543210" },
-      address: { type: String, default: "123 Jewelry Street, Surat, Gujarat" },
-      currency: { type: String, default: "INR" },
-      timezone: { type: String, default: "Asia/Kolkata" },
-      logo: {
-        url: { type: String, default: "" },
-        public_id: { type: String, default: "" },
-      },
-      favicon: {
-        url: { type: String, default: "" },
-        public_id: { type: String, default: "" },
-      },
+  phone: { type: String, default: "+91 9876543210" },
+  address: { type: String, default: "123 Jewellery Street, Surat, Gujarat" },
+  currency: { type: String, default: "INR" },
+  timezone: { type: String, default: "Asia/Kolkata" },
+  logo: {
+  url: { type: String, default: "" },
+  public_id: { type: String, default: "" },
+},
+  favicon: {
+  url: { type: String, default: "" },
+  public_id: { type: String, default: "" },
+},
     },
 
-    // SEO Settings
-    seo: {
-      metaTitle: { type: String, default: "Imit Jewelry - Premium Collections" },
-      metaDescription: { type: String, default: "Discover exclusive handcrafted jewelry at Imit." },
-      metaKeywords: { type: String, default: "jewelry, necklace, rings, surat jewelry" },
-      googleAnalyticsId: { type: String, default: "" },
-      ogImage: {
-        url: { type: String, default: "" },
-        public_id: { type: String, default: "" },
-      },
+// SEO Settings
+seo: {
+  metaTitle: {
+    type: String, default: "P&D Luxury Jewellery - Premium Collections" },
+    metaDescription: { type: String, default: "Discover exclusive handcrafted jewellery at P&D Luxury Jewellery." },
+    metaKeywords: { type: String, default: "jewellery, necklace, rings, surat jewellery" },
+    googleAnalyticsId: { type: String, default: "" },
+    ogImage: {
+      url: { type: String, default: "" },
+      public_id: { type: String, default: "" },
     },
+  },
 
-    // Order Settings
-    order: {
-      defaultStatus: { type: String, default: "PENDING" },
-      enableCOD: { type: Boolean, default: true },
-      shippingCharge: { type: Number, default: 0 },
-      freeShippingMinAmount: { type: Number, default: 999 },
-      taxPercentage: { type: Number, default: 3 },
-      returnDays: { type: Number, default: 7 },
-      allowCancellation: { type: Boolean, default: true },
-    },
+  // Order Settings
+  order: {
+    defaultStatus: { type: String, default: "PENDING" },
+    enableCOD: { type: Boolean, default: true },
+    shippingCharge: { type: Number, default: 0 },
+    freeShippingMinAmount: { type: Number, default: 999 },
+    taxPercentage: { type: Number, default: 3 },
+    returnDays: { type: Number, default: 7 },
+    allowCancellation: { type: Boolean, default: true },
+  },
 
-    // Payment Settings
-    payment: {
-      enableOnlinePayment: { type: Boolean, default: false },
-      razorpayKey: { type: String, default: "" },
-      razorpaySecret: { type: String, default: "" },
-      stripePublicKey: { type: String, default: "" },
-      stripeSecretKey: { type: String, default: "" },
-    },
+  // Payment Settings
+  payment: {
+    enableOnlinePayment: { type: Boolean, default: false },
+    razorpayKey: { type: String, default: "" },
+    razorpaySecret: { type: String, default: "" },
+    stripePublicKey: { type: String, default: "" },
+    stripeSecretKey: { type: String, default: "" },
+  },
 
-    // Email Settings
-    email: {
-      smtpHost: { type: String, default: "" },
-      smtpPort: { type: String, default: "" },
-      smtpEmail: { type: String, default: "" },
-      smtpPassword: { type: String, default: "" },
-      senderName: { type: String, default: "Imit Jewelry" },
+  // Email Settings
+  email: {
+    smtpHost: { type: String, default: "" },
+    smtpPort: { type: String, default: "" },
+    smtpEmail: { type: String, default: "" },
+    smtpPassword: { type: String, default: "" },
+    senderName: {
+      type: String, default: "P&D Luxury Jewellery" },
     },
 
     // Inventory Settings
@@ -97,7 +100,7 @@ const settingsSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// We only ever want one document in this collection
-const Settings = mongoose.model("Settings", settingsSchema);
+  // We only ever want one document in this collection
+  const Settings = mongoose.model("Settings", settingsSchema);
 
-export default Settings;
+  export default Settings;

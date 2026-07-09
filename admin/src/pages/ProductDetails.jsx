@@ -28,6 +28,12 @@ export function ProductDetails() {
   if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div></div>;
   if (!product) return <div className="p-8 text-white">Product not found</div>;
 
+  const specifications = Array.isArray(product.specifications)
+    ? product.specifications.filter(
+        (item) => item?.label && item?.value !== undefined && item?.value !== null && String(item.value).trim() !== ""
+      )
+    : [];
+
   return (
     <div className="space-y-6 text-slate-200 p-4 max-w-6xl mx-auto">
       <div className="flex items-center gap-4">
@@ -82,10 +88,6 @@ export function ProductDetails() {
                 <p className={`text-sm font-semibold ${product.stock < 10 ? 'text-rose-500' : 'text-emerald-500'}`}>{product.stock} Units</p>
               </div>
               <div className="space-y-1">
-                <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Material</p>
-                <p className="text-sm font-semibold text-slate-200">{product.material || 'N/A'}</p>
-              </div>
-              <div className="space-y-1">
                 <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Status</p>
                 <span className="inline-block px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-bold uppercase">{product.status}</span>
               </div>
@@ -94,6 +96,34 @@ export function ProductDetails() {
             <div className="space-y-2">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider">Description</h3>
               <p className="text-sm text-slate-400 leading-relaxed">{product.description}</p>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Product Specifications</h3>
+              {specifications.length > 0 ? (
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {product.specifications.map((specification, index) => {
+                    const value = specification?.value;
+
+                    if (!specification?.label || value === undefined || value === null || String(value).trim() === "") {
+                      return null;
+                    }
+
+                    return (
+                      <div key={`${specification.label}-${index}`} className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-1.5">
+                        <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
+                          {specification.label}
+                        </p>
+                        <p className="text-sm font-semibold text-slate-100 break-words">
+                          {specification.value}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">No specifications available.</p>
+              )}
             </div>
 
             <div className="flex gap-3 pt-4">

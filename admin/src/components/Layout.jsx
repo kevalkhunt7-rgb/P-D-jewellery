@@ -120,7 +120,7 @@ export function AdminLayout() {
 
   useEffect(() => {
     fetchAlerts();
-    // Refresh alerts every 5 minutes
+   
     const interval = setInterval(fetchAlerts, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [dismissedNotifications]);
@@ -168,11 +168,11 @@ export function AdminLayout() {
       {/* Brand Logo Header */}
       <div className="p-5 border-b border-slate-800 flex items-center justify-between min-h-16">
         <div className="flex items-center gap-3 overflow-hidden">
-          <div><img src={administrator} alt="P&d luxury Jewellery" className="w-12 h-12 " /></div>  
+          <div><img src={administrator} alt="P&D Luxury Jewellery" className="w-12 h-12 " /></div>  
           {(!sidebarCollapsed || isMobile) && (
             <div className="flex flex-col opacity-100 transition-opacity duration-300">
               <h1 className="text-sm font-semibold tracking-tight leading-none text-white">
-                P&d luxury Jewellery
+                P&D Luxury Jewellery
               </h1>
               <span className="text-[10px] font-medium tracking-wider uppercase text-amber-500/70 mt-1">
                 {admin?.role === "superAdmin" ? "Super Admin" : "Admin"}
@@ -405,7 +405,7 @@ export function AdminLayout() {
                                         {notif.time}
                                       </span>
                                     </div>
-                                    <p className="text-[11px] text-slate-400 leading-relaxed font-light">
+                                    <p className="text-[11px] text-slate-400 leading-relaxed font-bold">
                                       {notif.message}
                                     </p>
                                   </div>

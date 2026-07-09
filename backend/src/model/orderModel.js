@@ -221,6 +221,30 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    // ========== TWO-PHASE CHECKOUT FIELDS ==========
+    // Tracks when checkout was initiated and when the PENDING order expires.
+    // Stock is reserved at initiation; if payment never completes, the TTL
+    // index (or a cleanup cron) releases the reserved stock.
+    checkoutInitiatedAt: {
+      type: Date,
+    },
+    expiresAt: {
+      type: Date,
+      // MongoDB TTL index: documents are auto-deleted once expiresAt passes.
+      // We handle stock restoration via a pre-deleteMany / cron hook.
+      index: { expires: 0 },
+    },
+    // The server-created payment gateway order IDs.
+    // These are created by the backend during initiateCheckout — the frontend
+    // never sends an amount to the gateway directly.
+    razorpayGatewayOrderId: {
+      type: String,
+      default: "",
+    },
+    paypalGatewayOrderId: {
+      type: String,
+      default: "",
+    },
     orderStatus: {
       type: String,
       enum: [
@@ -244,6 +268,10 @@ const orderSchema = new mongoose.Schema(
     },
     deliveredAt: {
       type: Date,
+    },
+    inventoryTracked: {
+      type: Boolean,
+      default: true,
     },
     // Cancellation & Refund Fields
     cancellationStatus: {

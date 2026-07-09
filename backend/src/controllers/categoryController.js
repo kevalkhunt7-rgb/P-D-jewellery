@@ -54,7 +54,7 @@ export const createCategory = async (req, res) => {
     console.log(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -72,7 +72,7 @@ export const getAllCategories = async (req, res) => {
       categories,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message || "Server Error" });
+    res.status(500).json({ success: false, message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)) });
   }
 };
 
@@ -88,7 +88,7 @@ export const getSingleCategory = async (req, res) => {
 
     res.status(200).json({ success: true, category });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message || "Server Error" });
+    res.status(500).json({ success: false, message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)) });
   }
 };
 
@@ -142,7 +142,7 @@ export const updateCategory = async (req, res) => {
     console.log(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -180,7 +180,7 @@ export const deleteCategory = async (req, res) => {
     console.log(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };

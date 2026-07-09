@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 import api from "../utils/api";
 import toast from "react-hot-toast";
-import { 
-  FiSettings, FiGlobe, FiShoppingBag, FiCreditCard, 
-  FiMail, FiBox, FiHome, FiShare2, FiLock, FiLoader, 
+import {
+  FiSettings, FiGlobe, FiShoppingBag, FiCreditCard,
+  FiMail, FiBox, FiHome, FiShare2, FiLock, FiLoader,
   FiUsers, FiCheck, FiX, FiUserPlus, FiEdit, FiTrash2, FiUserCheck
 } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 // Default
-import { SectionCard, InputField, ToggleSwitch , ImageUpload } from "../components/SettingsComponents"; // Named
+import { SectionCard, InputField, ToggleSwitch, ImageUpload } from "../components/SettingsComponents"; // Named
 
 export function Settings() {
   const [activeTab, setActiveTab] = useState("general");
@@ -25,7 +25,7 @@ export function Settings() {
   const [showAddAdminModal, setShowAddAdminModal] = useState(false);
 
   const { admin } = useAuth();
-  
+
   // State for all settings sections
   const [settings, setSettings] = useState({
     general: {},
@@ -186,7 +186,7 @@ export function Settings() {
     setSettings(prev => ({
       ...prev,
       [section]: {
-        ...prev[section],
+        ...(prev[section] || {}),
         [id]: type === 'checkbox' ? checked : value
       }
     }));
@@ -203,7 +203,7 @@ export function Settings() {
   const saveSection = async (section) => {
     setSaving(true);
     const loadToast = toast.loading(`Saving ${section} settings...`);
-    
+
     try {
       const formData = new FormData();
       // Add text/boolean fields
@@ -305,11 +305,10 @@ export function Settings() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${
-                activeTab === tab.id
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${activeTab === tab.id
                   ? "bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/10"
                   : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"
-              }`}
+                }`}
             >
               <span className="text-lg">{tab.icon}</span>
               {tab.label}
@@ -321,16 +320,16 @@ export function Settings() {
         <div className="flex-1 max-w-4xl">
           {/* Gold Rate Settings */}
           {activeTab === "goldRate" && (
-            <SectionCard 
-              title="Global Gold Rate Settings" 
+            <SectionCard
+              title="Global Gold Rate Settings"
               description="Update the global base rate per gram for pure 24KT gold."
               onSave={saveGoldRate}
               loading={savingGoldRate}
             >
               <div className="grid md:grid-cols-2 gap-6">
-                <InputField 
+                <InputField
                   label="24KT Gold Rate (₹/g)" id="goldRate24kt" type="number"
-                  value={goldRate24kt} 
+                  value={goldRate24kt}
                   onChange={(e) => setGoldRate24kt(parseFloat(e.target.value) || 0)}
                   placeholder="e.g. 8000"
                 />
@@ -371,53 +370,49 @@ export function Settings() {
 
           {/* General Settings */}
           {activeTab === "general" && (
-            <SectionCard 
-              title="General Settings" 
+            <SectionCard
+              title="General Settings"
               description="Basic store identity and contact information"
               onSave={() => saveSection("general")}
               loading={saving}
             >
               <div className="grid md:grid-cols-2 gap-6">
-                <InputField 
-                  label="Store Name" id="storeName" 
-                  value={settings.general.storeName} 
+                <InputField
+                  label="Store Name" id="storeName"
+                  value={settings.general.storeName}
                   onChange={(e) => handleInputChange("general", e)}
-                  placeholder="e.g. Imit Jewelry"
+                  placeholder="e.g. P&D luxury Jewellery
+"
                 />
-                <InputField 
+                <InputField
                   label="Store Email" id="storeEmail" type="email"
-                  value={settings.general.storeEmail} 
+                  value={settings.general.storeEmail}
                   onChange={(e) => handleInputChange("general", e)}
                   placeholder="admin@yourstore.com"
                 />
-                <InputField 
-                  label="Phone Number" id="phone" 
-                  value={settings.general.phone} 
+                <InputField
+                  label="Phone Number" id="phone"
+                  value={settings.general.phone}
                   onChange={(e) => handleInputChange("general", e)}
                   placeholder="+91 98765 43210"
                 />
-                <InputField 
-                  label="Currency Code" id="currency" 
-                  value={settings.general.currency} 
-                  onChange={(e) => handleInputChange("general", e)}
-                  placeholder="INR"
-                />
+
               </div>
-              <InputField 
-                label="Store Address" id="address" 
-                value={settings.general.address} 
+              <InputField
+                label="Store Address" id="address"
+                value={settings.general.address}
                 onChange={(e) => handleInputChange("general", e)}
                 placeholder="Full physical address..."
               />
               <div className="grid md:grid-cols-2 gap-8 pt-4">
-                <ImageUpload 
-                  label="Store Logo" id="logo" 
+                <ImageUpload
+                  label="Store Logo" id="logo"
                   preview={previews.logo}
                   onChange={(e) => handleFileChange("general", "logo", e)}
                   dimensions="Recommended: 512x512px (PNG)"
                 />
-                <ImageUpload 
-                  label="Favicon" id="favicon" 
+                <ImageUpload
+                  label="Favicon" id="favicon"
                   preview={previews.favicon}
                   onChange={(e) => handleFileChange("general", "favicon", e)}
                   dimensions="Recommended: 32x32px (ICO/PNG)"
@@ -428,35 +423,35 @@ export function Settings() {
 
           {/* SEO Settings */}
           {activeTab === "seo" && (
-            <SectionCard 
-              title="SEO & Marketing" 
+            <SectionCard
+              title="SEO & Marketing"
               description="Configure how your store appears in search engines"
               onSave={() => saveSection("seo")}
               loading={saving}
             >
-              <InputField 
-                label="Meta Title" id="metaTitle" 
-                value={settings.seo.metaTitle} 
+              <InputField
+                label="Meta Title" id="metaTitle"
+                value={settings.seo.metaTitle}
                 onChange={(e) => handleInputChange("seo", e)}
                 placeholder="Page title for Google..."
               />
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Meta Description</label>
-                <textarea 
+                <textarea
                   id="metaDescription"
                   value={settings.seo.metaDescription || ''}
                   onChange={(e) => handleInputChange("seo", e)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white h-24 focus:outline-none focus:border-amber-500/50 transition-colors"
                 />
               </div>
-              <InputField 
-                label="Google Analytics ID" id="googleAnalyticsId" 
-                value={settings.seo.googleAnalyticsId} 
+              <InputField
+                label="Google Analytics ID" id="googleAnalyticsId"
+                value={settings.seo.googleAnalyticsId}
                 onChange={(e) => handleInputChange("seo", e)}
                 placeholder="UA-XXXXX-X or G-XXXXXXX"
               />
-              <ImageUpload 
-                label="Open Graph Image" id="ogImage" 
+              <ImageUpload
+                label="Open Graph Image" id="ogImage"
                 preview={previews.ogImage}
                 onChange={(e) => handleFileChange("seo", "ogImage", e)}
                 dimensions="Recommended: 1200x630px"
@@ -466,26 +461,21 @@ export function Settings() {
 
           {/* Order Settings */}
           {activeTab === "order" && (
-            <SectionCard 
-              title="Order Preferences" 
+            <SectionCard
+              title="Order Preferences"
               description="Manage shipping, taxes, and order behavior"
               onSave={() => saveSection("order")}
               loading={saving}
             >
               <div className="grid md:grid-cols-2 gap-6">
-                <InputField 
+                <InputField
                   label="Shipping Charge" id="shippingCharge" type="number"
-                  value={settings.order.shippingCharge} 
+                  value={settings.order.shippingCharge}
                   onChange={(e) => handleInputChange("order", e)}
                 />
-                <InputField 
+                <InputField
                   label="Free Shipping Above" id="freeShippingMinAmount" type="number"
-                  value={settings.order.freeShippingMinAmount} 
-                  onChange={(e) => handleInputChange("order", e)}
-                />
-                <InputField 
-                  label="Tax Percentage (%)" id="taxPercentage" type="number"
-                  value={settings.order.taxPercentage} 
+                  value={settings.order.freeShippingMinAmount}
                   onChange={(e) => handleInputChange("order", e)}
                 />
               </div>
@@ -495,30 +485,30 @@ export function Settings() {
 
           {/* Inventory Settings */}
           {activeTab === "inventory" && (
-            <SectionCard 
-              title="Inventory Management" 
+            <SectionCard
+              title="Inventory Management"
               description="Control how stock levels are handled"
               onSave={() => saveSection("inventory")}
               loading={saving}
             >
-              <InputField 
+              <InputField
                 label="Low Stock Alert Limit" id="lowStockLimit" type="number"
-                value={settings.inventory.lowStockLimit} 
+                value={settings.inventory?.lowStockLimit}
                 onChange={(e) => handleInputChange("inventory", e)}
                 helperText="Products with stock below this number will show alert"
               />
               <div className="space-y-4 pt-2">
-                <ToggleSwitch 
-                  label="Inventory Tracking" 
+                <ToggleSwitch
+                  label="Inventory Tracking"
                   id="enableTracking"
-                  checked={settings.inventory.enableTracking}
+                  checked={settings.inventory?.enableTracking}
                   onChange={(e) => handleInputChange("inventory", e)}
                   description="Automatically decrease stock on every order"
                 />
-                <ToggleSwitch 
-                  label="Auto Out of Stock" 
+                <ToggleSwitch
+                  label="Auto Out of Stock"
                   id="autoOutOfStock"
-                  checked={settings.inventory.autoOutOfStock}
+                  checked={settings.inventory?.autoOutOfStock}
                   onChange={(e) => handleInputChange("inventory", e)}
                   description="Hide products from shop when stock reaches zero"
                 />
@@ -528,8 +518,8 @@ export function Settings() {
 
           {/* Social Media */}
           {activeTab === "social" && (
-            <SectionCard 
-              title="Social Media" 
+            <SectionCard
+              title="Social Media"
               description="Links for your footer and contact pages"
               onSave={() => saveSection("social")}
               loading={saving}
@@ -575,11 +565,10 @@ export function Settings() {
                             </div>
                           </div>
                           <div className="mt-4 flex items-center gap-3">
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                              request.status === "pending" ? "bg-amber-500/10 text-amber-500 border border-amber-500/30" :
-                              request.status === "approved" ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/30" :
-                              "bg-red-500/10 text-red-500 border border-red-500/30"
-                            }`}>
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${request.status === "pending" ? "bg-amber-500/10 text-amber-500 border border-amber-500/30" :
+                                request.status === "approved" ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/30" :
+                                  "bg-red-500/10 text-red-500 border border-red-500/30"
+                              }`}>
                               {request.status}
                             </span>
                             <p className="text-xs text-slate-500">
@@ -648,7 +637,7 @@ export function Settings() {
                               {adminUser.avatar?.url ? (
                                 <img src={adminUser.avatar.url} alt={adminUser.name} className="w-full h-full object-cover" />
                               ) : (
-                                <img 
+                                <img
                                   src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${adminUser.name}`}
                                   alt={adminUser.name}
                                   className="w-full h-full object-cover"
@@ -666,10 +655,9 @@ export function Settings() {
                             </div>
                           </div>
                           <div className="mt-3 flex items-center gap-3">
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                              adminUser.role === "superAdmin" ? "bg-purple-500/10 text-purple-400 border border-purple-500/30" :
-                              "bg-blue-500/10 text-blue-400 border border-blue-500/30"
-                            }`}>
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${adminUser.role === "superAdmin" ? "bg-purple-500/10 text-purple-400 border border-purple-500/30" :
+                                "bg-blue-500/10 text-blue-400 border border-blue-500/30"
+                              }`}>
                               {adminUser.role}
                             </span>
                             <p className="text-xs text-slate-500">

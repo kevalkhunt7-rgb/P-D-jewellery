@@ -36,6 +36,13 @@ export const getSettings = async (req, res) => {
     // Create default settings if none exist
     if (!settings) {
       settings = await Settings.create({});
+    } else if (!settings.inventory) {
+      settings.inventory = {
+        lowStockLimit: 5,
+        autoOutOfStock: true,
+        enableTracking: true,
+      };
+      await settings.save();
     }
 
     // Fetch cached gold rate settings
@@ -51,7 +58,7 @@ export const getSettings = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -64,6 +71,13 @@ export const getPublicSettings = async (req, res) => {
     // Create default settings if none exist
     if (!settings) {
       settings = await Settings.create({});
+    } else if (!settings.inventory) {
+      settings.inventory = {
+        lowStockLimit: 5,
+        autoOutOfStock: true,
+        enableTracking: true,
+      };
+      await settings.save();
     }
 
     // Fetch cached gold rate settings
@@ -80,7 +94,7 @@ export const getPublicSettings = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -116,7 +130,10 @@ export const updateSettings = async (req, res) => {
     // Construct the dynamic update object (e.g., { "general.storeName": "..." })
     const finalUpdate = {};
     for (const key of Object.keys(updateData)) {
-      finalUpdate[`${section}.${key}`] = updateData[key];
+      let value = updateData[key];
+      if (value === "true") value = true;
+      if (value === "false") value = false;
+      finalUpdate[`${section}.${key}`] = value;
     }
 
     const settings = await Settings.findOneAndUpdate(

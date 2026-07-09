@@ -4,6 +4,14 @@ import cloudinary from "../config/cloudinary.js";
 import { calculatePriceBreakdown } from "../utils/pricingCalculator.js";
 import { getStoreSettingsCached } from "../utils/settingsCache.js";
 import { getCurrencyContext } from "../utils/currencyHelper.js";
+import {
+  mapSpecificationsToLegacyFields,
+  normalizeSpecifications,
+  resolveProductSpecifications,
+} from "../utils/productSpecifications.js";
+import jwt from "jsonwebtoken";
+import User from "../model/userModel.js";
+import Settings from "../model/settingsModel.js";
 
 
 // ================= DYNAMIC PRICING HELPERS =================
@@ -48,6 +56,7 @@ if (currencyCtx.currency === "USD") {
 
   return {
     ...productObj,
+    specifications: resolveProductSpecifications(productObj),
     price: salePrice, // root-level for backward compatibility
     originalPrice: originalPrice, // root-level for backward compatibility
     currency: currencyCtx.currency,
@@ -116,6 +125,7 @@ const injectDynamicPricingArray = async (products, req) => {
 
     return {
       ...productObj,
+      specifications: resolveProductSpecifications(productObj),
 
       price: salePrice,
       originalPrice,
@@ -186,6 +196,7 @@ export const createProduct = async (req, res) => {
       sgstRate,
       gst,
       gender,
+      specifications,
     } = req.body;
 
     // FIX: Map public_id from file.filename to prevent orphaned assets
@@ -193,23 +204,6 @@ export const createProduct = async (req, res) => {
       url: file.path,
       public_id: file.filename,
     })) : [];
-
-    // Required Fields Validation
-    if (
-      !name ||
-      !description ||
-      !category ||
-      images.length === 0 ||
-      !purity ||
-      netWeight === undefined ||
-      !makingChargeType ||
-      makingChargeValue === undefined
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide all required fields: name, description, category, images, purity, netWeight, makingChargeType, and makingChargeValue.",
-      });
-    }
 
     // Generate Slug
     const slug = slugify(name, {
@@ -257,6 +251,42 @@ export const createProduct = async (req, res) => {
       }
     }
 
+    const processedSpecifications = resolveProductSpecifications({
+      ...req.body,
+      specifications: normalizeSpecifications(specifications),
+      occasion: processedOccasion,
+      material,
+      purity,
+      metalColor,
+      grossWeight,
+      netWeight,
+      gender,
+      plating,
+      diamondWeight,
+      diamondPieces,
+    });
+    const mappedSpecificationFields =
+      mapSpecificationsToLegacyFields(processedSpecifications);
+    const resolvedPurity = mappedSpecificationFields.purity ?? purity;
+    const resolvedNetWeight = mappedSpecificationFields.netWeight ?? netWeight;
+
+    // Required Fields Validation
+    if (
+      !name ||
+      !description ||
+      !category ||
+      images.length === 0 ||
+      !resolvedPurity ||
+      resolvedNetWeight === undefined ||
+      !makingChargeType ||
+      makingChargeValue === undefined
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide all required fields: name, description, category, images, purity, netWeight, makingChargeType, and makingChargeValue.",
+      });
+    }
+
     // Create Product
     const product = await Product.create({
       name,
@@ -268,12 +298,12 @@ export const createProduct = async (req, res) => {
       discountPercentage: calculatedDiscount,
       stock,
       sku,
-      material,
+      material: mappedSpecificationFields.material ?? material,
       plating,
       color,
       weight,
       dimensions,
-      occasion: processedOccasion,
+      occasion: mappedSpecificationFields.occasion ?? processedOccasion,
       tags: processedTags,
       seoTitle,
       seoDescription,
@@ -284,12 +314,12 @@ export const createProduct = async (req, res) => {
       defaultRating,
       createdBy: req.user._id,
       metalType,
-      purity,
-      grossWeight,
-      netWeight,
-      metalColor,
-      diamondWeight,
-      diamondPieces,
+      purity: resolvedPurity,
+      grossWeight: mappedSpecificationFields.grossWeight ?? grossWeight,
+      netWeight: resolvedNetWeight,
+      metalColor: mappedSpecificationFields.metalColor ?? metalColor,
+      diamondWeight: mappedSpecificationFields.diamondWeight ?? diamondWeight,
+      diamondPieces: mappedSpecificationFields.diamondPieces ?? diamondPieces,
       gemstoneDetails: processedGemstones,
       bisHallmarkNumber,
       certificateDetails,
@@ -297,7 +327,8 @@ export const createProduct = async (req, res) => {
       makingChargeType,
       makingChargeValue,
       gst: Number(gst) || 3,
-      gender,
+      gender: mappedSpecificationFields.gender ?? gender,
+      specifications: processedSpecifications,
     });
 
     if (defaultRating) {
@@ -316,7 +347,7 @@ export const createProduct = async (req, res) => {
     console.log(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -327,8 +358,34 @@ export const getAllProducts = async (req, res) => {
     console.log("🔥 PRODUCT CONTROLLER HIT");
     const search = req.query.search?.trim() || "";
 
+    // Check if the user is an admin/superadmin
+    let isAdmin = false;
+    if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+      try {
+        const token = req.headers.authorization.split(" ")[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await User.findById(decoded.id).select("role");
+        if (user) {
+          const userRole = user.role ? user.role.toLowerCase() : "";
+          if (userRole === "admin" || userRole === "superadmin") {
+            isAdmin = true;
+          }
+        }
+      } catch (err) {
+        // invalid token or user not found, treat as customer
+      }
+    }
+
+    const settings = await Settings.findOne() || await Settings.create({});
+    const autoOutOfStock = settings.inventory?.autoOutOfStock !== false;
+
+    const filter = {};
+    if (autoOutOfStock && !isAdmin) {
+      filter.stock = { $gt: 0 };
+    }
+
     if (!search) {
-      const products = await Product.find({})
+      const products = await Product.find(filter)
         .populate("category")
         .populate("createdBy", "name email")
         .sort({ createdAt: -1 });
@@ -342,7 +399,7 @@ export const getAllProducts = async (req, res) => {
       });
     }
 
-    const products = await Product.aggregate([
+    const pipeline = [
       {
         $search: {
           index: "default",
@@ -374,7 +431,14 @@ export const getAllProducts = async (req, res) => {
             ]
           }
         }
-      },
+      }
+    ];
+
+    if (autoOutOfStock && !isAdmin) {
+      pipeline.push({ $match: { stock: { $gt: 0 } } });
+    }
+
+    pipeline.push(
       {
         $lookup: {
           from: "categories",
@@ -406,7 +470,9 @@ export const getAllProducts = async (req, res) => {
         }
       },
       { $sort: { searchScore: -1 } }
-    ]);
+    );
+
+    const products = await Product.aggregate(pipeline);
 
     const calculatedProducts = await injectDynamicPricingArray(products, req);
 
@@ -419,7 +485,7 @@ export const getAllProducts = async (req, res) => {
     console.error("Search API Error: ", error);
     return res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -442,7 +508,7 @@ export const getProductById = async (req, res) => {
 
     res.status(200).json({ success: true, product: calculatedProduct });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message || "Server Error" });
+    res.status(500).json({ success: false, message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)) });
   }
 };
 
@@ -461,7 +527,7 @@ export const getSingleProduct = async (req, res) => {
 
     res.status(200).json({ success: true, product: calculatedProduct });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message || "Server Error" });
+    res.status(500).json({ success: false, message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)) });
   }
 };
 
@@ -580,6 +646,19 @@ export const updateProduct = async (req, res) => {
       }
     }
 
+    const incomingSpecifications = normalizeSpecifications(updateData.specifications);
+    if (incomingSpecifications.length > 0 || product.specifications?.length > 0) {
+      updateData.specifications = resolveProductSpecifications({
+        ...product.toObject(),
+        ...updateData,
+        specifications: incomingSpecifications,
+      });
+      Object.assign(
+        updateData,
+        mapSpecificationsToLegacyFields(updateData.specifications)
+      );
+    }
+
     if (updateData.defaultRating !== undefined && product.numOfReviews === 0) {
       updateData.ratings = updateData.defaultRating;
     }
@@ -601,7 +680,7 @@ export const updateProduct = async (req, res) => {
     console.log(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -634,7 +713,7 @@ export const deleteProduct = async (req, res) => {
     console.log(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };

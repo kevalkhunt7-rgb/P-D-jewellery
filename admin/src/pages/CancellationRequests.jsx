@@ -78,6 +78,7 @@ export function CancellationRequests() {
   const [requestsData, setRequestsData] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false); // Added for spin animation control
   const [approveModal, setApproveModal] = useState({ isOpen: false, orderId: null });
   const [rejectModal, setRejectModal] = useState({ isOpen: false, orderId: null, reason: "" });
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, orderId: null });
@@ -99,7 +100,6 @@ export function CancellationRequests() {
       if (data.success) {
         setRequestsData(data.requests);
         
-        // Calculate stats
         let total = data.requests.length;
         let pendingApproval = 0;
         let approved = 0;
@@ -132,12 +132,19 @@ export function CancellationRequests() {
       toast.error("Failed to load cancellation requests");
     } finally {
       setLoading(false);
+      setIsRefreshing(false); // Turn off refresh spinner
     }
   };
 
   useEffect(() => {
     fetchCancellationRequests();
   }, [activeFilter]);
+
+  // Wrapper function for the manual refresh button action
+  const handleManualRefresh = () => {
+    setIsRefreshing(true);
+    fetchCancellationRequests();
+  };
 
   const handleApprove = async () => {
     const { orderId } = approveModal;
@@ -294,10 +301,11 @@ export function CancellationRequests() {
             <p className="text-xs text-slate-400 mt-0.5">Review and manage customer order cancellation requests</p>
           </div>
           <button
-            onClick={fetchCancellationRequests}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-slate-300 border border-slate-700 rounded-xl text-xs font-medium hover:bg-slate-700/50 transition-colors"
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="flex items-center cursor-pointer gap-2 px-4 py-2 bg-slate-800 text-slate-300 border border-slate-700 rounded-xl text-xs font-medium hover:bg-slate-700/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <FiRefreshCw className="w-3.5 h-3.5" />
+            <FiRefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
             Refresh
           </button>
         </div>
@@ -407,7 +415,14 @@ export function CancellationRequests() {
                     <td className="py-3.5 px-4">{getCancellationBadge(request.cancellationStatus)}</td>
                     <td className="py-3.5 px-4">{getRefundBadge(request.refundStatus)}</td>
                     <td className="py-3.5 px-4 font-semibold text-slate-200">
-                      ₹{request.refundAmount?.toLocaleString() || "0"}
+                      <div>
+                        <div>₹{request.refundAmount?.toLocaleString() || "0"}</div>
+                        {(request.displayCurrency === "USD" || request.paidCurrency === "USD") && (
+                          <div className="text-[11px] text-slate-500 font-normal mt-0.5">
+                            ${(request.refundAmount / (request.exchangeRate || 83)).toFixed(2)} USD
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3.5 px-4 font-mono text-[10px] text-slate-400">
                       {request.refundId || "-"}

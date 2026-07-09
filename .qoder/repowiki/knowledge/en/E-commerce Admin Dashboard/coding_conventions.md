@@ -1,0 +1,3 @@
+- Components that serve as full pages or major layout sections are exported as named functions (e.g., `export function AdminLayout`) while default exports are used for primary App entry points.
+- Authentication checks are performed at the route level using wrapper components (`ProtectedRoute`, `SuperAdminRoute`) rather than inside individual page components.
+- API base URLs and authentication tokens are centralized in utility files (`utils/api.js`) and context providers (`AuthContext.jsx`) to avoid hardcoding in individual components.

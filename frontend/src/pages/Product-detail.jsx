@@ -24,12 +24,32 @@ function ProductDetailPage({ product }) {
     const { slug } = useParams();
     const { products, loading } = useProducts();
 
+    const buildFallbackSpecifications = (productData) => [
+        { label: "Base Material", value: productData.baseMaterial || productData.material || productData.metalType || "" },
+        { label: "Purity", value: productData.purity || "" },
+        { label: "Plating Type", value: productData.platingType || productData.plating || "" },
+        { label: "Metal Color", value: productData.metalColor || productData.color || "" },
+        { label: "Gross Weight", value: productData.grossWeight ? `${productData.grossWeight} g` : "" },
+        { label: "Net Weight", value: productData.netWeight ? `${productData.netWeight} g` : "" },
+        { label: "Occasion", value: Array.isArray(productData.occasion) ? productData.occasion.join(", ") : productData.occasion || "" },
+        { label: "Gender", value: productData.gender || "" },
+        { label: "Diamond Carat", value: productData.diamondWeight ? `${productData.diamondWeight} ct` : "" },
+        { label: "Number of Diamonds", value: productData.diamondPieces || "" },
+    ].filter((item) => item.label && item.value !== undefined && item.value !== null && String(item.value).trim() !== "");
+
     const currentProductRaw =
         product ||
         products.find((p) => String(p.slug) === String(slug) || String(p.id) === String(slug) || String(p._id) === String(slug));
 
     // NORMALIZATION LAYER
     // 1. UPDATE THIS OBJECT PACKET INSIDE ProductDetailPage.jsx
+    const normalizedSpecifications = currentProductRaw
+        ? (
+            Array.isArray(currentProductRaw.specifications) && currentProductRaw.specifications.length > 0
+                ? currentProductRaw.specifications
+                : buildFallbackSpecifications(currentProductRaw)
+        )
+        : [];
     const currentProduct = currentProductRaw ? {
         ...currentProductRaw,
         title: currentProductRaw.title || currentProductRaw.name || "Atelier Piece",
@@ -41,6 +61,7 @@ function ProductDetailPage({ product }) {
         description: currentProductRaw.description || currentProductRaw.shortDesc || "",
 
         // ====== DATABASE TO FORM ALIGNMENT CORRECTIONS HERE ======
+        specifications: normalizedSpecifications,
         purity: currentProductRaw.purity || currentProductRaw.details?.purity || undefined,
         grossWeight: currentProductRaw.grossWeight || currentProductRaw.details?.grossWeight || currentProductRaw.details?.weight || undefined,
         netWeight: currentProductRaw.netWeight || currentProductRaw.details?.netWeight || undefined,
@@ -137,7 +158,7 @@ function ProductDetailPage({ product }) {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center text-stone-400 text-xs font-semibold tracking-[0.2em] bg-stone-50 animate-pulse">
+            <div className="min-h-screen flex items-center justify-center text-stone-800 text-xs font-semibold tracking-[0.2em] bg-stone-50 animate-pulse">
                 LOADING ATELIER PIECE...
             </div>
         );
@@ -176,7 +197,7 @@ function ProductDetailPage({ product }) {
             <div className="absolute top-[25%] right-0 w-[600px] h-[600px] bg-gradient-to-bl from-[#F7E7CE]/10 to-[#FFF0EB]/40 rounded-full blur-[140px] pointer-events-none" />
 
             {/* Breadcrumbs */}
-            <div className="container mx-auto px-4 sm:px-6 lg:px-12 pt-28 pb-6 text-[10px] sm:text-xs uppercase tracking-[0.2em] text-stone-400 flex items-center gap-2 flex-wrap">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-12 pt-28 pb-6 text-[10px] sm:text-xs uppercase tracking-[0.2em] text-stone-800 flex items-center gap-2 flex-wrap">
                 <Link to="/" className="hover:text-[#B76E79] transition-colors duration-300">Atelier</Link>
                 <ChevronRight className="w-3 h-3 stroke-[1.5]" />
                 <span className="hover:text-[#B76E79] cursor-pointer transition-colors duration-300">Collections</span>
@@ -246,13 +267,13 @@ function ProductDetailPage({ product }) {
 
                         <div className="flex items-center justify-between border-b border-stone-200/60 pb-5">
                             <div className="flex items-baseline gap-3">
-                                <span className="font-serif text-3xl font-medium tracking-tight text-stone-900">
+                                <span className=" text-3xl font-bold tracking-tight text-stone-900">
                                     {currentProduct.currencySymbol || '₹'}
                                     {currentProduct.price.toLocaleString(currentProduct.currency === 'USD' ? 'en-US' : 'en-IN', { minimumFractionDigits: currentProduct.currency === 'USD' ? 2 : 0, maximumFractionDigits: 2 })}
                                 </span>
                                 {currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price && (
                                     <>
-                                        <span className="text-sm line-through text-stone-400">
+                                        <span className="  text-sm line-through text-stone-800">
                                             {currentProduct.currencySymbol || '₹'}
                                             {currentProduct.originalPrice.toLocaleString(currentProduct.currency === 'USD' ? 'en-US' : 'en-IN', { minimumFractionDigits: currentProduct.currency === 'USD' ? 2 : 0, maximumFractionDigits: 2 })}
                                         </span>
@@ -277,7 +298,7 @@ function ProductDetailPage({ product }) {
 
                         <div className="flex items-center gap-4 pt-2">
                             <div className="space-y-1.5">
-                                <span className="text-[10px] font-bold tracking-widest text-stone-400 uppercase block">QTY</span>
+                                <span className="text-[10px] font-bold tracking-widest text-stone-800 uppercase block">QTY</span>
                                 <div className="flex items-center bg-white border border-stone-200/60 rounded-full p-1 shadow-sm">
                                     <button onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-stone-50 text-stone-600 transition-colors">
                                         <Minus className="w-3 h-3" />
@@ -290,9 +311,9 @@ function ProductDetailPage({ product }) {
                             </div>
 
                             <div className="flex-1 space-y-1.5">
-                                <span className="text-[10px] font-bold tracking-widest text-stone-400 uppercase block">Save To Box</span>
+                                <span className="text-[10px] font-bold tracking-widest text-stone-800 uppercase block">Save To Box</span>
                                 <button onClick={handleWishlistToggle} className={`w-full h-10 rounded-full border text-[11px] font-bold tracking-[0.15em] transition-all duration-300 flex items-center justify-center gap-2 ${isWishlisted ? 'bg-rose-50/50 border-rose-200 text-[#B76E79] shadow-sm' : 'bg-white border-stone-200 text-stone-600 hover:border-stone-400 shadow-sm'}`}>
-                                    <Heart className={`w-3.5 h-3.5 transition-transform duration-300 ${isWishlisted ? 'fill-current text-[#B76E79] scale-105' : 'text-stone-400'}`} />
+                                    <Heart className={`w-3.5 h-3.5 transition-transform duration-300 ${isWishlisted ? 'fill-current text-[#B76E79] scale-105' : 'text-stone-800'}`} />
                                     <span>{isWishlisted ? 'ADDED TO ATELIER BOX' : 'ADD TO WISHLIST'}</span>
                                 </button>
                             </div>

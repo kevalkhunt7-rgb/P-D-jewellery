@@ -102,18 +102,20 @@ function Navbar() {
                                         {storeName}
                                     </h1>
 
-                                    <h1
-                                        className="font-serif tracking-wider"
-                                        style={{
-                                            fontSize: "clamp(1rem, 2vw, 1rem)",
-                                            fontWeight: 700,
-                                            background: "linear-gradient(135deg, #B76E79 0%, #D4AF37 100%)",
-                                            WebkitBackgroundClip: "text",
-                                            WebkitTextFillColor: "transparent",
-                                        }}
-                                    >
-                                        Luxury Jewellery
-                                    </h1>
+                                    {!storeName.toLowerCase().includes("jewel") && (
+                                        <h1
+                                            className="font-serif tracking-wider"
+                                            style={{
+                                                fontSize: "clamp(1rem, 2vw, 1rem)",
+                                                fontWeight: 700,
+                                                background: "linear-gradient(135deg, #B76E79 0%, #D4AF37 100%)",
+                                                WebkitBackgroundClip: "text",
+                                                WebkitTextFillColor: "transparent",
+                                            }}
+                                        >
+                                            Luxury Jewellery
+                                        </h1>
+                                    )}
                                 </div>
                             </Link>
                         </motion.div>
@@ -253,7 +255,7 @@ function Navbar() {
                                     placeholder="Search for jewelry, materials, or collections..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-transparent border-b border-gray-200 py-4 pr-14 pl-2 text-xl sm:text-2xl font-light outline-none focus:border-[#B76E79] transition-colors duration-300 placeholder:text-gray-300 text-gray-800"
+                                    className="w-full bg-transparent border-b border-gray-200 py-4 pr-14 pl-2 text-xl sm:text-2xl font-bold outline-none focus:border-[#B76E79] transition-colors duration-300 placeholder:text-gray-300 text-gray-800"
                                 />
                                 <button
                                     type="submit"

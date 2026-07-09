@@ -10,7 +10,7 @@ export function WishlistTab({ validWishlistItems }) {
     <div className="space-y-6 animate-fade-in-slow">
       <div>
         <h3 className="font-serif text-2xl">Wishlist</h3>
-        <p className="text-xs text-[#2C2C2C]/50 mt-1">Your saved luxury pieces.</p>
+        <p className="text-sm mt-1">Your saved luxury pieces.</p>
       </div>
 
       {validWishlistItems.length > 0 ? (

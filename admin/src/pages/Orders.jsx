@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { 
-  FiSearch, 
-  FiFilter, 
-  FiEye, 
-  FiDownload, 
+import {
+  FiSearch,
+  FiFilter,
+  FiEye,
+  FiDownload,
   FiXCircle,
   FiChevronDown,
   FiCalendar,
   FiX,
-  
+
 } from "react-icons/fi";
 import api from "../utils/api";
 import toast from "react-hot-toast";
@@ -51,17 +51,19 @@ const getPaymentBadge = (status) => {
   );
 };
 
+const STATUS_OPTIONS = ["PENDING", "CONFIRMED", "PACKED", "SHIPPED", "DELIVERED"];
+
 export function Orders() {
   const [searchParams] = useSearchParams();
   const customerId = searchParams.get("customer");
-  
+
   const [ordersData, setOrdersData] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [loading, setLoading] = useState(true);
   const [activeDropdownId, setActiveDropdownId] = useState(null);
   const [cancelModal, setCancelModal] = useState({ isOpen: false, orderId: null });
-  
+
   // Filter States
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFormData] = useState({
@@ -218,10 +220,65 @@ export function Orders() {
     { value: "DELIVERED", label: `Delivered (${orderCounts.DELIVERED})` },
   ];
 
+  // Shared action cluster (view / cancel / status dropdown) — used in both
+  // the desktop table row and the mobile/tablet card layout.
+  const OrderActions = ({ order, align = "center" }) => (
+    <div className={`flex items-center gap-1.5 relative ${align === "right" ? "justify-end" : "justify-center"}`}>
+      <Link
+        to={`/orders/${order._id}`}
+        title="View Details"
+        className="p-2 text-slate-400 hover:text-white bg-slate-950 border border-slate-800/60 hover:border-slate-700 rounded-lg transition-all"
+      >
+        <FiEye className="w-3.5 h-3.5" />
+      </Link>
+
+      <button
+        title="Cancel Order"
+        onClick={() => setCancelModal({ isOpen: true, orderId: order._id })}
+        disabled={order.orderStatus === "CANCELLED" || order.orderStatus === "DELIVERED"}
+        className="p-2 text-slate-400 hover:text-rose-400 bg-slate-950 border border-slate-800/60 hover:border-rose-500/30 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+      >
+        <FiXCircle className="w-3.5 h-3.5" />
+      </button>
+
+      <span className="w-px h-4 bg-slate-800 mx-0.5" />
+
+      <div className="relative">
+        <button
+          onClick={() => setActiveDropdownId(activeDropdownId === order._id ? null : order._id)}
+          className="text-[11px] font-medium text-amber-500/90 hover:text-amber-400 px-2 py-1 bg-amber-500/5 hover:bg-amber-500/10 border border-amber-500/10 hover:border-amber-500/20 rounded-md transition-all flex items-center gap-1"
+        >
+          Status <FiChevronDown className="w-3 h-3" />
+        </button>
+
+        {activeDropdownId === order._id && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setActiveDropdownId(null)} />
+            <div className="absolute right-0 top-full mt-1 w-32 bg-slate-950 border border-slate-800 rounded-lg shadow-xl py-1 z-50 animate-in fade-in slide-in-from-top-1">
+              {STATUS_OPTIONS.map((statusOption) => (
+                <button
+                  key={statusOption}
+                  onClick={() => handleUpdateStatus(order._id, statusOption)}
+                  className={`w-full px-3 py-1.5 text-left text-[10px] font-semibold block capitalize transition-colors ${
+                    order.orderStatus === statusOption
+                      ? "text-amber-400 bg-amber-500/5"
+                      : "text-slate-400 hover:text-white hover:bg-slate-900"
+                  }`}
+                >
+                  {statusOption}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6 text-slate-200 p-1">
       {/* Cancel Confirmation Modal */}
-      <DeleteModal 
+      <DeleteModal
         isOpen={cancelModal.isOpen}
         onClose={() => setCancelModal({ isOpen: false, orderId: null })}
         onConfirm={handleCancelOrder}
@@ -231,7 +288,7 @@ export function Orders() {
 
       {/* Title block */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">Orders</h1>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Orders</h1>
         <p className="text-xs text-slate-400 mt-0.5">Manage and track customer orders</p>
       </div>
 
@@ -241,7 +298,7 @@ export function Orders() {
           <button
             key={tab.value}
             onClick={() => setActiveTab(tab.value)}
-            className={`px-4 py-2.5 text-xs font-semibold whitespace-nowrap transition-all border-b-2 -mb-px ${
+            className={`px-3 sm:px-4 py-2.5 text-xs font-semibold whitespace-nowrap transition-all border-b-2 -mb-px shrink-0 ${
               activeTab === tab.value
                 ? "border-amber-500 text-amber-500 bg-amber-500/5"
                 : "border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700"
@@ -254,11 +311,11 @@ export function Orders() {
 
       {/* Content Container Block Wrapper */}
       <div className="bg-slate-900 border border-slate-800/80 rounded-2xl shadow-sm">
-        
+
         {/* Filtering Options Control Panel */}
-        <div className="p-5 border-b border-slate-800/60">
+        <div className="p-4 sm:p-5 border-b border-slate-800/60">
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex flex-col lg:flex-row gap-3 sm:gap-4">
               {/* Search Input Area */}
               <div className="relative flex-1">
                 <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -272,8 +329,8 @@ export function Orders() {
               </div>
 
               {/* Utility Tool Buttons Group */}
-              <div className="flex gap-2.5">
-                <button 
+              <div className="flex flex-col sm:flex-row gap-2.5">
+                <button
                   onClick={() => setShowFilters(!showFilters)}
                   className={`inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium border transition-all rounded-xl w-full sm:w-auto ${
                     showFilters ? "bg-amber-500 text-slate-950 border-amber-500" : "bg-slate-950 text-slate-300 border-slate-800 hover:bg-slate-800/50"
@@ -282,8 +339,8 @@ export function Orders() {
                   <FiFilter className="w-3.5 h-3.5" />
                   Filters
                 </button>
-                
-                <button 
+
+                <button
                   onClick={exportPDF}
                   className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium text-slate-300 bg-slate-950 border border-slate-800 hover:bg-slate-800/50 hover:text-white transition-all rounded-xl w-full sm:w-auto"
                 >
@@ -295,10 +352,10 @@ export function Orders() {
 
             {/* Advanced Filters Panel */}
             {showFilters && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-slate-950/50 border border-slate-800/50 rounded-xl animate-in fade-in slide-in-from-top-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-slate-950/50 border border-slate-800/50 rounded-xl animate-in fade-in slide-in-from-top-2">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Payment Status</label>
-                  <select 
+                  <select
                     value={filters.paymentStatus}
                     onChange={(e) => setFormData({...filters, paymentStatus: e.target.value})}
                     className="w-full bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-lg px-3 py-2 outline-none focus:border-amber-500/50"
@@ -311,7 +368,7 @@ export function Orders() {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Order Status</label>
-                  <select 
+                  <select
                     value={filters.orderStatus}
                     onChange={(e) => setFormData({...filters, orderStatus: e.target.value})}
                     className="w-full bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-lg px-3 py-2 outline-none focus:border-amber-500/50"
@@ -327,24 +384,24 @@ export function Orders() {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Start Date</label>
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     value={filters.startDate}
                     onChange={(e) => setFormData({...filters, startDate: e.target.value})}
-                    className="w-full bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-lg px-3 py-2 outline-none focus:border-amber-500/50" 
+                    className="w-full bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-lg px-3 py-2 outline-none focus:border-amber-500/50"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">End Date</label>
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     value={filters.endDate}
                     onChange={(e) => setFormData({...filters, endDate: e.target.value})}
-                    className="w-full bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-lg px-3 py-2 outline-none focus:border-amber-500/50" 
+                    className="w-full bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-lg px-3 py-2 outline-none focus:border-amber-500/50"
                   />
                 </div>
-                <div className="lg:col-span-4 flex justify-end">
-                  <button 
+                <div className="sm:col-span-2 lg:col-span-4 flex justify-end">
+                  <button
                     onClick={() => setFormData({ paymentStatus: "all", orderStatus: "all", startDate: "", endDate: "" })}
                     className="text-[10px] font-bold text-rose-500 hover:text-rose-400 uppercase tracking-widest flex items-center gap-1"
                   >
@@ -356,30 +413,85 @@ export function Orders() {
           </div>
         </div>
 
-        {/* Data Table View */}
-        <div className="overflow-visible">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-slate-800 text-[11px] tracking-wider text-slate-400 uppercase font-semibold bg-slate-950/20">
-                <th className="py-3 px-5 font-medium">Order ID</th>
-                <th className="py-3 px-4 font-medium">Customer</th>
-                <th className="py-3 px-4 font-medium">Products</th>
-                <th className="py-3 px-4 font-medium">Amount</th>
-                <th className="py-3 px-4 font-medium">Payment</th>
-                <th className="py-3 px-4 font-medium">Status</th>
-                <th className="py-3 px-4 font-medium">Date</th>
-                <th className="py-3 px-5 text-center font-medium w-56">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/50 text-xs">
-              {filteredOrders.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="text-center py-12 text-slate-500 font-medium">
-                    No matching orders available.
-                  </td>
+        {/* Empty state (shared) */}
+        {filteredOrders.length === 0 && (
+          <div className="text-center py-12 text-slate-500 font-medium text-sm">
+            No matching orders available.
+          </div>
+        )}
+
+        {/* Mobile & tablet: card list — an 8-column table has no honest way to
+            fit below a wide desktop, so this avoids clipped dropdowns and
+            page-level horizontal scrolling. */}
+        {filteredOrders.length > 0 && (
+          <div className="xl:hidden divide-y divide-slate-800/50">
+            {filteredOrders.map((order) => (
+              <div key={order._id} className="p-4 sm:p-5 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 font-mono text-amber-500 font-medium text-xs tracking-tight">
+                      <span>{order._id.slice(-8).toUpperCase()}</span>
+                      {(order.paymentMethod === 'PAYPAL' || order.displayCurrency === 'USD') && (
+                        <span title="Foreign Order" className="text-sky-400">
+                          <IoAirplane className="w-3.5 h-3.5" />
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1 font-semibold text-slate-200 text-sm truncate">{order.user?.name || 'Guest'}</div>
+                    <div className="text-[11px] text-slate-500 truncate">{order.user?.email || 'No email'}</div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1.5 shrink-0">
+                    {getStatusBadge(order.orderStatus)}
+                    {getPaymentBadge(order.paymentStatus || (order.isPaid ? "paid" : "pending"))}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-slate-400 flex-wrap gap-y-2">
+                  <span>{order.orderItems?.length || 0} items</span>
+                  <span className="flex items-center gap-1">
+                    <FiCalendar className="w-3 h-3" />
+                    {new Date(order.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </span>
+                  <div className="w-full sm:w-auto text-right sm:text-left">
+                    <span className="font-semibold text-slate-200">
+                      ₹{order.totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                    {order.paidCurrency === 'USD' && (
+                      <span className="block text-[9px] text-sky-400 mt-0.5">
+                        Paid: ${order.paidAmount?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="pt-1 border-t border-slate-800/50">
+                  <div className="pt-3">
+                    <OrderActions order={order} align="right" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Desktop (xl+): full data table */}
+        {filteredOrders.length > 0 && (
+          <div className="hidden xl:block overflow-visible">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-800 text-[11px] tracking-wider text-slate-400 uppercase font-semibold bg-slate-950/20">
+                  <th className="py-3 px-5 font-medium">Order ID</th>
+                  <th className="py-3 px-4 font-medium">Customer</th>
+                  <th className="py-3 px-4 font-medium">Products</th>
+                  <th className="py-3 px-4 font-medium">Amount</th>
+                  <th className="py-3 px-4 font-medium">Payment</th>
+                  <th className="py-3 px-4 font-medium">Status</th>
+                  <th className="py-3 px-4 font-medium">Date</th>
+                  <th className="py-3 px-5 text-center font-medium w-56">Actions</th>
                 </tr>
-              ) : (
-                filteredOrders.map((order) => (
+              </thead>
+              <tbody className="divide-y divide-slate-800/50 text-xs">
+                {filteredOrders.map((order) => (
                   <tr key={order._id} className="hover:bg-slate-800/10 transition-colors group">
                     <td className="py-3.5 px-5 font-mono text-amber-500 font-medium tracking-tight">
                       <div className="flex items-center gap-1.5">
@@ -422,70 +534,19 @@ export function Orders() {
                         day: 'numeric'
                       })}
                     </td>
-                    
+
                     {/* Redesigned Row Action Suite */}
                     <td className="py-3.5 px-5">
-                      <div className="flex items-center justify-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity relative">
-                        <Link 
-                          to={`/orders/${order._id}`}
-                          title="View Details"
-                          className="p-2 text-slate-400 hover:text-white bg-slate-950 border border-slate-800/60 hover:border-slate-700 rounded-lg transition-all"
-                        >
-                          <FiEye className="w-3.5 h-3.5" />
-                        </Link>
-
-                        <button 
-                          title="Cancel Order"
-                          onClick={() => setCancelModal({ isOpen: true, orderId: order._id })}
-                          disabled={order.orderStatus === "CANCELLED" || order.orderStatus === "DELIVERED"}
-                          className="p-2 text-slate-400 hover:text-rose-400 bg-slate-950 border border-slate-800/60 hover:border-rose-500/30 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                        >
-                          <FiXCircle className="w-3.5 h-3.5" />
-                        </button>
-                        
-                        <span className="w-px h-4 bg-slate-800 mx-0.5" />
-
-                        {/* Interactive Dropdown Context Trigger */}
-                        <div className="relative">
-                          <button 
-                            onClick={() => setActiveDropdownId(activeDropdownId === order._id ? null : order._id)}
-                            className="text-[11px] font-medium text-amber-500/90 hover:text-amber-400 px-2 py-1 bg-amber-500/5 hover:bg-amber-500/10 border border-amber-500/10 hover:border-amber-500/20 rounded-md transition-all flex items-center gap-1"
-                          >
-                            Status <FiChevronDown className="w-3 h-3" />
-                          </button>
-                          
-                          {activeDropdownId === order._id && (
-                            <>
-                              {/* Backdrop Layer to close Dropdown cleanly */}
-                              <div className="fixed inset-0 z-40" onClick={() => setActiveDropdownId(null)} />
-                              
-                              {/* Fixed layout drop element rendered cleanly directly under target row text */}
-                              <div className="absolute right-0 top-full mt-1 w-32 bg-slate-950 border border-slate-800 rounded-lg shadow-xl py-1 z-50 animate-in fade-in slide-in-from-top-1">
-                                {["PENDING", "CONFIRMED", "PACKED", "SHIPPED", "DELIVERED"].map((statusOption) => (
-                                  <button
-                                    key={statusOption}
-                                    onClick={() => handleUpdateStatus(order._id, statusOption)}
-                                    className={`w-full px-3 py-1.5 text-left text-[10px] font-semibold block capitalize transition-colors ${
-                                      order.orderStatus === statusOption 
-                                        ? "text-amber-400 bg-amber-500/5" 
-                                        : "text-slate-400 hover:text-white hover:bg-slate-900"
-                                    }`}
-                                  >
-                                    {statusOption}
-                                  </button>
-                                ))}
-                              </div>
-                            </>
-                          )}
-                        </div>
+                      <div className="opacity-80 group-hover:opacity-100 transition-opacity">
+                        <OrderActions order={order} />
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
       </div>
     </div>

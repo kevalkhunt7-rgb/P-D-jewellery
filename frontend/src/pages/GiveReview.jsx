@@ -93,7 +93,7 @@ export default function GiveReview() {
     <div className="min-h-screen flex items-center justify-center bg-[#FDF8F3]">
       <div className="flex flex-col items-center gap-3">
         <Loader2 className="w-8 h-8 animate-spin text-[#B76E79]" />
-        <p className="text-xs font-serif italic text-stone-400 tracking-wider">Loading Atelier Record...</p>
+        <p className="text-xs font-serif italic text-stone-800 tracking-wider">Loading Atelier Record...</p>
       </div>
     </div>
   );
@@ -105,7 +105,7 @@ export default function GiveReview() {
         {/* Back Button */}
         <button 
           onClick={() => navigate(-1)}
-          className="group flex items-center gap-2 text-stone-400 hover:text-stone-800 transition-colors text-[10px] font-bold uppercase tracking-widest mb-6"
+          className="group flex items-center gap-2 text-stone-800 hover:text-stone-800 transition-colors text-[10px] font-bold uppercase tracking-widest mb-6"
         >
           <ChevronLeft className="w-3.5 h-3.5 transform group-hover:-translate-x-0.5 transition-transform" /> 
           Back to Orders
@@ -121,7 +121,7 @@ export default function GiveReview() {
               <span className="text-[9px] font-bold uppercase tracking-widest">Patron Reflection</span>
             </div>
             <h1 className="font-serif text-2xl sm:text-3xl text-stone-900 tracking-wide">Share Your Experience</h1>
-            <p className="text-stone-400 text-xs mt-1.5 font-light italic">Your insights guide the curation of our collection.</p>
+            <p className="text-stone-800 text-xs mt-1.5 font-bold italic">Your insights guide the curation of our collection.</p>
           </div>
 
           {/* Product Minimalist Context Display */}
@@ -133,7 +133,7 @@ export default function GiveReview() {
             />
             <div className="min-w-0">
               <h3 className="font-serif text-base text-stone-900 truncate">{product?.name}</h3>
-              <p className="text-[9px] text-stone-400 font-semibold uppercase tracking-widest mt-0.5">Atelier Signature Series</p>
+              <p className="text-[9px] text-stone-800 font-semibold uppercase tracking-widest mt-0.5">Atelier Signature Series</p>
             </div>
           </div>
 
@@ -141,7 +141,7 @@ export default function GiveReview() {
             
             {/* Elegant Luxury Interactive Star Rating Grid */}
             <div className="space-y-2 text-center bg-stone-50/50 py-4 rounded-xl border border-stone-100">
-              <label className="text-[10px] font-bold tracking-widest text-stone-400 uppercase block mb-1">
+              <label className="text-[10px] font-bold tracking-widest text-stone-800 uppercase block mb-1">
                 Valuation of Quality
               </label>
               <div className="flex justify-center gap-2">
@@ -171,7 +171,7 @@ export default function GiveReview() {
 
             {/* Styled Textarea Section */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold tracking-widest text-stone-400 uppercase block">
+              <label className="text-[10px] font-bold tracking-widest text-stone-800 uppercase block">
                 Detailed Reflection
               </label>
               <textarea
@@ -185,8 +185,8 @@ export default function GiveReview() {
 
             {/* Luxury Media Uploader */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold tracking-widest text-stone-400 uppercase block">
-                Atelier Imagery <span className="font-normal text-stone-400 lowercase italic">(up to 3)</span>
+              <label className="text-[10px] font-bold tracking-widest text-stone-800 uppercase block">
+                Atelier Imagery <span className="font-normal text-stone-800 lowercase italic">(up to 3)</span>
               </label>
               
               <div className="grid grid-cols-4 gap-3">
@@ -204,7 +204,7 @@ export default function GiveReview() {
                 ))}
                 
                 {images.length < 3 && (
-                  <label className="aspect-square rounded-xl border-2 border-dashed border-stone-200 flex flex-col items-center justify-center gap-1.5 cursor-pointer hover:border-[#B76E79] hover:bg-stone-50/50 transition-all text-stone-400 hover:text-[#B76E79] group">
+                  <label className="aspect-square rounded-xl border-2 border-dashed border-stone-200 flex flex-col items-center justify-center gap-1.5 cursor-pointer hover:border-[#B76E79] hover:bg-stone-50/50 transition-all text-stone-800 hover:text-[#B76E79] group">
                     <Camera className="w-5 h-5 stroke-[1.5] group-hover:scale-105 transition-transform" />
                     <span className="text-[8px] font-bold uppercase tracking-wider">Add Photo</span>
                     <input type="file" className="hidden" multiple onChange={handleImageChange} accept="image/*" />

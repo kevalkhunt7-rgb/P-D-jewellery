@@ -6,7 +6,7 @@ import countriesList from '../assets/country';
 
 const FloatingInput = ({ icon, label, name, type = 'text', value, error, onChange, disabled, maxLength }) => (
   <div className="relative w-full">
-    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 w-4 h-4 flex items-center justify-center pointer-events-none">
+    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-800 w-4 h-4 flex items-center justify-center pointer-events-none">
       {icon}
     </div>
     <input
@@ -49,7 +49,7 @@ const CustomSelect = ({ icon, label, name, value, options, error, onChange, disa
 
   return (
     <div className="relative w-full" ref={dropdownRef}>
-      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 w-4 h-4 flex items-center justify-center pointer-events-none z-10">
+      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-800 w-4 h-4 flex items-center justify-center pointer-events-none z-10">
         {icon}
       </div>
 
@@ -60,13 +60,13 @@ const CustomSelect = ({ icon, label, name, value, options, error, onChange, disa
         onClick={() => setIsOpen(!isOpen)}
         className={`w-full bg-white/50 border text-left ${error ? 'border-red-400 focus:border-red-500' : isOpen ? 'border-[#B76E79] ring-1 ring-[#B76E79]/20' : 'border-stone-200'} rounded-xl py-3.5 pl-11 pr-10 text-xs font-medium focus:outline-none transition-all disabled:opacity-50 flex items-center justify-between text-stone-700`}
       >
-        <span className={!selectedOption ? 'text-stone-400 font-normal' : 'text-stone-800'}>
+        <span className={!selectedOption ? 'text-stone-800 font-normal' : 'text-stone-800'}>
           {selectedOption ? selectedOption.label : label}
         </span>
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          className="text-stone-400"
+          className="text-stone-800"
         >
           <ChevronDown className="w-4 h-4" />
         </motion.div>
@@ -84,7 +84,7 @@ const CustomSelect = ({ icon, label, name, value, options, error, onChange, disa
           >
             {/* Search Input Bar */}
             <div className="p-2 border-b border-stone-100 flex items-center gap-2 bg-stone-50/50">
-              <Search className="w-3.5 h-3.5 text-stone-400 ml-2 flex-shrink-0" />
+              <Search className="w-3.5 h-3.5 text-stone-800 ml-2 flex-shrink-0" />
               <input
                 type="text"
                 placeholder="Search country..."
@@ -117,7 +117,7 @@ const CustomSelect = ({ icon, label, name, value, options, error, onChange, disa
                   </button>
                 ))
               ) : (
-                <div className="px-4 py-4 text-center text-xs text-stone-400 font-light">
+                <div className="px-4 py-4 text-center text-xs text-stone-800 font-bold">
                   No matching countries found
                 </div>
               )}
@@ -307,7 +307,7 @@ export default function ShippingStep({
       className="bg-white/70 backdrop-blur-xl border border-stone-200/80 rounded-2xl p-6 sm:p-8 shadow-xl shadow-stone-200/40"
     >
       <h2 className="font-serif text-2xl tracking-wide text-stone-900 mb-1">Shipping Information</h2>
-      <p className="text-stone-400 text-xs font-light tracking-wide mb-8">Please detail the verified location for secure courier drop-off.</p>
+      <p className="text-stone-800 text-xs font-bold tracking-wide mb-8">Please detail the verified location for secure courier drop-off.</p>
 
       {user?.addresses?.length > 0 && (
         <div className="mb-8">

@@ -155,8 +155,11 @@ export const getDashboardStats = async (req, res) => {
     // ======================================================
     // LOW STOCK PRODUCTS
     // ======================================================
+    const settings = await Settings.findOne() || await Settings.create({});
+    const lowStockLimit = settings.inventory?.lowStockLimit ?? 5;
+
     const lowStockItemsRaw = await Product.find({
-      stock: { $lte: 5 }
+      stock: { $lte: lowStockLimit }
     })
       .limit(5)
       .select("name stock images price");
@@ -380,7 +383,7 @@ export const getDashboardStats = async (req, res) => {
     console.error("Error in getDashboardStats:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error fetching dashboard stats",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -414,7 +417,7 @@ export const getAllCustomers = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in getAllCustomers:", error);
-    res.status(500).json({ success: false, message: error.message || 'Server Error fetching customers' });
+    res.status(500).json({ success: false, message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)) });
   }
 };
 
@@ -455,7 +458,7 @@ export const getCustomerDetails = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in getCustomerDetails:", error);
-    res.status(500).json({ success: false, message: error.message || 'Server Error fetching customer details' });
+    res.status(500).json({ success: false, message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)) });
   }
 };
 
@@ -508,7 +511,7 @@ export const createAdminRequest = async (req, res) => {
     console.error("Create admin request error:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -529,7 +532,7 @@ export const getAdminRequests = async (req, res) => {
     console.error("Get admin requests error:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -588,7 +591,7 @@ export const reviewAdminRequest = async (req, res) => {
     console.error("Review admin request error:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -607,7 +610,7 @@ export const getAllAdmins = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in getAllAdmins:", error);
-    res.status(500).json({ success: false, message: error.message || 'Server Error fetching admins' });
+    res.status(500).json({ success: false, message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)) });
   }
 };
 
@@ -651,7 +654,7 @@ export const updateAdminRole = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in updateAdminRole:", error);
-    res.status(500).json({ success: false, message: error.message || 'Server Error updating admin role' });
+    res.status(500).json({ success: false, message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)) });
   }
 };
 
@@ -684,7 +687,7 @@ export const deleteAdmin = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in deleteAdmin:", error);
-    res.status(500).json({ success: false, message: error.message || 'Server Error deleting admin' });
+    res.status(500).json({ success: false, message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)) });
   }
 };
 
@@ -730,7 +733,7 @@ export const createAdmin = async (req, res) => {
     console.error("Create admin error:", error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error creating admin"
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error))
     });
   }
 };

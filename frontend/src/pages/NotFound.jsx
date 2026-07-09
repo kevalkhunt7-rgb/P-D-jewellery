@@ -58,14 +58,14 @@ export default function NotFoundPage() {
           </motion.p>
           <motion.h1 
             variants={itemVariants}
-            className="font-serif text-4xl sm:text-5xl font-light tracking-wide text-stone-900"
+            className="font-serif text-4xl sm:text-5xl font-bold tracking-wide text-stone-900"
           >
             Page Comming Soon....
           </motion.h1>
           <div className="w-12 h-[1px] bg-[#B76E79] mx-auto my-4" />
           <motion.p 
             variants={itemVariants}
-            className="text-stone-500 text-xs sm:text-sm font-light max-w-sm mx-auto leading-relaxed tracking-wide"
+            className="text-stone-500 text-xs sm:text-sm font-bold max-w-sm mx-auto leading-relaxed tracking-wide"
           >
             The destination capsule or custom collection showcase configuration you are seeking has been moved, re-indexed, or stored back in the private archive vaults.
           </motion.p>
@@ -97,7 +97,7 @@ export default function NotFoundPage() {
         {/* Fine Print Footer Security Note */}
         <motion.div 
           variants={itemVariants} 
-          className="pt-8 text-[9px] font-medium tracking-widest text-stone-400 uppercase flex items-center justify-center gap-1.5"
+          className="pt-8 text-[9px] font-medium tracking-widest text-stone-800 uppercase flex items-center justify-center gap-1.5"
         >
           <ShieldAlert className="w-3.5 h-3.5 text-[#D4AF37]/80 stroke-[1.5]" />
           <span>Atelier Secure Browsing Parameters Active</span>

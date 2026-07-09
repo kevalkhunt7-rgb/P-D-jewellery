@@ -40,7 +40,8 @@ export default function PaymentStep({
   currency,
   currencySymbol,
   countryCode,
-  onPayPalSuccess
+  onCreatePayPalOrder,
+  onApprovePayPalOrder
 }) {
   const isIndia = countryCode === 'IN';
 
@@ -60,7 +61,7 @@ export default function PaymentStep({
       <motion.div variants={itemVariants} className="flex items-center justify-between mb-8">
         <motion.button
           onClick={() => setCurrentStep('shipping')}
-          className="text-xs font-bold tracking-widest uppercase text-stone-400 hover:text-stone-900 transition-colors flex items-center gap-2 group"
+          className="text-xs font-bold tracking-widest uppercase text-stone-800 hover:text-stone-900 transition-colors flex items-center gap-2 group"
           whileHover={{ x: -4 }}
           whileTap={{ scale: 0.98 }}
         >
@@ -104,8 +105,8 @@ export default function PaymentStep({
         <motion.p variants={itemVariants} className="text-sm font-medium text-stone-700 mb-1">
           Pay securely with {isIndia ? "Razorpay" : "PayPal"}
         </motion.p>
-        <motion.p variants={itemVariants} className="text-xs text-stone-400 font-light max-w-xs mx-auto">
-          All major credit cards, {isIndia ? "UPI transfers" : "and payment methods"} supported
+        <motion.p variants={itemVariants} className="text-xs text-stone-800 font-bold max-w-xs mx-auto">
+          All major credit cards, {isIndia ? "UPI transfers" : "and global payment methods"} supported
         </motion.p>
       </motion.div>
 
@@ -129,10 +130,10 @@ export default function PaymentStep({
                 <motion.div 
                   key="loader" 
                   className="flex items-center justify-center gap-2.5" 
-                  initial={{ opacity: 10, y: 10 }} 
-                  animate={{ opacity: 10, y: 0 }} 
+                  initial={{ opacity: 0, y: 10 }} 
+                  animate={{ opacity: 1, y: 0 }} 
                   exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 2 }}
+                  transition={{ duration: 0.2 }}
                 >
                   <RefreshCw className="w-4 h-4 animate-spin text-stone-100 stroke-[2.5]" />
                   <span className="tracking-[0.25em]">INITIALIZING SECURE GATEWAY...</span>
@@ -153,12 +154,14 @@ export default function PaymentStep({
             </AnimatePresence>
           </motion.button>
         ) : (
-          <PayPalButtons 
-            amount={orderTotal} 
-            onSuccess={onPayPalSuccess}
-            onError={(err) => console.error('PayPal error:', err)}
-            currency={currency}
-          />
+          /* 🚀 COMPATIBLE PAYPAL BUTTON INTERFACE WITH INTERNAL SKELETON LOADERS */
+          <div className="w-full max-w-md mx-auto">
+            <PayPalButtons 
+              onCreateOrder={onCreatePayPalOrder}
+              onApprove={onApprovePayPalOrder}
+              onError={(err) => console.error('PayPal Core Framework Error:', err)}
+            />
+          </div>
         )}
       </motion.div>
     </motion.div>

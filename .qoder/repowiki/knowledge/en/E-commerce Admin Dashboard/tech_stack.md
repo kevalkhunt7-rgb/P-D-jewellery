@@ -1,0 +1,1 @@
+React 19 with Vite build tool, Tailwind CSS v4 for styling, Framer Motion for UI animations, Recharts for data visualization, and jsPDF for report generation.

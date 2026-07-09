@@ -16,7 +16,7 @@ export const fetchAndUpdateExchangeRate = async () => {
     await StoreSettings.findOneAndUpdate(
       {},
       { usdConversionRate: rate, lastExchangeRateUpdate: new Date() },
-      { new: true, upsert: true }
+      { returnDocument: "after", upsert: true }
     );
     
     clearSettingsCache();
@@ -25,6 +25,8 @@ export const fetchAndUpdateExchangeRate = async () => {
   } catch (error) {
     console.error("Failed to fetch exchange rate:", error.message);
     console.log("Falling back to last cached rate");
+    console.error(error);
+console.error(error.cause);
     return null;
   }
 };

@@ -27,6 +27,8 @@ const cartSchema = new mongoose.Schema(
           required: true,
         },
 
+        // Convenience field — always mirrors lockedPricing.salePrice.
+        // Kept for backward compatibility with serialization and frontend.
         price: {
           type: Number,
           required: true,
@@ -41,6 +43,68 @@ const cartSchema = new mongoose.Schema(
         stock: {
           type: Number,
           default: 0,
+        },
+
+        // ========== LOCKED PRICING SNAPSHOT ==========
+        // Captured at add-to-cart time using the gold rate active at that moment.
+        // Checkout reads from here — it never calls calculatePriceBreakdown() again.
+        // This prevents gold-rate drift and price tampering.
+        lockedPricing: {
+          goldRate24kt: {
+            type: Number,
+            required: true,
+          },
+          purity: {
+            type: String,
+            required: true,
+          },
+          netWeight: {
+            type: Number,
+            required: true,
+          },
+          makingChargeType: {
+            type: String,
+            required: true,
+            enum: ["per_gram", "percentage"],
+          },
+          makingChargeValue: {
+            type: Number,
+            required: true,
+          },
+          metalValue: {
+            type: Number,
+            required: true,
+          },
+          makingCharge: {
+            type: Number,
+            required: true,
+          },
+          cgst: {
+            type: Number,
+            required: true,
+          },
+          sgst: {
+            type: Number,
+            required: true,
+          },
+          originalPrice: {
+            type: Number,
+            required: true,
+          },
+          discountPercentage: {
+            type: Number,
+            required: true,
+            default: 0,
+          },
+          salePrice: {
+            type: Number,
+            required: true,
+          },
+          lockedAt: {
+            type: Date,
+            required: true,
+            default: Date.now,
+          },
         },
       },
     ],

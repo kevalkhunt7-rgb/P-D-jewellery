@@ -81,7 +81,7 @@ export const createCoupon = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -96,10 +96,10 @@ export const applyCoupon = async (req, res) => {
     const { code } = req.body;
 
     // Validation
-    if (!code) {
+    if (!code || typeof code !== "string") {
       return res.status(400).json({
         success: false,
-        message: "Coupon code is required",
+        message: "Coupon code must be a string",
       });
     }
 
@@ -112,21 +112,12 @@ export const applyCoupon = async (req, res) => {
       });
     }
 
-    const storeSettings = await getStoreSettingsCached();
-    const goldRate24kt = storeSettings.goldRate24kt;
-
     let recalculatedCartTotalINR = 0;
     for (const item of cart.cartItems) {
       if (item.product) {
-        const breakdown = calculatePriceBreakdown({
-          goldRate24kt,
-          purity: item.product.purity || "22KT",
-          netWeight: item.product.netWeight || 0,
-          makingChargeType: item.product.makingChargeType || "per_gram",
-          makingChargeValue: item.product.makingChargeValue || 0,
-          discountPercentage: item.product.discountPercentage || 0,
-        });
-        recalculatedCartTotalINR += breakdown.salePrice * item.quantity;
+        // Use the server-locked price of the item
+        const itemPrice = item.lockedPricing?.salePrice || item.price;
+        recalculatedCartTotalINR += itemPrice * item.quantity;
       }
     }
 
@@ -222,7 +213,7 @@ export const applyCoupon = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -248,7 +239,7 @@ export const getAllCoupons = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -286,7 +277,7 @@ export const deleteCoupon = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -337,7 +328,7 @@ export const updateCoupon = async (req, res) => {
     console.log(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };

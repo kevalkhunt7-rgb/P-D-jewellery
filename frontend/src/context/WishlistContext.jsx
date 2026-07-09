@@ -46,7 +46,13 @@ useEffect(() => {
         setWishlist([]);
       }
     } else {
-      const savedWishlist = localStorage.getItem('lumiere_wishlist');
+      let savedWishlist = localStorage.getItem('pd_luxury_jewellery_wishlist');
+      if (!savedWishlist) {
+        savedWishlist = localStorage.getItem('lumiere_wishlist');
+        if (savedWishlist) {
+          localStorage.setItem('pd_luxury_jewellery_wishlist', savedWishlist);
+        }
+      }
       setWishlist(savedWishlist ? JSON.parse(savedWishlist) : []);
     }
   };
@@ -56,7 +62,7 @@ useEffect(() => {
   // Sync local storage if not logged in
   useEffect(() => {
     if (!user) {
-      localStorage.setItem('lumiere_wishlist', JSON.stringify(wishlist));
+      localStorage.setItem('pd_luxury_jewellery_wishlist', JSON.stringify(wishlist));
     }
   }, [wishlist, user]);
 

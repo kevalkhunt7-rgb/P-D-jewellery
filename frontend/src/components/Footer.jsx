@@ -7,21 +7,25 @@ import { motion } from 'framer-motion';
 import { useSettings } from '../context/SettingsContext';
 
 const QUICK_LINKS = [
-  { label: 'About Us', href: '/about' },
+
   { label: 'Collections', href: '/collections' },
   { label: 'New Arrivals', href: '/new-arrivals' },
+  { label: 'Lookbook', href: '/lookbook' },
   { label: 'Bridal', href: '/collections?occasion=wedding' },
 ];
 
 const CUSTOMER_CARE_LINKS = [
   { label: 'Contact Us', href: '/contact' },
-  { label: 'Shipping Info', href: '/shipping' },
-  { label: 'Lookbook', href: '/lookbook' },
+  { label: 'About Us', href: '/about' },
+  { label: 'Shipping Policy', href: '/policies#shipping-policy' },
+  { label: 'Refund Policy', href: '/policies#refund-policy' },
+  { label: 'Cancellation Policy', href: '/policies#cancellation-policy' },
+  { label: 'Payment Policy', href: '/policies#payment-policy' },
 ];
 
 const LEGAL_LINKS = [
-  { label: 'Privacy Policy', href: '/privacy' },
-  { label: 'Terms of Service', href: '/terms' },
+  { label: 'Privacy Policy', href: '/policies#PoliciesPage' },
+  { label: 'Terms of Service', href: '/policies#terms-and-conditions' },
 ];
 
 const PAYMENT_METHODS = ['VISA', 'MASTERCARD', 'NET BANKING', 'UPI', 'PAY LATER'];
@@ -34,14 +38,14 @@ export function Footer() {
   const logoUrl = settings.general?.logo?.url || staticLogo;
   const storeAddress = settings.general?.address || "123 Jewelry Lane, Fashion District\nNew York, NY 10001";
   const storePhone = settings.general?.phone;
-  const storeEmail = settings.general?.storeEmail || "hello@lumiere.com";
+  const storeEmail = settings.general?.storeEmail || "support@pdluxuryjewellery.com";
   const storeDescription = settings.general?.tagline || "Crafting timeless elegance through exquisite gold jewellery.";
 
   const socialLinks = [
-    { icon: FaFacebookSquare, href: settings.social?.facebook || 'https://facebook.com/lumiere' },
-    { icon: FaInstagram, href: settings.social?.instagram || 'https://instagram.com/lumiere' },
-    { icon: FaXTwitter, href: settings.social?.twitter || 'https://twitter.com/lumiere' },
-    { icon: FaYoutube, href: settings.social?.youtube || 'https://youtube.com/lumiere' },
+    { icon: FaFacebookSquare, href: settings.social?.facebook || 'https://facebook.com/pdluxuryjewellery' },
+    { icon: FaInstagram, href: settings.social?.instagram || 'https://instagram.com/pdluxuryjewellery' },
+    { icon: FaXTwitter, href: settings.social?.twitter || 'https://twitter.com/pdluxuryjewellery' },
+    { icon: FaYoutube, href: settings.social?.youtube || 'https://youtube.com/pdluxuryjewellery' },
   ];
 
   return (
@@ -170,15 +174,15 @@ export function Footer() {
             >
               <span className="opacity-70">Made with</span>
               <Heart className="w-4 h-4 text-[#B76E79] fill-[#B76E79]" />
-              <span className="opacity-70">for jewelry lovers</span>
+              <span className="opacity-70">for jewellery lovers</span>
             </div>
 
             <div className="flex gap-6">
               {LEGAL_LINKS.map((link) => (
-                <a 
+                <a
                   key={link.label}
-                  href={link.href} 
-                  className="opacity-70 hover:opacity-100 transition-opacity" 
+                  href={link.href}
+                  className="opacity-70 hover:opacity-100 transition-opacity"
                   style={{ fontSize: '0.875rem', color: 'inherit', textDecoration: 'none' }}
                 >
                   {link.label}

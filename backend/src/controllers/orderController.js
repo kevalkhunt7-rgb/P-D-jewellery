@@ -10,6 +10,14 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import crypto from "crypto";
 import { getCurrencyContext } from "../utils/currencyHelper.js";
+import { refundPaypalCapture, getPaypalRefundStatus } from "./paypalController.js";
+import paypalClient from "../config/paypal.js";
+import paypal from "@paypal/checkout-server-sdk";
+import {
+  sendOrderConfirmationEmail,
+  sendOrderStatusUpdateEmail,
+  sendCancellationApprovedEmail
+} from "../services/emailService.js";
 
 // ================= LOCALIZED ORDER SERIALIZATION =================
 // Customer-facing serializer: converts to display currency (USD for foreign orders)
@@ -102,78 +110,72 @@ const ORDER_STATUS_VALUES = [
   "DELIVERED",
   "RETURNED",
   "FAILED",
-  // "CANCELLED" is deliberately excluded from the values updateOrderStatus
-  // accepts. Cancellation must go through requestCancellation /
-  // approveCancellation so refunds and stock restoration happen correctly.
 ];
 
 const PAYMENT_METHODS = ["Razorpay", "ONLINE", "PAYPAL"];
 
-// ================= CREATE RAZORPAY ORDER =================
-export const createRazorpayOrder = async (req, res) => {
+// ================= CLEANUP EXPIRED PENDING ORDERS =================
+// Automatically restocks inventory and marks pending orders older than 30 mins as FAILED
+export const cleanupExpiredOrders = async () => {
   try {
-    const { amount, currency } = req.body;
+    const expiredOrders = await Order.find({
+      orderStatus: "PENDING",
+      expiresAt: { $lt: new Date() }
+    });
 
-    // BUG FIX: amount was never validated, so a missing/negative/zero
-    // amount would be sent straight to Razorpay's API.
-    if (!amount || typeof amount !== "number" || amount <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: "A valid positive amount is required",
-      });
+    for (const order of expiredOrders) {
+      const session = await mongoose.startSession();
+      session.startTransaction();
+      try {
+        const dbOrder = await Order.findById(order._id).session(session);
+        if (dbOrder && dbOrder.orderStatus === "PENDING") {
+          // Restock items if they were tracked
+          if (dbOrder.inventoryTracked !== false) {
+            for (const item of dbOrder.orderItems) {
+              await Product.findByIdAndUpdate(
+                item.product,
+                { $inc: { stock: item.quantity, totalSales: -item.quantity } },
+                { session }
+              );
+            }
+          } else {
+            for (const item of dbOrder.orderItems) {
+              await Product.findByIdAndUpdate(
+                item.product,
+                { $inc: { totalSales: -item.quantity } },
+                { session }
+              );
+            }
+          }
+          dbOrder.orderStatus = "FAILED";
+          dbOrder.expiresAt = undefined;
+          await dbOrder.save({ session });
+          await session.commitTransaction();
+          console.log(`[Checkout Cleanup] Restored stock and marked expired order ${order._id} as FAILED.`);
+        } else {
+          await session.abortTransaction();
+        }
+      } catch (err) {
+        await session.abortTransaction();
+        console.error(`[Checkout Cleanup Error] Failed to clean up order ${order._id}:`, err);
+      } finally {
+        session.endSession();
+      }
     }
-
-    const options = {
-      amount: Math.round(amount * 100), // ₹100 => 10000 paise
-      currency: currency || "INR",
-      receipt: `receipt_${Date.now()}`,
-    };
-
-    const order = await razorpay.orders.create(options);
-
-    res.status(200).json({
-      success: true,
-      order,
-    });
-  } catch (error) {
-    console.error("Razorpay Error:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message || "Failed to create Razorpay order",
-    });
+  } catch (err) {
+    console.error("[Checkout Cleanup Error] General error in cleanupExpiredOrders:", err);
   }
 };
 
-// ================= CREATE ORDER (SECURE CHECKOUT) =================
-export const createOrder = async (req, res) => {
+// ================= INITIATE CHECKOUT (PHASE 1) =================
+export const initiateCheckout = async (req, res) => {
+  // Trigger cleanup of any expired PENDING checkouts asynchronously to keep stock accurate
+  cleanupExpiredOrders().catch(err => console.error("Expired orders cleanup error:", err));
+
   const session = await mongoose.startSession();
-  session.startTransaction();
 
   try {
-    const {
-      orderItems,
-      shippingAddress,
-      paymentMethod,
-      paymentId,
-      razorpayOrderId,
-      razorpaySignature,
-      paypalOrderId,
-      shippingPrice = 0,
-      taxPrice = 0,
-      couponCode,
-      discountAmount: requestedDiscount = 0,
-    } = req.body;
-
-    // Get currency context
-    const context = await getCurrencyContext(req);
-
-    // Validation
-    if (!orderItems || orderItems.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "No order items",
-      });
-    }
+    const { shippingAddress, couponCode, paymentMethod } = req.body;
 
     if (!shippingAddress) {
       return res.status(400).json({
@@ -189,85 +191,92 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    // If payment method is Razorpay, verify signature; otherwise, for PayPal, just check we have paymentId and paypalOrderId
-    if (paymentMethod === "Razorpay" || paymentMethod === "ONLINE") {
-      if (!razorpayOrderId || !paymentId || !razorpaySignature) {
-        return res.status(400).json({
-          success: false,
-          message: "Missing payment verification details",
-        });
-      }
-
-      // Verify payment signature before touching stock or writing to the DB
-      const generatedSignature = crypto
-        .createHmac("sha256", process.env.RAZORPAY_API_SECRET)
-        .update(`${razorpayOrderId}|${paymentId}`)
-        .digest("hex");
-
-      if (generatedSignature !== razorpaySignature) {
-        return res.status(400).json({
-          success: false,
-          message: "Payment verification failed",
-        });
-      }
-    } else if (paymentMethod === "PAYPAL") {
-      if (!paymentId || !paypalOrderId) {
-        return res.status(400).json({
-          success: false,
-          message: "Missing PayPal payment details",
-        });
-      }
-    }
-
-    // Fetch active gold rate from StoreSettings
-    const storeSettings = await StoreSettings.findOne().session(session) ||
-      await StoreSettings.create([{ goldRate24kt: 8000 }], { session }).then(arr => arr[0]);
-    const goldRate24kt = storeSettings.goldRate24kt;
-
-    // Fetch order rules from Settings
-    const settings = await Settings.findOne().session(session) ||
-      await Settings.create([{}], { session }).then(arr => arr[0]);
+    // 1. Fetch static settings & cart OUTSIDE the transaction to minimize locking & read overhead.
+    const settings = await Settings.findOne() || await Settings.create({});
     const shippingCharge = settings.order?.shippingCharge || 0;
     const freeShippingMinAmount = settings.order?.freeShippingMinAmount || 0;
     const taxPercentage = settings.order?.taxPercentage || 0;
+    const enableTracking = settings.inventory?.enableTracking !== false;
 
-    let itemsPrice = 0;
+    const cart = await Cart.findOne({ user: req.user._id }).populate("cartItems.product");
+    if (!cart || !cart.cartItems || cart.cartItems.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Your cart is empty",
+      });
+    }
+
+    const context = await getCurrencyContext(req);
+    const storeSettings = await StoreSettings.findOne() || await StoreSettings.create({ goldRate24kt: 8000 });
+    const goldRate24kt = storeSettings.goldRate24kt;
+
+    let itemsPrice = 0; // INR
     const verifiedOrderItems = [];
 
-    // Rebuild and calculate price breakdown on server-side securely
-    for (const item of orderItems) {
-      const product = await Product.findById(item.product).session(session);
-
+    // Verify stock and populate order items from locked cart pricing
+    for (const item of cart.cartItems) {
+      const product = item.product;
       if (!product) {
-        throw new Error(`Product not found: ${item.name || item.product}`);
+        return res.status(400).json({
+          success: false,
+          message: "Product not found in cart",
+        });
+      }
+      if (product.status !== "active") {
+        return res.status(400).json({
+          success: false,
+          message: `Product ${product.name} is no longer active`,
+        });
+      }
+      if (enableTracking && product.stock < item.quantity) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient stock for product: ${product.name}. Available: ${product.stock}`,
+        });
       }
 
-      if (product.stock < item.quantity) {
-        throw new Error(`${product.name} is out of stock`);
+      // If lockedPricing is missing (migration/legacy case), initialize it now
+      if (!item.lockedPricing) {
+        const breakdown = calculatePriceBreakdown({
+          goldRate24kt,
+          purity: product.purity || "22KT",
+          netWeight: product.netWeight || 0,
+          makingChargeType: product.makingChargeType || "per_gram",
+          makingChargeValue: product.makingChargeValue || 0,
+          discountPercentage: product.discountPercentage || 0,
+        });
+
+        item.lockedPricing = {
+          goldRate24kt,
+          purity: product.purity || "22KT",
+          netWeight: product.netWeight || 0,
+          makingChargeType: product.makingChargeType || "per_gram",
+          makingChargeValue: product.makingChargeValue || 0,
+          metalValue: breakdown.metalValue,
+          makingCharge: breakdown.makingCharge,
+          cgst: breakdown.cgst,
+          sgst: breakdown.sgst,
+          originalPrice: breakdown.originalPrice,
+          discountPercentage: breakdown.discountPercentage,
+          salePrice: breakdown.salePrice,
+          lockedAt: new Date(),
+        };
       }
 
-      const breakdown = calculatePriceBreakdown({
-        goldRate24kt,
-        purity: product.purity,
-        netWeight: product.netWeight,
-        makingChargeType: product.makingChargeType,
-        makingChargeValue: product.makingChargeValue,
-        discountPercentage: product.discountPercentage || 0,
-      });
-
-      const itemTotalPrice = Number((breakdown.salePrice * item.quantity).toFixed(2));
+      const lp = item.lockedPricing;
+      const itemTotalPrice = Number((lp.salePrice * item.quantity).toFixed(2));
       itemsPrice += itemTotalPrice;
 
       // Calculate display prices for order item
-      let itemDisplayPrice = breakdown.salePrice;
-      let itemDisplaySalePrice = breakdown.salePrice;
-      let itemDisplayOriginalPrice = breakdown.originalPrice;
+      let itemDisplayPrice = lp.salePrice;
+      let itemDisplaySalePrice = lp.salePrice;
+      let itemDisplayOriginalPrice = lp.originalPrice;
       let itemDisplayTotalPrice = itemTotalPrice;
 
       if (context.currency === "USD") {
-        itemDisplayPrice = Number((breakdown.salePrice / context.conversionRate).toFixed(2));
-        itemDisplaySalePrice = Number((breakdown.salePrice / context.conversionRate).toFixed(2));
-        itemDisplayOriginalPrice = Number((breakdown.originalPrice / context.conversionRate).toFixed(2));
+        itemDisplayPrice = Number((lp.salePrice / context.conversionRate).toFixed(2));
+        itemDisplaySalePrice = Number((lp.salePrice / context.conversionRate).toFixed(2));
+        itemDisplayOriginalPrice = Number((lp.originalPrice / context.conversionRate).toFixed(2));
         itemDisplayTotalPrice = Number((itemTotalPrice / context.conversionRate).toFixed(2));
       }
 
@@ -275,25 +284,23 @@ export const createOrder = async (req, res) => {
         product: product._id,
         name: product.name,
         image: item.image || (product.images?.[0]?.url || ""),
-        price: breakdown.salePrice, // server computed price (INR)
+        price: lp.salePrice,
         quantity: item.quantity,
 
         // Snapshot parameters
-        goldRate24kt,
-        purity: product.purity,
-        netWeight: product.netWeight,
-        makingChargeType: product.makingChargeType,
-        makingChargeValue: product.makingChargeValue,
-        metalValue: breakdown.metalValue,
-        makingCharge: breakdown.makingCharge,
-        gstOnMetal: breakdown.gstOnMetal,
-        gstOnLabour: breakdown.gstOnLabour,
-        originalPrice: breakdown.originalPrice,
-        discountPercentage: breakdown.discountPercentage,
-        salePrice: breakdown.salePrice,
+        goldRate24kt: lp.goldRate24kt,
+        purity: lp.purity,
+        netWeight: lp.netWeight,
+        makingChargeType: lp.makingChargeType,
+        makingChargeValue: lp.makingChargeValue,
+        metalValue: lp.metalValue,
+        makingCharge: lp.makingCharge,
+        originalPrice: lp.originalPrice,
+        discountPercentage: lp.discountPercentage,
+        salePrice: lp.salePrice,
         totalPrice: itemTotalPrice,
 
-        // New display fields for order items
+        // Display fields
         displayCurrency: context.currency,
         displayPrice: itemDisplayPrice,
         displaySalePrice: itemDisplaySalePrice,
@@ -302,19 +309,30 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    // Calculate dynamic shipping cost
+    // Dynamic shipping cost
     const calculatedShippingPrice = (freeShippingMinAmount > 0 && itemsPrice >= freeShippingMinAmount) ? 0 : shippingCharge;
 
-    // Validate and process coupon if applied
+    // Validate coupon and compute discount
     let discountAmount = 0;
     let appliedCouponCode = "";
     if (couponCode) {
-      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() }).session(session);
+      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
       if (!coupon) {
-        throw new Error("Invalid coupon code");
+        return res.status(400).json({ success: false, message: "Invalid or inactive coupon code" });
+      }
+      if (new Date() > new Date(coupon.expiryDate)) {
+        return res.status(400).json({ success: false, message: "Coupon has expired" });
       }
       if (itemsPrice < coupon.minimumOrderAmount) {
-        throw new Error(`Minimum order amount for coupon is not met`);
+        return res.status(400).json({ success: false, message: `Minimum order amount for coupon is not met` });
+      }
+
+      // Check usage limits
+      const userUsageCount = coupon.usedBy.filter(
+        (uid) => uid.toString() === req.user._id.toString()
+      ).length;
+      if (coupon.usageLimit > 0 && userUsageCount >= coupon.usageLimit) {
+        return res.status(400).json({ success: false, message: `You have reached the usage limit for this coupon` });
       }
 
       if (coupon.discountType === "percentage") {
@@ -329,13 +347,13 @@ export const createOrder = async (req, res) => {
       appliedCouponCode = coupon.code;
     }
 
-    // Compute dynamic boutique taxes
+    // Dynamic tax calculation
     const calculatedTaxPrice = Number(((itemsPrice - discountAmount) * (taxPercentage / 100)).toFixed(2));
 
-    // Master grand total
+    // Master grand total in INR
     const totalPrice = Number((itemsPrice + calculatedShippingPrice + calculatedTaxPrice - discountAmount).toFixed(2));
 
-    // Calculate display values
+    // Display values (converted to USD if applicable)
     const displayCurrency = context.currency;
     let displayItemsPrice = itemsPrice;
     let displayShippingPrice = calculatedShippingPrice;
@@ -349,22 +367,227 @@ export const createOrder = async (req, res) => {
       displayTotalPrice = Number((totalPrice / context.conversionRate).toFixed(2));
     }
 
-    // Reduce stock and increase totalSales atomically inside the transaction
-    for (const item of verifiedOrderItems) {
-      const updatedProduct = await Product.findOneAndUpdate(
-        { _id: item.product, stock: { $gte: item.quantity } },
-        { $inc: { stock: -item.quantity, totalSales: item.quantity } },
-        { new: true, session }
-      );
+    // Set order expiry (30 mins from now)
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
-      if (!updatedProduct) {
-        throw new Error(`${item.name} went out of stock while placing your order`);
+    // 2. Perform Stock Reservation & Order Document Creation inside a Retriable Transaction
+    let createdOrder = null;
+
+    await session.withTransaction(async () => {
+      // Reserve stock atomically inside transaction if tracking is enabled
+      if (enableTracking) {
+        for (const item of verifiedOrderItems) {
+          const updatedProduct = await Product.findOneAndUpdate(
+            { _id: item.product, stock: { $gte: item.quantity } },
+            { $inc: { stock: -item.quantity, totalSales: item.quantity } },
+            { returnDocument: "after", session }
+          );
+          if (!updatedProduct) {
+            throw new Error(`${item.name} went out of stock while placing order`);
+          }
+        }
+      } else {
+        // If tracking is disabled, only increment totalSales without decrementing stock
+        for (const item of verifiedOrderItems) {
+          await Product.findByIdAndUpdate(
+            item.product,
+            { $inc: { totalSales: item.quantity } },
+            { session }
+          );
+        }
       }
+
+      // Create PENDING order document
+      const [order] = await Order.create([{
+        user: req.user._id,
+        orderItems: verifiedOrderItems,
+        shippingAddress,
+        paymentMethod,
+        isPaid: false,
+        itemsPrice: Number(itemsPrice.toFixed(2)),
+        shippingPrice: calculatedShippingPrice,
+        taxPrice: calculatedTaxPrice,
+        totalPrice,
+        couponCode: appliedCouponCode,
+        discountAmount: Number(discountAmount.toFixed(2)),
+
+        displayCurrency,
+        displayItemsPrice,
+        displayShippingPrice,
+        displayTaxPrice,
+        displayTotalPrice,
+        exchangeRate: context.conversionRate,
+
+        paidCurrency: displayCurrency,
+        paidAmount: displayTotalPrice,
+
+        orderStatus: "PENDING",
+        checkoutInitiatedAt: new Date(),
+        expiresAt,
+        razorpayGatewayOrderId: "",
+        paypalGatewayOrderId: "",
+        inventoryTracked: enableTracking,
+      }], { session });
+
+      createdOrder = order;
+    });
+
+    // 3. Make External Network Calls outside of the transaction block.
+    // This prevents slow network calls from holding document locks and causing WriteConflicts.
+    let razorpayGatewayOrderId = "";
+    let paypalGatewayOrderId = "";
+
+    try {
+      if (paymentMethod === "Razorpay" || paymentMethod === "ONLINE") {
+        const options = {
+          amount: Math.round(totalPrice * 100), // paise
+          currency: "INR",
+          receipt: `receipt_${createdOrder._id.toString()}`,
+        };
+        const razorpayOrder = await razorpay.orders.create(options);
+        razorpayGatewayOrderId = razorpayOrder.id;
+      } else if (paymentMethod === "PAYPAL") {
+        const request = new paypal.orders.OrdersCreateRequest();
+        request.prefer("return=representation");
+        request.prefer("return=representation");
+        request.requestBody({
+          intent: "CAPTURE",
+          purchase_units: [
+            {
+              amount: {
+                currency_code: "USD",
+                value: Number(displayTotalPrice).toFixed(2),
+              },
+            },
+          ],
+        });
+        const response = await paypalClient.execute(request);
+        paypalGatewayOrderId = response.result.id;
+      }
+
+      // 4. Update the order with the gateway order ID (non-transaction, quick update)
+      if (razorpayGatewayOrderId || paypalGatewayOrderId) {
+        await Order.findByIdAndUpdate(createdOrder._id, {
+          $set: {
+            razorpayGatewayOrderId,
+            paypalGatewayOrderId,
+          }
+        });
+      }
+
+    } catch (gatewayError) {
+      console.error("[Checkout Gateway Error]: Failed to create payment gateway order:", gatewayError);
+      
+      // Fallback: If gateway order creation failed, immediately release stock & mark order as FAILED
+      try {
+        if (enableTracking) {
+          for (const item of verifiedOrderItems) {
+            await Product.findByIdAndUpdate(item.product, {
+              $inc: { stock: item.quantity, totalSales: -item.quantity }
+            });
+          }
+        } else {
+          for (const item of verifiedOrderItems) {
+            await Product.findByIdAndUpdate(item.product, {
+              $inc: { totalSales: -item.quantity }
+            });
+          }
+        }
+        await Order.findByIdAndUpdate(createdOrder._id, {
+          $set: { orderStatus: "FAILED", expiresAt: undefined }
+        });
+      } catch (cleanupErr) {
+        console.error("[Checkout Gateway Fallback Error]: Failed to restore stock & mark order as failed:", cleanupErr);
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: `Failed to initiate payment gateway: ${gatewayError.message || gatewayError}`,
+      });
     }
 
-    // Create Order inside session
-    let paymentInfo;
-    if (paymentMethod === "Razorpay" || paymentMethod === "ONLINE") {
+    res.status(201).json({
+      success: true,
+      message: "Checkout initiated successfully",
+      orderId: createdOrder._id,
+      orderSummary: {
+        itemsPrice: displayItemsPrice,
+        shippingPrice: displayShippingPrice,
+        taxPrice: displayTaxPrice,
+        discountAmount: displayCurrency === "USD" ? Number((discountAmount / context.conversionRate).toFixed(2)) : discountAmount,
+        totalPrice: displayTotalPrice,
+        currency: displayCurrency,
+        currencySymbol: context.currencySymbol,
+      },
+      razorpayOrder: razorpayGatewayOrderId ? { id: razorpayGatewayOrderId, amount: totalPrice * 100, currency: "INR" } : null,
+      paypalOrderId: paypalGatewayOrderId || null,
+    });
+
+  } catch (error) {
+    console.error("========== INITIATE CHECKOUT ERROR ==========");
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to initiate checkout",
+    });
+  } finally {
+    session.endSession();
+  }
+};
+
+// ================= CONFIRM CHECKOUT (PHASE 2) =================
+export const confirmCheckout = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { orderId, paymentId, razorpayOrderId, razorpaySignature, paypalOrderId } = req.body;
+
+    const order = await Order.findById(orderId).session(session);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    if (order.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized access to order",
+      });
+    }
+
+    // Verify status is PENDING
+    if (order.orderStatus !== "PENDING") {
+      return res.status(400).json({
+        success: false,
+        message: `Checkout already processed or expired. Current status: ${order.orderStatus}`,
+      });
+    }
+
+    let paymentInfo = {};
+    if (order.paymentMethod === "Razorpay" || order.paymentMethod === "ONLINE") {
+      if (!paymentId || !razorpayOrderId || !razorpaySignature) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing Razorpay verification details",
+        });
+      }
+
+      // Verify Razorpay HMAC signature
+      const generatedSignature = crypto
+        .createHmac("sha256", process.env.RAZORPAY_API_SECRET)
+        .update(`${razorpayOrderId}|${paymentId}`)
+        .digest("hex");
+
+      if (generatedSignature !== razorpaySignature) {
+        return res.status(400).json({
+          success: false,
+          message: "Razorpay signature verification failed",
+        });
+      }
+
       paymentInfo = {
         id: paymentId,
         status: "paid",
@@ -372,52 +595,53 @@ export const createOrder = async (req, res) => {
         razorpayPaymentId: paymentId,
         razorpaySignature,
       };
-    } else if (paymentMethod === "PAYPAL") {
+    } else if (order.paymentMethod === "PAYPAL") {
+      if (!paypalOrderId) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing PayPal order ID",
+        });
+      }
+
+      // Capture PayPal order on the server-side to prevent client-side spoofing
+      const request = new paypal.orders.OrdersCaptureRequest(paypalOrderId);
+      request.requestBody({});
+      const response = await paypalClient.execute(request);
+
+      if (response.result.status !== "COMPLETED") {
+        return res.status(400).json({
+          success: false,
+          message: `PayPal capture status is ${response.result.status}, expected COMPLETED`,
+        });
+      }
+
+      const captureId = response.result.purchase_units[0].payments.captures[0].id;
       paymentInfo = {
-        id: paymentId,
+        id: captureId,
         status: "COMPLETED",
         paypalOrderId,
       };
     }
 
-    const [order] = await Order.create([{
-      user: req.user._id,
-      orderItems: verifiedOrderItems,
-      shippingAddress,
-      paymentMethod,
-      paymentInfo,
-      isPaid: true,
-      paidAt: Date.now(),
-      itemsPrice: Number(itemsPrice.toFixed(2)), // Always INR
-      shippingPrice: calculatedShippingPrice, // Always INR
-      taxPrice: calculatedTaxPrice, // Always INR
-      totalPrice, // Always INR
-      couponCode: appliedCouponCode,
-      discountAmount: Number(discountAmount.toFixed(2)), // Always INR
+    // Mark as paid and confirmed, remove expiry time so index won't delete it
+    order.paymentInfo = paymentInfo;
+    order.isPaid = true;
+    order.paidAt = Date.now();
+    order.orderStatus = "CONFIRMED";
+    order.expiresAt = undefined;
 
-      // Display fields for customer-facing views
-      displayCurrency,
-      displayItemsPrice,
-      displayShippingPrice,
-      displayTaxPrice,
-      displayTotalPrice,
-      exchangeRate: context.conversionRate,
+    await order.save({ session });
 
-      // Original payment currency and amount (what customer actually paid)
-      paidCurrency: displayCurrency, // USD for foreign orders, INR for domestic
-      paidAmount: displayTotalPrice, // The amount in the currency the customer paid
-    }], { session });
-
-    // Update coupon usage inside session
-    if (appliedCouponCode) {
+    // Update coupon usage
+    if (order.couponCode) {
       await Coupon.updateOne(
-        { code: appliedCouponCode },
+        { code: order.couponCode },
         { $inc: { usedCount: 1 }, $push: { usedBy: req.user._id } },
         { session }
       );
     }
 
-    // Clear cart upon successful order placement
+    // Clear cart upon successful payment
     const cart = await Cart.findOne({ user: req.user._id }).session(session);
     if (cart) {
       cart.cartItems = [];
@@ -426,37 +650,112 @@ export const createOrder = async (req, res) => {
       await cart.save({ session });
     }
 
-    // Commit dynamic pricing order transaction
     await session.commitTransaction();
 
+    // Trigger order confirmation email asynchronously
+    sendOrderConfirmationEmail(order);
+
     const serializedOrder = await serializeOrder(order, req);
-    res.status(201).json({
+    res.status(200).json({
       success: true,
-      message: "Order placed successfully",
+      message: "Order placed and payment confirmed",
       order: serializedOrder,
     });
+
   } catch (error) {
-  await session.abortTransaction();
-
-  console.error("========== ORDER ERROR ==========");
-  console.error(error);
-  console.error(error.stack);
-  console.error("================================");
-
-  res.status(500).json({
-    success: false,
-    message: error.message,
-  });
-
+    await session.abortTransaction();
+    console.error("========== CONFIRM CHECKOUT ERROR ==========");
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to confirm checkout",
+    });
   } finally {
     session.endSession();
   }
 };
 
+// ================= CANCEL CHECKOUT (PHASE 1 ABORT) =================
+export const cancelCheckout = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { orderId } = req.body;
+    const order = await Order.findById(orderId).session(session);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    if (order.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    if (order.orderStatus !== "PENDING") {
+      return res.status(400).json({
+        success: false,
+        message: `Only PENDING checkouts can be cancelled. Current status is ${order.orderStatus}`,
+      });
+    }
+
+    // Restock items atomically if they were tracked
+    if (order.inventoryTracked !== false) {
+      for (const item of order.orderItems) {
+        await Product.findByIdAndUpdate(
+          item.product,
+          { $inc: { stock: item.quantity, totalSales: -item.quantity } },
+          { session }
+        );
+      }
+    } else {
+      for (const item of order.orderItems) {
+        await Product.findByIdAndUpdate(
+          item.product,
+          { $inc: { totalSales: -item.quantity } },
+          { session }
+        );
+      }
+    }
+
+    order.orderStatus = "FAILED";
+    order.expiresAt = undefined;
+
+    await order.save({ session });
+    await session.commitTransaction();
+
+    res.status(200).json({
+      success: true,
+      message: "Checkout cancelled and inventory restocked",
+    });
+
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("========== CANCEL CHECKOUT ERROR ==========");
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to cancel checkout",
+    });
+  } finally {
+    session.endSession();
+  }
+};
+;
+
 
 // ================= GET MY ORDERS =================
 export const getMyOrders = async (req, res) => {
   try {
+    // Trigger cleanup of any expired pending checkouts asynchronously
+    cleanupExpiredOrders().catch(err => console.error("Expired orders cleanup error:", err));
+
     const orders = await Order.find({
       user: req.user._id,
     }).sort({ createdAt: -1 });
@@ -472,7 +771,7 @@ export const getMyOrders = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -525,7 +824,7 @@ export const getSingleOrder = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -534,6 +833,9 @@ export const getSingleOrder = async (req, res) => {
 // ================= GET ALL ORDERS (ADMIN) =================
 export const getAllOrders = async (req, res) => {
   try {
+    // Trigger cleanup of any expired pending checkouts asynchronously
+    cleanupExpiredOrders().catch(err => console.error("Expired orders cleanup error:", err));
+
     // NOTE: this loads every order into memory with no pagination. Fine for
     // a small catalog, but worth adding page/limit query params before this
     // gets used against a large order collection in production.
@@ -560,7 +862,7 @@ export const getAllOrders = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -628,24 +930,31 @@ export const updateOrderStatus = async (req, res) => {
       });
     }
 
-    order.orderStatus = newStatus;
+    const updatedOrder = await Order.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          orderStatus: newStatus,
+          deliveredAt: newStatus === "DELIVERED" ? Date.now() : order.deliveredAt,
+        }
+      },
+      { returnDocument: "after", runValidators: false }
+    );
 
-    if (newStatus === "DELIVERED") {
-      order.deliveredAt = Date.now();
+    if (updatedOrder) {
+      sendOrderStatusUpdateEmail(updatedOrder);
     }
-
-    await order.save();
 
     res.status(200).json({
       success: true,
       message: "Order status updated",
-      order,
+      order: updatedOrder,
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -702,24 +1011,30 @@ export const requestCancellation = async (req, res) => {
       });
     }
 
-    order.cancellationStatus = "Requested";
-    order.cancellationReason = cancellationReason;
-    order.cancellationRequestedAt = Date.now();
-    order.refundStatus = order.isPaid ? "Pending" : "NotRequired";
-    order.refundAmount = order.totalPrice;
-
-    await order.save();
+    const updatedOrder = await Order.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          cancellationStatus: "Requested",
+          cancellationReason: cancellationReason,
+          cancellationRequestedAt: Date.now(),
+          refundStatus: order.isPaid ? "Pending" : "NotRequired",
+          refundAmount: order.totalPrice,
+        }
+      },
+      { returnDocument: "after", runValidators: false }
+    );
 
     res.status(200).json({
       success: true,
       message: "Cancellation request submitted successfully",
-      order,
+      order: updatedOrder,
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -755,12 +1070,12 @@ export const getCancellationRequests = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
 
-// ================= SYNC REFUND STATUS FROM RAZORPAY (ADMIN) =================
+// ================= SYNC REFUND STATUS FROM GATEWAY (ADMIN) =================
 export const syncRefundStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -780,43 +1095,73 @@ export const syncRefundStatus = async (req, res) => {
       });
     }
 
-    // Fetch refund from Razorpay
-    const refund = await razorpay.refunds.fetch(order.refundId);
-
-    // Update order based on Razorpay status
     let newRefundStatus = order.refundStatus;
     let refundCompletedAt = order.refundCompletedAt;
     let refundFailureReason = order.refundFailureReason;
 
-    if (refund.status === "processed") {
-      newRefundStatus = "Completed";
-      refundCompletedAt = new Date();
-    } else if (refund.status === "failed") {
-      newRefundStatus = "Failed";
-      refundFailureReason = refund.error_description || "Refund failed";
-    } else if (refund.status === "pending") {
-      newRefundStatus = "Pending";
+    if (order.paymentMethod === "Razorpay" || order.paymentMethod === "ONLINE") {
+      // Fetch refund from Razorpay
+      console.log(`[Sync Refund Status] Fetching Razorpay refund status for Refund ID: ${order.refundId}`);
+      const refund = await razorpay.refunds.fetch(order.refundId);
+
+      if (refund.status === "processed") {
+        newRefundStatus = "Completed";
+        refundCompletedAt = refundCompletedAt || new Date();
+      } else if (refund.status === "failed") {
+        newRefundStatus = "Failed";
+        refundFailureReason = refund.error_description || "Refund failed";
+      } else if (refund.status === "pending") {
+        newRefundStatus = "Pending";
+      }
+    } else if (order.paymentMethod === "PAYPAL") {
+      // Fetch refund from PayPal
+      console.log(`[Sync Refund Status] Fetching PayPal refund status for Refund ID: ${order.refundId}`);
+      const refund = await getPaypalRefundStatus(order.refundId);
+
+      // PayPal refund status values: COMPLETED, PENDING, CANCELLED, FAILED, etc.
+      if (refund.status === "COMPLETED") {
+        newRefundStatus = "Completed";
+        refundCompletedAt = refundCompletedAt || new Date();
+      } else if (refund.status === "FAILED" || refund.status === "CANCELLED") {
+        newRefundStatus = "Failed";
+        refundFailureReason = refund.status_details?.reason || `PayPal refund status is ${refund.status}`;
+      } else if (refund.status === "PENDING") {
+        newRefundStatus = "Pending";
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: `Refund status synchronization is not supported for payment method: ${order.paymentMethod}`,
+      });
     }
 
-    order.refundStatus = newRefundStatus;
-    order.refundCompletedAt = refundCompletedAt;
-    order.refundFailureReason = refundFailureReason;
-
-    await order.save();
+    const updatedOrder = await Order.findByIdAndUpdate(
+      orderId,
+      {
+        $set: {
+          refundStatus: newRefundStatus,
+          refundCompletedAt: refundCompletedAt,
+          refundFailureReason: refundFailureReason,
+        }
+      },
+      { returnDocument: "after", runValidators: false }
+    );
 
     res.status(200).json({
       success: true,
       message: "Refund status synced successfully",
-      order,
+      order: updatedOrder,
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({
+    console.error("[Sync Refund Status Error]:", error.response?.data || error.message || error);
+    res.status(error.response?.status || 500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.response?.data?.message || error.message || "Server Error",
+      details: error.response?.data || null,
     });
   }
 };
+
 
 // ================= HANDLE RAZORPAY WEBHOOK =================
 export const handleRazorpayWebhook = async (req, res) => {
@@ -827,15 +1172,57 @@ export const handleRazorpayWebhook = async (req, res) => {
     // For now, just process the event
     const event = req.body;
 
-    if (event.event === "refund.processed") {
+    if (event.event === "order.paid" || event.event === "payment.captured") {
+      const razorpayOrderId = event.event === "order.paid"
+        ? event.payload.order.entity.id
+        : event.payload.payment.entity.order_id;
+
+      const paymentId = event.payload.payment?.entity?.id || "";
+
+      if (razorpayOrderId) {
+        const order = await Order.findOne({ razorpayGatewayOrderId: razorpayOrderId, orderStatus: "PENDING" });
+        if (order) {
+          order.isPaid = true;
+          order.paidAt = Date.now();
+          order.orderStatus = "CONFIRMED";
+          order.expiresAt = undefined;
+          order.paymentInfo = {
+            id: paymentId,
+            status: "COMPLETED",
+            razorpayOrderId,
+            razorpayPaymentId: paymentId,
+          };
+          await order.save();
+
+          // Clear Cart
+          const cart = await Cart.findOne({ user: order.user });
+          if (cart) {
+            cart.cartItems = [];
+            cart.totalItems = 0;
+            cart.totalPrice = 0;
+            await cart.save();
+          }
+
+          console.log(`[Razorpay Webhook Success] Fulfilling order ${order._id} for Razorpay Order ID: ${razorpayOrderId}`);
+          sendOrderConfirmationEmail(order);
+        }
+      }
+    } else if (event.event === "refund.processed") {
       // Find order by refund ID
       const refundId = event.payload.refund.entity.id;
       const order = await Order.findOne({ refundId });
 
       if (order) {
-        order.refundStatus = "Completed";
-        order.refundCompletedAt = new Date();
-        await order.save();
+        await Order.findByIdAndUpdate(
+          order._id,
+          {
+            $set: {
+              refundStatus: "Completed",
+              refundCompletedAt: new Date()
+            }
+          },
+          { runValidators: false }
+        );
       }
     } else if (event.event === "refund.failed") {
       // Find order by refund ID
@@ -843,9 +1230,16 @@ export const handleRazorpayWebhook = async (req, res) => {
       const order = await Order.findOne({ refundId });
 
       if (order) {
-        order.refundStatus = "Failed";
-        order.refundFailureReason = event.payload.refund.entity.error_description || "Refund failed";
-        await order.save();
+        await Order.findByIdAndUpdate(
+          order._id,
+          {
+            $set: {
+              refundStatus: "Failed",
+              refundFailureReason: event.payload.refund.entity.error_description || "Refund failed"
+            }
+          },
+          { runValidators: false }
+        );
       }
     }
 
@@ -854,7 +1248,7 @@ export const handleRazorpayWebhook = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -873,30 +1267,37 @@ export const deleteCancellationRecord = async (req, res) => {
     }
 
     // Reset all cancellation and refund fields
-    order.cancellationStatus = "None";
-    order.cancellationReason = "";
-    order.cancellationRequestedAt = undefined;
-    order.cancellationReviewedAt = undefined;
-    order.cancellationReviewedBy = undefined;
-    order.refundStatus = "NotRequired";
-    order.refundAmount = 0;
-    order.refundId = "";
-    order.refundProcessedAt = undefined;
-    order.refundCompletedAt = undefined;
-    order.refundFailureReason = "";
-    order.refundInitiatedAt = undefined;
-
-    await order.save();
+    const updatedOrder = await Order.findByIdAndUpdate(
+      orderId,
+      {
+        $set: {
+          cancellationStatus: "None",
+          cancellationReason: "",
+          cancellationRequestedAt: undefined,
+          cancellationReviewedAt: undefined,
+          cancellationReviewedBy: undefined,
+          refundStatus: "NotRequired",
+          refundAmount: 0,
+          refundId: "",
+          refundProcessedAt: undefined,
+          refundCompletedAt: undefined,
+          refundFailureReason: "",
+          refundInitiatedAt: undefined,
+        }
+      },
+      { returnDocument: "after", runValidators: false }
+    );
 
     res.status(200).json({
       success: true,
       message: "Cancellation record deleted successfully",
+      order: updatedOrder,
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -937,38 +1338,147 @@ export const approveCancellation = async (req, res) => {
     }
 
     // Process the refund (or mark why one isn't happening)
-    if (order.isPaid && order.paymentInfo?.razorpayPaymentId) {
-      try {
-        const refund = await razorpay.payments.refund(
-          order.paymentInfo.razorpayPaymentId,
-          {
-            amount: Math.round(order.refundAmount * 100),
-            speed: "normal",
-            notes: {
-              orderId: order._id.toString(),
-              customer: order.shippingAddress.fullName,
-              reason: order.cancellationReason,
-            },
-          }
-        );
-
-        order.refundId = refund.id;
-        order.refundStatus = refund.status === "processed" ? "Completed" : "Pending";
-        order.refundProcessedAt = new Date();
-      } catch (razorpayError) {
-        console.error("Razorpay refund failed:", razorpayError);
-        order.refundStatus = "Failed";
-        // BUG FIX: refundFailureReason exists on the schema but was never
-        // being set, so failed refunds left no trace of why.
-        order.refundFailureReason =
-          razorpayError?.error?.description || razorpayError.message || "Refund failed";
-      }
+    if (order.paymentMethod === "COD") {
+      console.log(`[Order Refund Status] Order ${order._id} is COD. Refund is NotRequired.`);
+      order.refundStatus = "NotRequired";
     } else if (order.isPaid) {
-      // Paid but missing a Razorpay payment ID on record — flag it rather
-      // than silently leaving refundStatus stuck on "Pending" forever.
-      order.refundStatus = "Failed";
-      order.refundFailureReason = "No Razorpay payment ID on record for this order";
+      if (order.paymentMethod === "Razorpay" || order.paymentMethod === "ONLINE") {
+        if (order.paymentInfo?.razorpayPaymentId) {
+          try {
+            console.log(`[Order Refund Init] Processing Razorpay refund for order ${order._id}. Payment ID: ${order.paymentInfo.razorpayPaymentId}`);
+            const refund = await razorpay.payments.refund(
+              order.paymentInfo.razorpayPaymentId,
+              {
+                amount: Math.round(order.refundAmount * 100),
+                speed: "normal",
+                notes: {
+                  orderId: order._id.toString(),
+                  customer: order.shippingAddress.fullName,
+                  reason: order.cancellationReason,
+                },
+              }
+            );
+
+            order.refundId = refund.id;
+            order.refundStatus = refund.status === "processed" ? "Completed" : "Pending";
+            order.refundProcessedAt = new Date();
+            console.log(`[Order Refund Success] Razorpay refund initiated successfully. Refund ID: ${refund.id}, Status: ${order.refundStatus}`);
+          } catch (razorpayError) {
+            console.error("[Order Refund Error] Razorpay refund failed:", razorpayError);
+            order.refundStatus = "Failed";
+            order.refundFailureReason =
+              razorpayError?.error?.description || razorpayError.message || "Refund failed";
+          }
+        } else {
+          console.warn(`[Order Refund Error] Paid order ${order._id} has no Razorpay Payment ID stored.`);
+          order.refundStatus = "Failed";
+          order.refundFailureReason = "No Razorpay payment ID on record for this order";
+        }
+      } else if (order.paymentMethod === "PAYPAL") {
+        const captureId = order.paymentInfo?.id;
+        const captureStatus = order.paymentInfo?.status;
+
+        // 1. Verify capture status is COMPLETED
+        if (!captureStatus || captureStatus.toUpperCase() !== "COMPLETED") {
+          const errMsg = `PayPal capture status is '${captureStatus || "UNKNOWN"}', expected 'COMPLETED'`;
+          console.error(`[PayPal Refund Error] Order ID: ${order._id}. ${errMsg}`);
+          order.refundStatus = "Failed";
+          order.refundFailureReason = errMsg;
+        } else if (!captureId) {
+          console.warn(`[PayPal Refund Error] Paid order ${order._id} has no PayPal Capture ID stored.`);
+          order.refundStatus = "Failed";
+          order.refundFailureReason = "No PayPal capture ID on record for this order";
+        } else {
+          try {
+            // Determine refund currency and amount
+            const refundCurrency = order.paidCurrency || "USD";
+            let refundVal = order.refundAmount;
+
+            if (refundCurrency === "USD") {
+              // Convert INR refund amount to USD using exchangeRate
+              const calculatedUSD = Number((order.refundAmount / (order.exchangeRate || 1)).toFixed(2));
+              
+              // Validate that the refund amount matches the original paidAmount (within a small tolerance)
+              const difference = Math.abs(calculatedUSD - order.paidAmount);
+              if (difference > 0.05) {
+                console.warn(`[PayPal Refund Warning] Calculated USD refund (${calculatedUSD}) differs from original paidAmount (${order.paidAmount}). Using original paidAmount to ensure full refund.`);
+                refundVal = order.paidAmount;
+              } else {
+                refundVal = calculatedUSD;
+              }
+            } else {
+              // For INR domestic (if any PayPal transaction was in INR)
+              const difference = Math.abs(order.refundAmount - order.totalPrice);
+              if (difference > 1) {
+                console.warn(`[PayPal Refund Warning] Refund amount (${order.refundAmount}) differs from original totalPrice (${order.totalPrice}). Using totalPrice.`);
+                refundVal = order.totalPrice;
+              }
+            }
+
+            // 2. Validate refund amount and currency match original payment
+            if (refundCurrency !== order.paidCurrency) {
+              console.warn(`[PayPal Refund Currency Mismatch] Refund Currency: ${refundCurrency}, Paid Currency: ${order.paidCurrency}`);
+            }
+
+            // Construct payload for logging
+            const refundPayload = {
+              amount: {
+                value: Number(refundVal).toFixed(2),
+                currency_code: refundCurrency,
+              }
+            };
+
+            // 3. Detailed logging of refund parameters BEFORE calling the API
+            console.log("=================================================");
+            console.log("[PayPal Refund Execution Details]");
+            console.log(`- Order ID: ${order._id.toString()}`);
+            console.log(`- Capture ID: ${captureId}`);
+            console.log(`- Capture Status: ${captureStatus}`);
+            console.log(`- Original Paid Amount: ${order.paidAmount} ${order.paidCurrency}`);
+            console.log("- Refund Payload Sent to PayPal:", JSON.stringify(refundPayload, null, 2));
+            console.log("=================================================");
+
+            // Call the PayPal refund API using the helper
+            const refundResponse = await refundPaypalCapture(captureId, refundVal, refundCurrency);
+
+            // 4. Detailed logging of PayPal API response
+            console.log("=================================================");
+            console.log("[PayPal Refund API Response Success]");
+            console.log(`- Order ID: ${order._id.toString()}`);
+            console.log(`- Capture ID: ${captureId}`);
+            console.log("- Response Data:", JSON.stringify(refundResponse, null, 2));
+            console.log("=================================================");
+
+            order.refundId = refundResponse.id;
+            order.refundStatus = refundResponse.status === "COMPLETED" ? "Completed" : "Pending";
+            order.refundProcessedAt = new Date();
+          } catch (paypalError) {
+            const apiErrorDetails = paypalError.response?.data || null;
+            
+            // 5. Detailed logging of PayPal API failure (business validation errors)
+            console.error("=================================================");
+            console.error("[PayPal Refund API Response Failure]");
+            console.error(`- Order ID: ${order._id.toString()}`);
+            console.error(`- Capture ID: ${captureId}`);
+            console.error(`- Status Code: ${paypalError.response?.status || "N/A"}`);
+            console.error("- API Error Details:", JSON.stringify(apiErrorDetails, null, 2));
+            console.error(`- Message: ${paypalError.message}`);
+            console.error("=================================================");
+
+            order.refundStatus = "Failed";
+            order.refundFailureReason =
+              apiErrorDetails?.message || 
+              (apiErrorDetails?.details && JSON.stringify(apiErrorDetails.details)) || 
+              paypalError.message || 
+              "PayPal refund failed";
+          }
+        }
+      } else {
+        console.warn(`[Order Refund Warning] Unknown paid payment method: ${order.paymentMethod} for order ${order._id}. Marking refund as NotRequired.`);
+        order.refundStatus = "NotRequired";
+      }
     } else {
+      console.log(`[Order Refund Status] Order ${order._id} is unpaid. Refund is NotRequired.`);
       order.refundStatus = "NotRequired";
     }
 
@@ -984,32 +1494,52 @@ export const approveCancellation = async (req, res) => {
       }
     }
 
-    order.orderStatus = "CANCELLED";
-    order.cancellationStatus = "Approved";
-    order.cancellationReviewedAt = Date.now();
-    order.cancellationReviewedBy = req.user._id;
+    const updatedOrder = await Order.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          refundId: order.refundId,
+          refundStatus: order.refundStatus,
+          refundProcessedAt: order.refundProcessedAt,
+          refundFailureReason: order.refundFailureReason,
+          orderStatus: "CANCELLED",
+          cancellationStatus: "Approved",
+          cancellationReviewedAt: Date.now(),
+          cancellationReviewedBy: req.user._id,
+        }
+      },
+      { returnDocument: "after", runValidators: false }
+    );
 
-    await order.save();
+    // Restock items if they were tracked.
+    if (order.inventoryTracked !== false) {
+      for (const item of order.orderItems) {
+        await Product.findByIdAndUpdate(item.product, {
+          $inc: { stock: item.quantity, totalSales: -item.quantity },
+        });
+      }
+    } else {
+      for (const item of order.orderItems) {
+        await Product.findByIdAndUpdate(item.product, {
+          $inc: { totalSales: -item.quantity },
+        });
+      }
+    }
 
-    // Restock items. BUG FIX: switched from fetch -> mutate -> save per
-    // item to an atomic $inc update, avoiding a race with any concurrent
-    // stock changes on the same product.
-    for (const item of order.orderItems) {
-      await Product.findByIdAndUpdate(item.product, {
-        $inc: { stock: item.quantity, totalSales: -item.quantity },
-      });
+    if (updatedOrder) {
+      sendCancellationApprovedEmail(updatedOrder);
     }
 
     res.status(200).json({
       success: true,
       message: "Cancellation approved and refund processed",
-      order,
+      order: updatedOrder,
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -1056,24 +1586,30 @@ export const rejectCancellation = async (req, res) => {
       });
     }
 
-    order.cancellationStatus = "Rejected";
-    order.cancellationReason = rejectionReason;
-    order.cancellationReviewedAt = Date.now();
-    order.cancellationReviewedBy = req.user._id;
-    order.refundStatus = "NotRequired";
-
-    await order.save();
+    const updatedOrder = await Order.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          cancellationStatus: "Rejected",
+          cancellationReason: rejectionReason,
+          cancellationReviewedAt: Date.now(),
+          cancellationReviewedBy: req.user._id,
+          refundStatus: "NotRequired",
+        }
+      },
+      { returnDocument: "after", runValidators: false }
+    );
 
     res.status(200).json({
       success: true,
       message: "Cancellation request rejected",
-      order,
+      order: updatedOrder,
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };

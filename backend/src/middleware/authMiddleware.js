@@ -15,7 +15,7 @@ export const protect = async (req, res, next) => {
 
     if (!token) {
       return res.status(401).json({
-        success: false,
+        success:  false,
         message: "Not authorized, token missing",
       });
     }
@@ -62,7 +62,7 @@ export const adminOnly = async (req, res, next) => {
 
     return res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };
@@ -86,7 +86,7 @@ export const superAdminOnly = async (req, res, next) => {
 
     return res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || (error && typeof error === 'object' ? JSON.stringify(error) : String(error)),
     });
   }
 };

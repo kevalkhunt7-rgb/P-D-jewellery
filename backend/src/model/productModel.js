@@ -45,6 +45,20 @@ const productSchema = new mongoose.Schema(
       },
     ],
 
+    specifications: [
+      {
+        label: {
+          type: String,
+          trim: true,
+        },
+        value: {
+          type: String,
+          trim: true,
+          default: "",
+        },
+      },
+    ],
+
     discountPercentage: {
       type: Number,
       default: 0,

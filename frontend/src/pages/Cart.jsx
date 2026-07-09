@@ -60,7 +60,7 @@ console.log("Currency:", orderConfig.currency);
 
   const shippingCharge = Number(orderConfig.shippingCharge) || 0;
   const freeShippingThreshold = Number(orderConfig.freeShippingMinAmount) || 0;
-  const taxPercentage = Number(orderConfig.taxPercentage) || 0;
+  const taxPercentage = typeof orderConfig.taxPercentage === 'number' ? orderConfig.taxPercentage : 3;
 
   // Calculate conditional active shipping cost
   const actualShippingCost = useMemo(() => {
@@ -256,14 +256,19 @@ console.log("Currency:", orderConfig.currency);
                     <span className="font-semibold text-[#2C2C2C]">{currencySymbol}{subtotal.toLocaleString(currency === 'USD' ? 'en-US' : 'en-IN', { minimumFractionDigits: currency === 'USD' ? 2 : 0, maximumFractionDigits: 2 })}</span>
                   </div>
                   
-                  {/* 🚀 DYNAMIC SHIPPING LINE */}
-                Shipping Premium
-
-                  {/* 🚀 DYNAMIC TAX / GST LINE */}
+                  {/* 🚀 DYNAMIC SHIPPING & TAX LINES */}
                   <div className="flex justify-between items-center text-[#2C2C2C]/70">
-                    <span className="font-medium">Boutique Duties & GST ({taxPercentage}%)</span>
-                    <span className="font-semibold text-[#2C2C2C]">{currencySymbol}{calculatedTaxAmount.toLocaleString(currency === 'USD' ? 'en-US' : 'en-IN', { minimumFractionDigits: currency === 'USD' ? 2 : 0, maximumFractionDigits: 2 })}</span>
+                    <span className="font-medium">Shipping Premium</span>
+                    <span className={`font-semibold ${actualShippingCost === 0 ? 'text-[#B76E79] font-bold uppercase text-[10px] tracking-wider' : 'text-[#2C2C2C]'}`}>
+                      {actualShippingCost === 0 ? 'Complimentary' : `${currencySymbol}${actualShippingCost.toLocaleString()}`}
+                    </span>
                   </div>
+                  {calculatedTaxAmount > 0 && (
+                    <div className="flex justify-between items-center text-[#2C2C2C]/70">
+                      <span className="font-medium">Estimated Tax ({taxPercentage}%)</span>
+                      <span className="font-semibold text-[#2C2C2C]">{currencySymbol}{calculatedTaxAmount.toLocaleString(currency === 'USD' ? 'en-US' : 'en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Final Total Row */}

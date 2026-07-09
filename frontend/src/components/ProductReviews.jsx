@@ -43,7 +43,7 @@ export function ProductReviews({ productId }) {
 
   if (loading) {
     return (
-      <div className="py-20 flex flex-col items-center justify-center gap-3 text-stone-400">
+      <div className="py-20 flex flex-col items-center justify-center gap-3 text-stone-800">
         <Loader2 className="w-5 h-5 animate-spin stroke-[1.5]" />
         <span className="text-[10px] tracking-widest uppercase font-medium">Curating Reflections...</span>
       </div>
@@ -60,7 +60,7 @@ export function ProductReviews({ productId }) {
 
       {totalReviews === 0 ? (
         <div className="py-20 text-center bg-stone-50/50 backdrop-blur-sm rounded-2xl border border-stone-200/40 max-w-2xl mx-auto">
-          <p className="text-stone-400 font-serif italic text-base">No reflections have been shared for this piece yet.</p>
+          <p className="text-stone-800 font-serif italic text-base">No reflections have been shared for this piece yet.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
@@ -70,7 +70,7 @@ export function ProductReviews({ productId }) {
             <h3 className="font-serif text-lg text-stone-800 mb-4">Aesthetic Rating</h3>
             <div className="flex items-baseline gap-2 mb-2">
               <span className="text-4xl font-serif text-stone-900">{averageRating.toFixed(1)}</span>
-              <span className="text-stone-400 text-sm">/ 5.0</span>
+              <span className="text-stone-800 text-sm">/ 5.0</span>
             </div>
             
             <div className="flex text-[#D4AF37] mb-6">
@@ -95,7 +95,7 @@ export function ProductReviews({ productId }) {
                       style={{ width: `${dist.percentage}%` }}
                     />
                   </div>
-                  <span className="w-8 text-right text-stone-400 font-mono">{Math.round(dist.percentage)}%</span>
+                  <span className="w-8 text-right text-stone-800 font-mono">{Math.round(dist.percentage)}%</span>
                 </div>
               ))}
             </div>
@@ -110,7 +110,7 @@ export function ProductReviews({ productId }) {
               >
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
                   <div className="flex items-center gap-4">
-                    <div className="w-11 h-11 rounded-full bg-stone-100/80 flex items-center justify-center text-stone-400 border border-stone-200/40 shrink-0">
+                    <div className="w-11 h-11 rounded-full bg-stone-100/80 flex items-center justify-center text-stone-800 border border-stone-200/40 shrink-0">
                       <User className="w-5 h-5 stroke-[1.5]" />
                     </div>
                     <div>
@@ -122,7 +122,7 @@ export function ProductReviews({ productId }) {
                           </span>
                         )}
                       </div>
-                      <p className="text-[10px] text-stone-400 uppercase tracking-widest mt-1">
+                      <p className="text-[10px] text-stone-800 uppercase tracking-widest mt-1">
                         {new Date(review.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                       </p>
                     </div>
@@ -174,7 +174,7 @@ export function ProductReviews({ productId }) {
           onClick={() => setActiveImage(null)}
         >
           <button 
-            className="absolute top-6 right-6 text-stone-400 hover:text-white p-2 rounded-full transition-colors bg-white/5 backdrop-blur"
+            className="absolute top-6 right-6 text-stone-800 hover:text-white p-2 rounded-full transition-colors bg-white/5 backdrop-blur"
             onClick={() => setActiveImage(null)}
             aria-label="Close interactive modal"
           >

@@ -10,7 +10,7 @@ function CertifiedJewellery() {
             <span className="text-xs uppercase tracking-[0.3em] text-[#B76E79] font-bold block mb-2">
               Certified Excellence
             </span>
-            <h2 className="font-serif text-4xl md:text-5xl font-light text-[#2C2C2C] tracking-wide mb-6">
+            <h2 className="font-serif text-4xl md:text-5xl font-bold text-[#2C2C2C] tracking-wide mb-6">
               Hallmarked & Certified Jewellery
             </h2>
             <p className="text-sm md:text-base text-stone-600 mb-8 leading-relaxed">

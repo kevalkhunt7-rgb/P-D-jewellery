@@ -31,7 +31,7 @@ function DiamondCollections() {
           <span className="text-xs uppercase tracking-[0.3em] text-[#B76E79] font-bold block mb-2">
             Our Collections
           </span>
-          <h2 className="font-serif text-4xl md:text-5xl font-light text-[#2C2C2C] tracking-wide mb-4">
+          <h2 className="font-serif text-4xl md:text-5xl font-bold text-[#2C2C2C] tracking-wide mb-4">
             Diamond Collections
           </h2>
           <p className="text-sm md:text-base text-stone-600 max-w-2xl mx-auto">
@@ -54,7 +54,7 @@ function DiamondCollections() {
           </div>
         ) : (
           /* 🌟 This is your core container grid. Added border/padding to make sure it's visible on screen */
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 w-full block clear-both min-h-[400px] p-2">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-8 w-full block clear-both min-h-[400px] p-2">
             {diamondOnlyProducts.map((product) => {
               // Safety fallback identification key tracker
               const productKey = product._id || product.id || Math.random().toString();

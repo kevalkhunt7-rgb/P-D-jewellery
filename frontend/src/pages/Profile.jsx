@@ -17,6 +17,7 @@ import { AddressManager } from '../components/AddressManager';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import { sanitizePhone, isValidPhone, PHONE_ERROR_MESSAGE } from '../utils/phoneValidation';
 
 // Subcomponents imports
 import { ProfileTab } from '../components/ProfileTab';
@@ -48,7 +49,7 @@ function Profile() {
   useEffect(() => {
     if (user) {
       setUserAddresses(user.addresses || []);
-      setEditData({ name: user.name, phone: user.phone || '' });
+      setEditData({ name: user.name, phone: sanitizePhone(user.phone || '') });
       setImagePreview(user.avatar?.url || null);
     }
   }, [user]);
@@ -63,6 +64,9 @@ function Profile() {
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
+    if (!isValidPhone(editData.phone)) {
+      return toast.error(PHONE_ERROR_MESSAGE);
+    }
     setUpdateLoading(true);
     try {
       const formData = new FormData();
@@ -169,7 +173,7 @@ function Profile() {
               <Sparkles className="w-4 h-4 text-[#D4AF37]" />
               <span className="text-xs uppercase tracking-[0.25em] text-[#E8C7B7]">Private Lounge</span>
             </div>
-            <h1 className="font-serif text-white text-2xl sm:text-4xl font-light">
+            <h1 className="font-serif text-white text-2xl sm:text-4xl font-bold">
               Welcome Back, <span className="italic text-[#FFF0EB]"> {user?.name || 'Guest'}</span>
             </h1>
             <p className="text-white/60 text-xs sm:text-sm mt-2 max-w-md">Your luxury profile dashboard awaits.</p>
@@ -211,10 +215,7 @@ function Profile() {
                 )}
               </div>
               <h2 className="font-serif text-lg font-medium text-[#2C2C2C]">{user?.name}</h2>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-[#B76E79]/10 to-[#D4AF37]/10 rounded-full border border-[#E8C7B7]/30 mt-1.5">
-                <Star className="w-3 h-3 text-[#D4AF37] fill-[#D4AF37]" />
-                <span className="text-[10px] uppercase font-semibold tracking-wider text-[#2C2C2C]/80">Elite Member</span>
-              </div>
+              
             </div>
 
             <nav className="mt-6 space-y-1">

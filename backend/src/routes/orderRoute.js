@@ -1,12 +1,13 @@
 import express from "express";
 
 import {
-    createOrder,
+    initiateCheckout,
+    confirmCheckout,
+    cancelCheckout,
     getMyOrders,
     getSingleOrder,
     getAllOrders,
     updateOrderStatus,
-    createRazorpayOrder,
     requestCancellation,
     getCancellationRequests,
     approveCancellation,
@@ -24,9 +25,9 @@ import {
 const router = express.Router();
 
 // ================= USER ROUTES =================
-router.post("/create", protect, createOrder);
-router.post("/checkout", protect, createOrder);
-router.post("/razorpay", protect, createRazorpayOrder);
+router.post("/checkout/initiate", protect, initiateCheckout);
+router.post("/checkout/confirm", protect, confirmCheckout);
+router.post("/checkout/cancel", protect, cancelCheckout);
 router.get("/my-orders", protect, getMyOrders);
 router.get("/single/:id", protect, getSingleOrder);
 

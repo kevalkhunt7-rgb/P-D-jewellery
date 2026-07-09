@@ -54,7 +54,7 @@ export function InstagramGallery() {
                 letterSpacing: '0.1em',
               }}
             >
-              @LUMIERE_JEWELRY
+              @PD_LUXURY_JEWELLERY
             </span>
           </div>
           <h2
@@ -154,7 +154,7 @@ export function InstagramGallery() {
             }}
           >
             <FiInstagram  className="w-5 h-5" />
-            Follow @lumiere_jewelry
+            Follow @pd_luxury_jewellery
           </button>
         </div>
 

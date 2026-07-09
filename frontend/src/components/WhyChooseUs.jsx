@@ -52,7 +52,7 @@ function WhyChooseUs() {
           <span className="text-xs uppercase tracking-[0.3em] text-[#B76E79] font-bold block mb-2">
             Why Choose Us
           </span>
-          <h2 className="font-serif text-4xl md:text-5xl font-light text-[#2C2C2C] tracking-wide mb-4">
+          <h2 className="font-serif text-4xl md:text-5xl font-bold text-[#2C2C2C] tracking-wide mb-4">
             The Atelier Promise
           </h2>
           <p className="text-sm md:text-base text-stone-600 max-w-2xl mx-auto">

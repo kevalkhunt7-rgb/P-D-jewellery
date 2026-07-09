@@ -89,7 +89,7 @@ function LiveGoldRates() {
           <span className="text-xs uppercase tracking-[0.3em] text-[#D4AF37] font-bold block mb-2">
             Live Rates
           </span>
-          <h2 className="font-serif text-4xl md:text-5xl font-light tracking-wide mb-4">
+          <h2 className="font-serif text-4xl md:text-5xl font-bold tracking-wide mb-4">
             Today's Gold Prices
           </h2>
           <p className="text-sm md:text-base text-stone-300 max-w-2xl mx-auto">
@@ -111,10 +111,10 @@ function LiveGoldRates() {
                 <h3 className="font-serif text-2xl text-[#D4AF37] mb-2">
                   {item.purity}
                 </h3>
-                <p className="text-4xl font-light font-serif tracking-wider">
+                <p className="text-4xl font-bold font-serif tracking-wider">
                   {item.price}
                 </p>
-                <p className="text-xs uppercase tracking-widest text-stone-400 mt-2">
+                <p className="text-xs uppercase tracking-widest text-stone-800 mt-2">
                   per gram
                 </p>
               </div>

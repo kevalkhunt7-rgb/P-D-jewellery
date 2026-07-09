@@ -94,6 +94,34 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const sendForgotOTP = async (email) => {
+    try {
+      const { data } = await api.post('/auth/forgot-password', { email });
+      if (data.success) {
+        toast.success(data.message || 'Password reset OTP sent!');
+        return { success: true, message: data.message };
+      }
+    } catch (error) {
+      const errMsg = error.response?.data?.message || 'Failed to send reset OTP';
+      toast.error(errMsg);
+      return { success: false, message: errMsg };
+    }
+  };
+
+  const resetPassword = async (email, otp, newPassword) => {
+    try {
+      const { data } = await api.post('/auth/reset-password', { email, otp, newPassword });
+      if (data.success) {
+        toast.success(data.message || 'Password reset successfully!');
+        return { success: true, message: data.message };
+      }
+    } catch (error) {
+      const errMsg = error.response?.data?.message || 'Failed to reset password';
+      toast.error(errMsg);
+      return { success: false, message: errMsg };
+    }
+  };
+
   const register = async (userData) => {
     try {
       const { data } = await api.post('/auth/register', userData);
@@ -133,9 +161,11 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     login,
-    loginWithGoogle, // <-- Added here so it's accessible across the app
+    loginWithGoogle,
     sendOTP,
     verifyOTP,
+    sendForgotOTP,
+    resetPassword,
     register,
     logout,
     refreshUser,

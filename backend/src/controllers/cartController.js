@@ -20,6 +20,7 @@ const serializeCart = async (cart, req) => {
       cartObj.cartItems = cartObj.cartItems.map(item => {
         item.price = Number((item.price / context.conversionRate).toFixed(2));
         if (item.product) {
+          // Backward compat: update populated product details
           item.product.price = Number((item.product.price / context.conversionRate).toFixed(2));
           if (item.product.originalPrice) {
             item.product.originalPrice = Number((item.product.originalPrice / context.conversionRate).toFixed(2));
@@ -34,6 +35,15 @@ const serializeCart = async (cart, req) => {
             item.product.pricing.originalPrice = Number((item.product.pricing.originalPrice / context.conversionRate).toFixed(2));
             item.product.pricing.salePrice = Number((item.product.pricing.salePrice / context.conversionRate).toFixed(2));
           }
+        }
+        // Format lockedPricing details if present
+        if (item.lockedPricing) {
+          item.lockedPricing.metalValue = Number((item.lockedPricing.metalValue / context.conversionRate).toFixed(2));
+          item.lockedPricing.makingCharge = Number((item.lockedPricing.makingCharge / context.conversionRate).toFixed(2));
+          item.lockedPricing.cgst = Number((item.lockedPricing.cgst / context.conversionRate).toFixed(2));
+          item.lockedPricing.sgst = Number((item.lockedPricing.sgst / context.conversionRate).toFixed(2));
+          item.lockedPricing.originalPrice = Number((item.lockedPricing.originalPrice / context.conversionRate).toFixed(2));
+          item.lockedPricing.salePrice = Number((item.lockedPricing.salePrice / context.conversionRate).toFixed(2));
         }
         return item;
       });
@@ -53,8 +63,8 @@ const serializeCart = async (cart, req) => {
   return cartObj;
 };
 
-// ================= DYNAMIC CART RECALCULATION =================
-const recalculateCartPrices = async (cart) => {
+// ================= DYNAMIC CART RECALCULATION (SUM TOTALS ONLY) =================
+const recalculateCartTotals = async (cart) => {
   if (!cart || !cart.cartItems || cart.cartItems.length === 0) {
     if (cart) {
       cart.totalItems = 0;
@@ -70,8 +80,9 @@ const recalculateCartPrices = async (cart) => {
   let totalPrice = 0;
 
   for (const item of cart.cartItems) {
-    const product = item.product;
-    if (product) {
+    // If lockedPricing is missing (e.g. legacy/migration carts), initialize it
+    if (!item.lockedPricing && item.product) {
+      const product = item.product;
       const calculation = calculatePriceBreakdown({
         goldRate24kt,
         purity: product.purity || "22KT",
@@ -81,14 +92,30 @@ const recalculateCartPrices = async (cart) => {
         discountPercentage: product.discountPercentage || 0,
       });
 
-      // Update in-memory item price
+      item.lockedPricing = {
+        goldRate24kt,
+        purity: product.purity || "22KT",
+        netWeight: product.netWeight || 0,
+        makingChargeType: product.makingChargeType || "per_gram",
+        makingChargeValue: product.makingChargeValue || 0,
+        metalValue: calculation.metalValue,
+        makingCharge: calculation.makingCharge,
+        cgst: calculation.cgst,
+        sgst: calculation.sgst,
+        originalPrice: calculation.originalPrice,
+        discountPercentage: calculation.discountPercentage,
+        salePrice: calculation.salePrice,
+        lockedAt: new Date(),
+      };
       item.price = calculation.salePrice;
-      totalPrice += calculation.salePrice * item.quantity;
+    }
+
+    if (item.lockedPricing) {
+      totalPrice += item.lockedPricing.salePrice * item.quantity;
       totalItems += item.quantity;
     }
   }
 
-  // Format pricing values to 2 decimal places at summary boundaries
   cart.totalItems = totalItems;
   cart.totalPrice = Number(totalPrice.toFixed(2));
   return cart;
@@ -109,6 +136,13 @@ export const addToCart = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Product not found",
+      });
+    }
+
+    if (product.status !== "active") {
+      return res.status(400).json({
+        success: false,
+        message: "Product is not active and cannot be purchased",
       });
     }
 
@@ -149,9 +183,26 @@ export const addToCart = async (req, res) => {
       discountPercentage: product.discountPercentage || 0,
     });
 
+    const lockedPricing = {
+      goldRate24kt,
+      purity: product.purity || "22KT",
+      netWeight: product.netWeight || 0,
+      makingChargeType: product.makingChargeType || "per_gram",
+      makingChargeValue: product.makingChargeValue || 0,
+      metalValue: calculation.metalValue,
+      makingCharge: calculation.makingCharge,
+      cgst: calculation.cgst,
+      sgst: calculation.sgst,
+      originalPrice: calculation.originalPrice,
+      discountPercentage: calculation.discountPercentage,
+      salePrice: calculation.salePrice,
+      lockedAt: new Date(),
+    };
+
     // Product Already Exists
     if (itemIndex > -1) {
       cart.cartItems[itemIndex].quantity += quantity;
+      cart.cartItems[itemIndex].lockedPricing = lockedPricing;
       cart.cartItems[itemIndex].price = calculation.salePrice;
     } else {
       // Add New Product
@@ -162,12 +213,13 @@ export const addToCart = async (req, res) => {
         price: calculation.salePrice,
         quantity,
         stock: product.stock,
+        lockedPricing,
       });
     }
 
-    // Recalculate Totals
+    // Recalculate Totals (Sum only)
     await cart.populate("cartItems.product");
-    await recalculateCartPrices(cart);
+    await recalculateCartTotals(cart);
     await cart.save();
 
     const serializedCart = await serializeCart(cart, req);
@@ -181,7 +233,7 @@ export const addToCart = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || String(error),
     });
   }
 };
@@ -207,8 +259,8 @@ export const getMyCart = async (req, res) => {
       });
     }
 
-    // Dynamically recalculate prices against current gold rate
-    await recalculateCartPrices(cart);
+    // Recalculate totals without changing existing locked prices
+    await recalculateCartTotals(cart);
     await cart.save();
 
     const serializedCart = await serializeCart(cart, req);
@@ -221,7 +273,7 @@ export const getMyCart = async (req, res) => {
     console.log(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || String(error),
     });
   }
 };
@@ -253,11 +305,27 @@ export const updateCartItem = async (req, res) => {
       });
     }
 
+    // Verify product still exists and stock is available
+    const product = await Product.findById(req.params.productId);
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product no longer exists",
+      });
+    }
+
+    if (product.stock < quantity) {
+      return res.status(400).json({
+        success: false,
+        message: `Only ${product.stock} items left in stock`,
+      });
+    }
+
     item.quantity = quantity;
 
-    // Recalculate Totals
+    // Recalculate Totals (keeps locked price, just adjusts quantity summation)
     await cart.populate("cartItems.product");
-    await recalculateCartPrices(cart);
+    await recalculateCartTotals(cart);
     await cart.save();
 
     const serializedCart = await serializeCart(cart, req);
@@ -271,7 +339,7 @@ export const updateCartItem = async (req, res) => {
     console.log(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || String(error),
     });
   }
 };
@@ -296,7 +364,7 @@ export const removeCartItem = async (req, res) => {
 
     // Recalculate Totals
     await cart.populate("cartItems.product");
-    await recalculateCartPrices(cart);
+    await recalculateCartTotals(cart);
     await cart.save();
 
     const serializedCart = await serializeCart(cart, req);
@@ -310,7 +378,7 @@ export const removeCartItem = async (req, res) => {
     console.log(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || String(error),
     });
   }
 };
@@ -344,7 +412,74 @@ export const clearCart = async (req, res) => {
     console.log(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Server Error",
+      message: error.message || String(error),
+    });
+  }
+};
+
+// ================= REFRESH/RE-LOCK CART PRICES =================
+export const refreshCartPrices = async (req, res) => {
+  try {
+    let cart = await Cart.findOne({
+      user: req.user._id,
+    }).populate("cartItems.product");
+
+    if (!cart || !cart.cartItems || cart.cartItems.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Your cart is empty",
+      });
+    }
+
+    const storeSettings = await getStoreSettingsCached();
+    const goldRate24kt = storeSettings.goldRate24kt;
+
+    for (const item of cart.cartItems) {
+      const product = item.product;
+      if (product) {
+        // Recalculate breakdown using current gold rate
+        const calculation = calculatePriceBreakdown({
+          goldRate24kt,
+          purity: product.purity || "22KT",
+          netWeight: product.netWeight || 0,
+          makingChargeType: product.makingChargeType || "per_gram",
+          makingChargeValue: product.makingChargeValue || 0,
+          discountPercentage: product.discountPercentage || 0,
+        });
+
+        item.lockedPricing = {
+          goldRate24kt,
+          purity: product.purity || "22KT",
+          netWeight: product.netWeight || 0,
+          makingChargeType: product.makingChargeType || "per_gram",
+          makingChargeValue: product.makingChargeValue || 0,
+          metalValue: calculation.metalValue,
+          makingCharge: calculation.makingCharge,
+          cgst: calculation.cgst,
+          sgst: calculation.sgst,
+          originalPrice: calculation.originalPrice,
+          discountPercentage: calculation.discountPercentage,
+          salePrice: calculation.salePrice,
+          lockedAt: new Date(),
+        };
+        item.price = calculation.salePrice;
+      }
+    }
+
+    await recalculateCartTotals(cart);
+    await cart.save();
+
+    const serializedCart = await serializeCart(cart, req);
+    res.status(200).json({
+      success: true,
+      message: "Cart prices successfully updated to current gold rates",
+      cart: serializedCart,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: error.message || String(error),
     });
   }
 };

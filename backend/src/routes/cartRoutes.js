@@ -6,6 +6,7 @@ import {
   updateCartItem,
   removeCartItem,
   clearCart,
+  refreshCartPrices,
 } from "../controllers/cartController.js";
 
 import {
@@ -53,6 +54,13 @@ router.delete(
   "/clear",
   protect,
   clearCart
+);
+
+// Refresh Locked Prices to current rates
+router.post(
+  "/refresh-prices",
+  protect,
+  refreshCartPrices
 );
 
 export default router;

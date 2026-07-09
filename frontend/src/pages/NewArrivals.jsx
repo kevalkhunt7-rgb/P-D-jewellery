@@ -130,7 +130,7 @@ export default function NewArrivalsPage() {
       <div className="absolute top-[30%] right-[-10%] w-[50vw] h-[50vw] bg-gradient-to-bl from-[#F7E7CE]/10 to-[#FFF0EB] rounded-full blur-[160px] pointer-events-none" />
 
       <section className="relative pt-20 pb-16 text-center px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <nav className="text-[10px] tracking-[0.25em] uppercase font-bold text-stone-400 mb-6 flex items-center justify-center gap-2">
+        <nav className="text-[10px] tracking-[0.25em] uppercase font-bold text-stone-800 mb-6 flex items-center justify-center gap-2">
           <Link to="/" className="hover:text-[#B76E79] transition-colors">Home</Link>
           <span className="text-stone-300">/</span>
           <span className="text-stone-800 tracking-widest">New Arrivals</span>
@@ -141,7 +141,7 @@ export default function NewArrivalsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            className="font-serif text-4xl sm:text-5xl lg:text-6xl tracking-wide font-light text-stone-900"
+            className="font-serif text-4xl sm:text-5xl lg:text-6xl tracking-wide font-bold text-stone-900"
           >
             New Arrivals
           </motion.h1>
@@ -154,7 +154,7 @@ export default function NewArrivalsPage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-10 sticky top-0 z-30">
         <div className="bg-white/70 backdrop-blur-xl border border-stone-200/60 rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between shadow-lg shadow-stone-950/5">
 
-          <div className="text-xs tracking-wider text-stone-500 font-light flex items-center gap-2">
+          <div className="text-xs tracking-wider text-stone-500 font-bold flex items-center gap-2">
             <Grid className="w-4 h-4 text-[#B76E79]/80 stroke-[1.5]" />
             Showing <span className="font-semibold text-stone-900">{filteredAndSortedProducts.length}</span> New Pieces
           </div>
@@ -169,9 +169,9 @@ export default function NewArrivalsPage() {
                 onChange={(e) => { setSearchQuery(e.target.value); setVisibleCount(8); }}
                 className="w-full bg-white border border-stone-200/80 rounded-full pl-9 pr-4 py-2 text-xs font-medium focus:outline-none focus:border-[#B76E79] focus:ring-1 focus:ring-[#B76E79]/20 tracking-wide transition-all"
               />
-              <Search className="w-3.5 h-3.5 text-stone-400 absolute left-3 top-3" />
+              <Search className="w-3.5 h-3.5 text-stone-800 absolute left-3 top-3" />
               {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="absolute right-3 top-3 text-stone-400 hover:text-stone-900">
+                <button onClick={() => setSearchQuery('')} className="absolute right-3 top-3 text-stone-800 hover:text-stone-900">
                   <X className="w-3 h-3" />
                 </button>
               )}
@@ -182,9 +182,9 @@ export default function NewArrivalsPage() {
                 onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
                 className="flex items-center gap-2 px-5 py-2 bg-white border border-stone-200/80 rounded-full text-xs font-bold tracking-wider text-stone-700 hover:text-stone-950 focus:outline-none transition-all"
               >
-                <span className="text-stone-400 font-light uppercase tracking-widest text-[10px]">Sort:</span>
+                <span className="text-stone-800 font-bold uppercase tracking-widest text-[10px]">Sort:</span>
                 <span>{sortLabelMap[sortBy]}</span>
-                <ChevronDown className={`w-3.5 h-3.5 text-stone-400 transition-transform duration-300 ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-3.5 h-3.5 text-stone-800 transition-transform duration-300 ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
 
               <AnimatePresence>
@@ -245,7 +245,7 @@ export default function NewArrivalsPage() {
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-xs font-bold tracking-[0.2em] uppercase text-stone-400">Valuation Tier</h4>
+              <h4 className="text-xs font-bold tracking-[0.2em] uppercase text-stone-800">Valuation Tier</h4>
               <div className="space-y-2.5">
                 {priceRanges.map((range) => {
                   const isChecked = selectedPriceRange === range.id;
@@ -279,7 +279,7 @@ export default function NewArrivalsPage() {
                 <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
                 <span>100% Certified Conflict-Free</span>
               </div>
-              <p className="text-[10px] text-stone-400 font-light leading-relaxed">
+              <p className="text-[10px] text-stone-800 font-bold leading-relaxed">
                 Every new arrival ships with full certification of authenticity.
               </p>
             </div>
@@ -301,8 +301,8 @@ export default function NewArrivalsPage() {
                   className="text-center py-24 bg-white/60 backdrop-blur-xl border border-stone-200/60 rounded-2xl max-w-xl mx-auto px-6 shadow-sm"
                 >
                   <Sparkles className="w-10 h-10 text-[#D4AF37]/50 mx-auto mb-4 stroke-[1.2]" />
-                  <h3 className="font-serif text-2xl font-light tracking-wide text-stone-900 mb-2">No New Arrivals Yet</h3>
-                  <p className="text-stone-500 text-xs font-light max-w-xs mx-auto leading-relaxed mb-8">
+                  <h3 className="font-serif text-2xl font-bold tracking-wide text-stone-900 mb-2">No New Arrivals Yet</h3>
+                  <p className="text-stone-500 text-xs font-bold max-w-xs mx-auto leading-relaxed mb-8">
                     Check back soon—our atelier is always crafting new pieces!
                   </p>
                   <Link

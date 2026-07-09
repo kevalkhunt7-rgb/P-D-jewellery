@@ -5,13 +5,13 @@ function CertificationPolicy() {
     <div className="min-h-screen bg-[#FDF8F3] text-[#2C2C2C] font-sans py-24">
       <div className="container mx-auto px-4 sm:px-6 lg:px-16">
         <div className="max-w-3xl mx-auto">
-          <h1 className="font-serif text-4xl md:text-5xl font-light tracking-wide mb-8">
+          <h1 className="font-serif text-4xl md:text-5xl font-bold tracking-wide mb-8">
             Certification Policy
           </h1>
 
           <div className="space-y-8">
             <section className="bg-white/60 backdrop-blur-md rounded-2xl p-6 md:p-8 border border-stone-200/60 shadow-sm">
-              <h2 className="font-serif text-2xl font-light mb-4 text-[#B76E79]">
+              <h2 className="font-serif text-2xl font-bold mb-4 text-[#B76E79]">
                 Our Certification Standards
               </h2>
               <p className="text-sm md:text-base leading-relaxed text-stone-700">
@@ -21,7 +21,7 @@ function CertificationPolicy() {
             </section>
 
             <section className="bg-white/60 backdrop-blur-md rounded-2xl p-6 md:p-8 border border-stone-200/60 shadow-sm">
-              <h2 className="font-serif text-2xl font-light mb-4 text-[#B76E79]">
+              <h2 className="font-serif text-2xl font-bold mb-4 text-[#B76E79]">
                 Diamond Certifications
               </h2>
               <p className="text-sm md:text-base leading-relaxed text-stone-700 mb-4">
@@ -31,7 +31,7 @@ function CertificationPolicy() {
             </section>
 
             <section className="bg-white/60 backdrop-blur-md rounded-2xl p-6 md:p-8 border border-stone-200/60 shadow-sm">
-              <h2 className="font-serif text-2xl font-light mb-4 text-[#B76E79]">
+              <h2 className="font-serif text-2xl font-bold mb-4 text-[#B76E79]">
                 Gemstone Certifications
               </h2>
               <p className="text-sm md:text-base leading-relaxed text-stone-700">
@@ -41,7 +41,7 @@ function CertificationPolicy() {
             </section>
 
             <section className="bg-white/60 backdrop-blur-md rounded-2xl p-6 md:p-8 border border-stone-200/60 shadow-sm">
-              <h2 className="font-serif text-2xl font-light mb-4 text-[#B76E79]">
+              <h2 className="font-serif text-2xl font-bold mb-4 text-[#B76E79]">
                 Hallmark Authentication
               </h2>
               <p className="text-sm md:text-base leading-relaxed text-stone-700">

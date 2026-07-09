@@ -1,0 +1,4 @@
+- **Framework & Routing**: Built with React 19 and Vite, using `react-router-dom` for client-side routing. The `App.jsx` file defines a nested route structure where `ProtectedRoute` guards the main `AdminLayout`, and a `SuperAdminRoute` further restricts access to sensitive areas like Settings.
+- **State Management**: Authentication state (token, user role) is managed globally via `AuthContext.jsx`, which persists sessions in `localStorage` and synchronizes Axios headers.
+- **UI Composition**: The `AdminLayout` component provides a persistent sidebar and header, utilizing `framer-motion` for animations and `react-icons` for visual consistency. Pages are organized as individual components under `src/pages/`, following a feature-based directory structure.
+- **API Integration**: A centralized Axios instance in `utils/api.js` handles HTTP requests, automatically injecting Bearer tokens from local storage for authenticated endpoints.
