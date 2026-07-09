@@ -22,6 +22,10 @@ function DiamondCollections() {
     );
   });
 
+  if (!loading && diamondOnlyProducts.length === 0) {
+    return null;
+  }
+
   return (
     <section className="py-20 px-4 bg-white min-h-screen block relative clear-both">
       <div className="container mx-auto max-w-6xl relative z-10">
@@ -48,16 +52,12 @@ function DiamondCollections() {
           <div className="text-center py-12 text-red-500">
             Error fetching diamonds: {error}
           </div>
-        ) : diamondOnlyProducts.length === 0 ? (
-          <div className="text-center py-12 text-stone-500 border border-dashed border-stone-200 rounded-xl">
-            No items with "Diamond" logged in their gemstone details found.
-          </div>
         ) : (
           /* 🌟 This is your core container grid. Added border/padding to make sure it's visible on screen */
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-8 w-full block clear-both min-h-[400px] p-2">
             {diamondOnlyProducts.map((product) => {
               // Safety fallback identification key tracker
-              const productKey = product._id || product.id || Math.random().toString();
+               const productKey = product._id || product.id || Math.random().toString();
               return (
                 <div key={productKey} className="w-full h-full block">
                   <ProductCard product={product} />

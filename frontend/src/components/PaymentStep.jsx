@@ -43,7 +43,7 @@ export default function PaymentStep({
   onCreatePayPalOrder,
   onApprovePayPalOrder
 }) {
-  const isIndia = countryCode === 'IN';
+  const isIndia = currency === 'INR';
 
   return (
     <motion.div

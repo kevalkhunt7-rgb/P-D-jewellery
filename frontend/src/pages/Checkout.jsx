@@ -173,7 +173,7 @@ export default function PremiumCheckoutPage() {
   const initiateCheckoutOrder = async (couponCodeVal) => {
     setIsLoading(true);
     try {
-      const selectedPaymentMethod = countryCode === 'IN' ? 'Razorpay' : 'PAYPAL';
+      const selectedPaymentMethod = currency === 'INR' ? 'Razorpay' : 'PAYPAL';
       const shippingAddress = {
         fullName: formData.name,
         phone: formData.phone,
