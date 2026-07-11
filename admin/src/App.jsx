@@ -28,6 +28,7 @@ import { CustomerProfile } from './pages/CustomberDetails'
 import { AdminLogin } from './pages/AdminLogin'
 import { CancellationRequests } from './pages/CancellationRequests'
 import { NotFound } from './pages/NotFound'
+import { ShippingRegions } from './pages/ShippingRegions'
 
 // 🔐 Role Guard Component for SuperAdmin Routes
 function SuperAdminRoute() {
@@ -49,10 +50,10 @@ function App() {
     <AuthProvider>
       <Toaster position="top-right" />
       <Routes>
-      
+
         <Route element={<ProtectedRoute />}>
           <Route element={<AdminLayout />}>
-        
+
             <Route index element={<Home />} />
             <Route path="/products" element={<Products />} />
             <Route path="/categories" element={<Categories />} />
@@ -61,9 +62,10 @@ function App() {
             <Route path="/cancellation-requests" element={<CancellationRequests />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/coupons" element={<Coupons />} />
+            <Route path="/shipping" element={<ShippingRegions />} />
             <Route path="/reviews" element={<Reviews />} />
             <Route path="/banners" element={<Banners />} />
-            
+
             {/* 🔐 Nesting /settings inside the SuperAdmin Guard */}
             <Route element={<SuperAdminRoute />}>
               <Route path="/settings" element={<Settings />} />
@@ -81,10 +83,10 @@ function App() {
             <Route path="/edit-coupon/:id" element={<EditCoupon />} />
             <Route path="/customers/:id" element={<CustomerProfile />} />
             <Route path="/*" element={<NotFound />} />
-        
+
           </Route>
         </Route>
-        <Route path="/login" element={<AdminLogin />}/>
+        <Route path="/login" element={<AdminLogin />} />
       </Routes>
     </AuthProvider>
   )

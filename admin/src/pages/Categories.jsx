@@ -133,7 +133,7 @@ export function Categories() {
         {categoriesData.map((category) => (
           <div key={category._id} className="bg-slate-900 border border-slate-800/80 rounded-2xl overflow-hidden shadow-sm flex flex-col justify-between group">
             <div>
-              <div className="h-32 w-full overflow-hidden border-b border-slate-800/40">
+              <div className="h-44 w-full overflow-hidden border-b border-slate-800/40">
                 <img
                   src={category.image}
                   alt={category.name}

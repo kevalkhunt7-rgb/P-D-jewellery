@@ -15,6 +15,8 @@ import {
     syncRefundStatus,
     handleRazorpayWebhook,
     deleteCancellationRecord,
+    adminCancelOrder,
+    deleteOrder,
 } from "../controllers/orderController.js";
 
 import {
@@ -55,7 +57,7 @@ router.put(
     "/cancel/:id",
     protect,
     adminOnly,
-    approveCancellation
+    adminCancelOrder
 );
 
 // Admin Cancellation & Refund Management
@@ -98,6 +100,14 @@ router.delete(
 router.post(
   "/webhook",
   handleRazorpayWebhook
+);
+
+// Delete order record (Admin Only)
+router.delete(
+  "/delete/:id",
+  protect,
+  adminOnly,
+  deleteOrder
 );
 
 export default router;

@@ -38,6 +38,7 @@ export function EditProduct() {
   const [images, setImages] = useState([null, null, null, null, null]);
   const [previews, setPreviews] = useState([null, null, null, null, null]);
   const [goldRate24kt, setGoldRate24kt] = useState(8000);
+  const [dailySilverRate999, setDailySilverRate999] = useState(100);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -61,7 +62,7 @@ export function EditProduct() {
     defaultRating: 0,
     gender: "unisex",
     specifications: createDefaultSpecifications(),
-    metalType: "Gold",
+    metalType: "GOLD",
     purity: "22KT",
     grossWeight: 0,
     netWeight: 0,
@@ -74,6 +75,7 @@ export function EditProduct() {
     certificateDetails: "",
     makingChargeType: "per_gram",
     makingChargeValue: 0,
+    extraCharges: [],
     gst: 3,
     cgstRate: 1.5,
     sgstRate: 1.5,
@@ -94,6 +96,7 @@ export function EditProduct() {
 
         if (goldRateRes.data.success) {
           setGoldRate24kt(goldRateRes.data.goldRate24kt);
+          setDailySilverRate999(goldRateRes.data.dailySilverRate999 || 100);
         }
 
         if (categoriesRes.data.success) {
@@ -151,7 +154,7 @@ export function EditProduct() {
               defaultRating: product.defaultRating || 0,
               gender: product.gender || "unisex",
               specifications: buildInitialSpecifications(product),
-              metalType: product.metalType || "Gold",
+              metalType: (product.metalType || "GOLD").toUpperCase(),
               purity: product.purity || "22KT",
               grossWeight: product.grossWeight || 0,
               netWeight: product.netWeight || 0,
@@ -164,6 +167,7 @@ export function EditProduct() {
               certificateDetails: product.certificateDetails || "",
               makingChargeType: product.makingChargeType || "per_gram",
               makingChargeValue: product.makingChargeValue || 0,
+              extraCharges: Array.isArray(product.extraCharges) ? product.extraCharges : [],
               gst: product.gst || 3,
               cgstRate: product.cgstRate || 1.5,
               sgstRate: product.sgstRate || 1.5,
@@ -416,19 +420,22 @@ export function EditProduct() {
 
     try {
       return calculatePriceBreakdown({
+        metalType: formData.metalType || "GOLD",
         goldRate24kt,
+        dailySilverRate999,
         purity: specPurity || formData.purity || "22KT",
         netWeight: parseFloat(specNetWeight) || parseFloat(formData.netWeight) || 0,
         makingChargeType: formData.makingChargeType || "per_gram",
         makingChargeValue: parseFloat(formData.makingChargeValue) || 0,
+        extraCharges: formData.extraCharges || [],
         cgstRate: parseFloat(formData.cgstRate) || 1.5,
         sgstRate: parseFloat(formData.sgstRate) || 1.5,
         discountPercentage: parseFloat(formData.discountPercentage) || 0,
       });
     } catch (e) {
-      return { originalPrice: 0, salePrice: 0, metalValue: 0, makingCharge: 0, cgst: 0, sgst: 0 };
+      return { originalPrice: 0, salePrice: 0, metalValue: 0, extraCharges: 0, makingCharge: 0, cgst: 0, sgst: 0 };
     }
-  }, [goldRate24kt, formData.specifications, formData.purity, formData.netWeight, formData.makingChargeType, formData.makingChargeValue, formData.cgstRate, formData.sgstRate, formData.discountPercentage]);
+  }, [goldRate24kt, dailySilverRate999, formData.specifications, formData.metalType, formData.purity, formData.netWeight, formData.makingChargeType, formData.makingChargeValue, formData.extraCharges, formData.cgstRate, formData.sgstRate, formData.discountPercentage]);
 
   if (fetching)
     return (
@@ -619,12 +626,13 @@ export function EditProduct() {
               </div>
               <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-500 border-t border-slate-900 pt-2.5">
                 <div>Metal Value: <span className="text-slate-400 font-semibold">₹{pricePreview.metalValue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                <div>Extra Charges: <span className="text-slate-400 font-semibold">₹{(pricePreview.extraCharges || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
                 <div>Making Charges: <span className="text-slate-400 font-semibold">₹{pricePreview.makingCharge.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
                 <div>CGST: <span className="text-slate-400 font-semibold">₹{pricePreview.cgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
                 <div>SGST: <span className="text-slate-400 font-semibold">₹{pricePreview.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
               </div>
               <p className="text-[9px] text-slate-600">
-                Calculated on-the-fly using 24KT Gold Rate: <strong>₹{goldRate24kt}/g</strong>.
+                Calculated on-the-fly using {formData.metalType === "SILVER" ? "999 Fine Silver" : "24KT Gold"} Rate: <strong>₹{formData.metalType === "SILVER" ? dailySilverRate999 : goldRate24kt}/g</strong>.
               </p>
             </div>
 
@@ -680,6 +688,79 @@ export function EditProduct() {
                 />
               </div>
             </div>
+
+            {/* Multi Extra Charges List Builder */}
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-300">
+                  Extra Charges (Non-Metal Additions: Gems, Pearls, Enamel)
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      extraCharges: [
+                        ...(prev.extraCharges || []),
+                        { label: "", value: 0 }
+                      ]
+                    }));
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-amber-500 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 hover:border-amber-500/30 rounded-lg transition-all"
+                >
+                  <FiPlus className="w-3.5 h-3.5" />
+                  Add Charge
+                </button>
+              </div>
+
+              {(!formData.extraCharges || formData.extraCharges.length === 0) ? (
+                <p className="text-[11px] text-slate-500 italic">No extra charges added yet. Click "Add Charge" to specify.</p>
+              ) : (
+                <div className="space-y-2">
+                  {formData.extraCharges.map((charge, idx) => (
+                    <div key={idx} className="flex gap-3 items-center bg-slate-950/40 p-2.5 rounded-xl border border-slate-850">
+                      <div className="flex-1 space-y-1">
+                        <input
+                          type="text"
+                          value={charge.label}
+                          placeholder="e.g. Pearls"
+                          onChange={(e) => {
+                            const newCharges = [...formData.extraCharges];
+                            newCharges[idx].label = e.target.value;
+                            setFormData(prev => ({ ...prev, extraCharges: newCharges }));
+                          }}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-700 focus:outline-none focus:border-amber-500/30 transition-colors"
+                        />
+                      </div>
+                      <div className="w-1/3 space-y-1">
+                        <input
+                          type="number"
+                          min="0"
+                          value={charge.value || ""}
+                          placeholder="₹ value"
+                          onChange={(e) => {
+                            const newCharges = [...formData.extraCharges];
+                            newCharges[idx].value = parseFloat(e.target.value) || 0;
+                            setFormData(prev => ({ ...prev, extraCharges: newCharges }));
+                          }}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-700 focus:outline-none focus:border-amber-500/30 transition-colors"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newCharges = formData.extraCharges.filter((_, i) => i !== idx);
+                          setFormData(prev => ({ ...prev, extraCharges: newCharges }));
+                        }}
+                        className="p-2 text-slate-500 hover:text-red-400 bg-slate-900 border border-slate-800 rounded-lg hover:border-red-500/20 transition-all"
+                      >
+                        <FiX className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Premium Jewellery Details */}
@@ -690,27 +771,34 @@ export function EditProduct() {
 
 
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-1.5">
-                <label htmlFor="purity" className="text-xs font-semibold text-slate-300">
-                  Purity
-                </label>
+                <label htmlFor="metalType" className="text-xs font-semibold text-slate-300">Metal Type *</label>
                 <div className="relative">
                   <select
-                    id="purity"
-                    value={formData.purity}
-                    onChange={handleInputChange}
+                    id="metalType"
+                    value={formData.metalType}
+                    onChange={(e) => {
+                      const selectedVal = e.target.value;
+                      const defaultPurity = selectedVal === "SILVER" ? "925 Sterling" : "22KT";
+                      setFormData((prev) => {
+                        const nextFormData = {
+                          ...prev,
+                          metalType: selectedVal,
+                          purity: defaultPurity,
+                        };
+                        nextFormData.specifications = syncSpecificationValue(
+                          prev.specifications,
+                          SPEC_FIELD_LABEL_MAP.purity,
+                          defaultPurity
+                        );
+                        return nextFormData;
+                      });
+                    }}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50 transition-colors appearance-none pr-10"
                   >
-                    <option value="" disabled>Select purity</option>
-                    <option value="9KT">9KT Gold</option>
-                    <option value="14KT">14KT Gold</option>
-                    <option value="18KT">18KT Gold</option>
-                    <option value="22KT">22KT Gold</option>
-                    <option value="24KT">24KT Gold</option>
-                    <option value="925 Sterling">925 Sterling Silver</option>
-                    <option value="950 Platinum">950 Platinum</option>
-                    <option value="999 Platinum">999 Platinum</option>
+                    <option value="GOLD">Gold</option>
+                    <option value="SILVER">Silver</option>
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -721,9 +809,44 @@ export function EditProduct() {
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="metalColor" className="text-xs font-semibold text-slate-300">
-                  Metal Color
-                </label>
+                <label htmlFor="purity" className="text-xs font-semibold text-slate-300">Purity *</label>
+                <div className="relative">
+                  <select
+                    id="purity"
+                    value={formData.purity}
+                    onChange={handleInputChange}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50 transition-colors appearance-none pr-10"
+                  >
+                    <option value="" disabled>Select purity</option>
+                    {formData.metalType === "SILVER" ? (
+                      <>
+                        <option value="999 Fine">999 Fine Silver (99.9%)</option>
+                        <option value="958">958 Britannia Silver (95.8%)</option>
+                        <option value="925 Sterling">925 Sterling Silver (92.5%)</option>
+                        <option value="900">900 Coin Silver (90.0%)</option>
+                        <option value="835">835 Silver (83.5%)</option>
+                        <option value="800">800 Silver (80.0%)</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="9KT">9KT Gold</option>
+                        <option value="14KT">14KT Gold</option>
+                        <option value="18KT">18KT Gold</option>
+                        <option value="22KT">22KT Gold</option>
+                        <option value="24KT">24KT Gold</option>
+                      </>
+                    )}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="metalColor" className="text-xs font-semibold text-slate-300">Metal Color</label>
                 <div className="relative">
                   <select
                     id="metalColor"

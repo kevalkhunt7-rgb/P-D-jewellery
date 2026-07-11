@@ -223,7 +223,7 @@ export default function CollectionsPage() {
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             className="font-serif text-4xl sm:text-5xl lg:text-6xl tracking-wide font-bold text-stone-900"
           >
-            The Atelier Collection
+            The Luxury Collection
           </motion.h1>
         </div>
       </section>
@@ -364,7 +364,7 @@ export default function CollectionsPage() {
           <aside className="hidden lg:block lg:col-span-3 sticky top-28 space-y-8 bg-white/40 backdrop-blur-xl border border-stone-200/40 rounded-2xl p-6 shadow-sm">
             <div className="flex items-center justify-between pb-4 border-b border-stone-200/60">
               <h3 className="font-serif text-lg tracking-wide text-stone-900 flex items-center gap-2">
-                <Sliders className="w-4 h-4 text-[#D4AF37]" /> Filter Atelier
+                <Sliders className="w-4 h-4 text-[#D4AF37]" /> Filter Luxury
               </h3>
               {(selectedCategory !== 'all' || selectedOccasion !== 'all' || selectedPriceRange !== 'all' || selectedGender !== 'all' || searchQuery !== '') && (
                 <button
@@ -475,7 +475,7 @@ export default function CollectionsPage() {
                 <span>100% Certified Conflict-Free</span>
               </div>
               <p className="text-[10px] text-stone-800 font-bold leading-relaxed">
-                Every inclusion variant from the Atelier collection ships with full GIA grading certification card keys.
+                Every inclusion variant from the Luxury collection ships with full GIA grading certification card keys.
               </p>
             </div>
           </aside>

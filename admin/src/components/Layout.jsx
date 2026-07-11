@@ -26,7 +26,8 @@ import {
   HiOutlineChevronRight,
   HiOutlineBars3,
   HiOutlineXMark,
-  HiOutlineExclamationTriangle
+  HiOutlineExclamationTriangle,
+  HiOutlineTruck
 } from "react-icons/hi2";
 
 const menuItems = [
@@ -37,6 +38,7 @@ const menuItems = [
   { icon: HiOutlineExclamationTriangle, label: "Cancellation Requests", path: "/cancellation-requests" },
   { icon: HiOutlineUsers, label: "Customers", path: "/customers" },
   { icon: HiOutlineTicket, label: "Coupons", path: "/coupons" },
+  { icon: HiOutlineTruck, label: "Shipping Regions", path: "/shipping" },
   { icon: HiOutlineStar, label: "Reviews", path: "/reviews" },
   { icon: HiOutlinePhoto, label: "Banners", path: "/banners" },
   { icon: HiOutlineHomeModern, label: "Inventory", path: "/inventory" },
@@ -120,7 +122,7 @@ export function AdminLayout() {
 
   useEffect(() => {
     fetchAlerts();
-   
+
     const interval = setInterval(fetchAlerts, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [dismissedNotifications]);
@@ -168,7 +170,7 @@ export function AdminLayout() {
       {/* Brand Logo Header */}
       <div className="p-5 border-b border-slate-800 flex items-center justify-between min-h-16">
         <div className="flex items-center gap-3 overflow-hidden">
-          <div><img src={administrator} alt="P&D Luxury Jewellery" className="w-12 h-12 " /></div>  
+          <div><img src={administrator} alt="P&D Luxury Jewellery" className="w-12 h-12 " /></div>
           {(!sidebarCollapsed || isMobile) && (
             <div className="flex flex-col opacity-100 transition-opacity duration-300">
               <h1 className="text-sm font-semibold tracking-tight leading-none text-white">
@@ -211,8 +213,8 @@ export function AdminLayout() {
               onClick={() => isMobile && setMobileMenuOpen(false)}
               title={!showLabel ? item.label : undefined}
               className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative ${isActive
-                  ? "bg-amber-500 text-slate-950 shadow-sm shadow-amber-500/10 font-semibold"
-                  : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                ? "bg-amber-500 text-slate-950 shadow-sm shadow-amber-500/10 font-semibold"
+                : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
                 }`}
             >
               <Icon
@@ -363,7 +365,7 @@ export function AdminLayout() {
                     <div className="max-h-[380px] overflow-y-auto divide-y divide-slate-800/40 [scrollbar-width:thin] [scrollbar-color:#1e293b_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-slate-800 [&::-webkit-scrollbar-thumb]:rounded-full">
                       <AnimatePresence initial={false}>
                         {notifications.length === 0 ? (
-                          <motion.div 
+                          <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             className="p-12 text-center flex flex-col items-center justify-center"
@@ -444,7 +446,7 @@ export function AdminLayout() {
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div> 
+            </div>
 
             <div className="w-[1px] h-5 bg-slate-800 mx-1 hidden sm:block" />
 
@@ -480,7 +482,7 @@ export function AdminLayout() {
                   </button>
                   {/* 🔐 Optional profile action role display check */}
                   {admin?.role === "superAdmin" && (
-                    <button 
+                    <button
                       onClick={() => { setProfileDropdownOpen(false); navigate('/settings'); }}
                       className="w-full text-left text-xs px-3 py-2 text-slate-300 hover:bg-slate-800 hover:text-slate-100 transition-colors"
                     >

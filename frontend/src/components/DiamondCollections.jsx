@@ -54,7 +54,7 @@ function DiamondCollections() {
           </div>
         ) : (
           /* 🌟 This is your core container grid. Added border/padding to make sure it's visible on screen */
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-8 w-full block clear-both min-h-[400px] p-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 w-full block clear-both min-h-[400px] p-2">
             {diamondOnlyProducts.map((product) => {
               // Safety fallback identification key tracker
                const productKey = product._id || product.id || Math.random().toString();

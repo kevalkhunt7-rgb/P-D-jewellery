@@ -7,7 +7,7 @@ import { getCurrencyContext } from "../utils/currencyHelper.js";
 // ================= LOCALIZED CART SERIALIZATION =================
 const serializeCart = async (cart, req) => {
   if (!cart) return cart;
-  
+
   const context = await getCurrencyContext(req);
   const cartObj = cart.toObject ? cart.toObject() : cart;
 
@@ -15,7 +15,7 @@ const serializeCart = async (cart, req) => {
   cartObj.currencySymbol = context.currencySymbol;
 
   if (context.currency === "USD") {
-    cartObj.totalPrice = Number((cartObj.totalPrice / context.conversionRate).toFixed(2));
+    let convertedItemsPrice = 0;
     if (cartObj.cartItems) {
       cartObj.cartItems = cartObj.cartItems.map(item => {
         item.price = Number((item.price / context.conversionRate).toFixed(2));
@@ -29,9 +29,10 @@ const serializeCart = async (cart, req) => {
           item.product.currencySymbol = context.currencySymbol;
           if (item.product.pricing) {
             item.product.pricing.metalValue = Number((item.product.pricing.metalValue / context.conversionRate).toFixed(2));
+            item.product.pricing.extraCharges = Number((item.product.pricing.extraCharges / context.conversionRate).toFixed(2));
             item.product.pricing.makingCharge = Number((item.product.pricing.makingCharge / context.conversionRate).toFixed(2));
-            if (item.product.pricing.cgst) item.product.pricing.cgst = Number((item.product.pricing.cgst / context.conversionRate).toFixed(2));
-            if (item.product.pricing.sgst) item.product.pricing.sgst = Number((item.product.pricing.sgst / context.conversionRate).toFixed(2));
+            item.product.pricing.cgst = Number((item.product.pricing.cgst / context.conversionRate).toFixed(2));
+            item.product.pricing.sgst = Number((item.product.pricing.sgst / context.conversionRate).toFixed(2));
             item.product.pricing.originalPrice = Number((item.product.pricing.originalPrice / context.conversionRate).toFixed(2));
             item.product.pricing.salePrice = Number((item.product.pricing.salePrice / context.conversionRate).toFixed(2));
           }
@@ -39,15 +40,28 @@ const serializeCart = async (cart, req) => {
         // Format lockedPricing details if present
         if (item.lockedPricing) {
           item.lockedPricing.metalValue = Number((item.lockedPricing.metalValue / context.conversionRate).toFixed(2));
+
+          if (Array.isArray(item.lockedPricing.extraCharges)) {
+            item.lockedPricing.extraCharges = item.lockedPricing.extraCharges.map(charge => ({
+              label: charge.label,
+              value: Number((charge.value / context.conversionRate).toFixed(2)),
+              _id: charge._id
+            }));
+          } else if (item.lockedPricing.extraCharges !== undefined) {
+            item.lockedPricing.extraCharges = Number((item.lockedPricing.extraCharges / context.conversionRate).toFixed(2));
+          }
+
           item.lockedPricing.makingCharge = Number((item.lockedPricing.makingCharge / context.conversionRate).toFixed(2));
           item.lockedPricing.cgst = Number((item.lockedPricing.cgst / context.conversionRate).toFixed(2));
           item.lockedPricing.sgst = Number((item.lockedPricing.sgst / context.conversionRate).toFixed(2));
           item.lockedPricing.originalPrice = Number((item.lockedPricing.originalPrice / context.conversionRate).toFixed(2));
           item.lockedPricing.salePrice = Number((item.lockedPricing.salePrice / context.conversionRate).toFixed(2));
         }
+        convertedItemsPrice += item.price * item.quantity;
         return item;
       });
     }
+    cartObj.totalPrice = Number(convertedItemsPrice.toFixed(2));
   } else {
     if (cartObj.cartItems) {
       cartObj.cartItems = cartObj.cartItems.map(item => {
@@ -63,7 +77,7 @@ const serializeCart = async (cart, req) => {
   return cartObj;
 };
 
-// ================= DYNAMIC CART RECALCULATION (SUM TOTALS ONLY) =================
+// ================= DYNAMIC CART RECALCULATION =================
 const recalculateCartTotals = async (cart) => {
   if (!cart || !cart.cartItems || cart.cartItems.length === 0) {
     if (cart) {
@@ -75,30 +89,38 @@ const recalculateCartTotals = async (cart) => {
 
   const storeSettings = await getStoreSettingsCached();
   const goldRate24kt = storeSettings.goldRate24kt;
+  const dailySilverRate999 = storeSettings.dailySilverRate999 || 100;
 
   let totalItems = 0;
   let totalPrice = 0;
 
   for (const item of cart.cartItems) {
-    // If lockedPricing is missing (e.g. legacy/migration carts), initialize it
-    if (!item.lockedPricing && item.product) {
-      const product = item.product;
+    const product = item.product;
+    if (product) {
       const calculation = calculatePriceBreakdown({
+        metalType: product.metalType || "GOLD",
         goldRate24kt,
+        dailySilverRate999,
         purity: product.purity || "22KT",
         netWeight: product.netWeight || 0,
         makingChargeType: product.makingChargeType || "per_gram",
         makingChargeValue: product.makingChargeValue || 0,
+        extraCharges: product.extraCharges || 0,
         discountPercentage: product.discountPercentage || 0,
       });
 
       item.lockedPricing = {
+        metalType: product.metalType || "GOLD",
         goldRate24kt,
+        dailySilverRate999,
         purity: product.purity || "22KT",
         netWeight: product.netWeight || 0,
         makingChargeType: product.makingChargeType || "per_gram",
         makingChargeValue: product.makingChargeValue || 0,
         metalValue: calculation.metalValue,
+        extraCharges: Array.isArray(product.extraCharges)
+          ? product.extraCharges.map(c => ({ label: c.label, value: c.value }))
+          : [],
         makingCharge: calculation.makingCharge,
         cgst: calculation.cgst,
         sgst: calculation.sgst,
@@ -128,7 +150,7 @@ export const addToCart = async (req, res) => {
 
     console.log("REQ BODY:", req.body);
     console.log("USER:", req.user);
-    
+
     // Product Check
     const product = await Product.findById(productId);
 

@@ -19,6 +19,8 @@ import adminRoutes from './src/routes/adminRoutes.js';
 import settingsRoutes from './src/routes/settingsRoutes.js';
 import paymentRoutes from './src/routes/paymentRoutes.js'
 import contactRoutes from './src/routes/contactRoutes.js';
+import shippingRoutes from './src/routes/shippingRoutes.js';
+import { seedDefaultRegions } from './src/utils/shippingSeeder.js';
 import dns from 'dns';
 import { fetchAndUpdateExchangeRate } from './src/utils/exchangeRateService.js';
 
@@ -27,7 +29,9 @@ import { fetchAndUpdateExchangeRate } from './src/utils/exchangeRateService.js';
 dns.setDefaultResultOrder('ipv4first');
 
 // Connect Database
-connectDB();
+connectDB().then(() => {
+  seedDefaultRegions();
+});
 
 // Fetch exchange rate on server start
 fetchAndUpdateExchangeRate();
@@ -45,7 +49,7 @@ app.use(helmet());
 
 // 1. FIXED: Explicit CORS Policy to prevent ERR_CONNECTION_RESET
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174' ,'http://localhost:5001' ,'https://p-d-jewellery.vercel.app'],
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5001', 'https://p-d-jewellery.vercel.app'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -108,6 +112,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/contact", contactRoutes);
+app.use("/api/shipping", shippingRoutes);
 
 // Error Handling Middleware Fallback (Keeps server alive if routes throw errors)
 app.use((err, req, res, next) => {

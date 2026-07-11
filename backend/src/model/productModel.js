@@ -81,14 +81,18 @@ const productSchema = new mongoose.Schema(
     // ==========================================
     metalType: {
       type: String,
-      enum: ["Gold", "Silver", "Platinum", "Brass", "Stainless-Steel", "Titanium"],
-      default: "Gold",
+      enum: ["GOLD", "SILVER"],
+      default: "GOLD",
     },
 
     purity: {
       type: String,
       required: true,
-      enum: ["22KT", "18KT", "14KT", "9KT", "24KT", "925 Sterling", "950 Platinum", "999 Platinum", "925", "999"],
+      enum: [
+        "22KT", "18KT", "14KT", "9KT", "24KT",
+        "925 Sterling", "950 Platinum", "999 Platinum", "925", "999",
+        "999 Fine", "958", "900", "835", "800"
+      ],
       default: "22KT",
     },
 
@@ -165,6 +169,13 @@ const productSchema = new mongoose.Schema(
       required: true,
       default: 0,
     },
+
+    extraCharges: [
+      {
+        label: { type: String, required: true },
+        value: { type: Number, required: true, default: 0 }
+      }
+    ],
 
     cgstRate: {
       type: Number,

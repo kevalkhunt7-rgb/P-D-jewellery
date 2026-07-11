@@ -14,6 +14,7 @@ export const getStoreSettingsCached = async () => {
 
   cachedSettings = {
     goldRate24kt: settings.goldRate24kt,
+    dailySilverRate999: settings.dailySilverRate999,
     usdConversionRate: settings.usdConversionRate,
     lastExchangeRateUpdate: settings.lastExchangeRateUpdate,
     updatedAt: settings.updatedAt,

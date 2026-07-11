@@ -59,7 +59,7 @@ const orderSchema = new mongoose.Schema(
           type: Number,
           required: true,
         },
-        
+
         originalPrice: {
           type: Number,
           required: true,
@@ -220,6 +220,27 @@ const orderSchema = new mongoose.Schema(
     paidAmount: {
       type: Number,
       default: 0,
+    },
+    shippingRegion: {
+      type: String,
+      default: "",
+    },
+    shippingCountry: {
+      type: String,
+      default: "",
+    },
+    shippingCurrency: {
+      type: String,
+      default: "INR",
+    },
+    deliveryTime: {
+      type: String,
+      default: "",
+    },
+    shippingMethod: {
+      type: String,
+      enum: ["Flat", "Weight"],
+      default: "Flat",
     },
     // ========== TWO-PHASE CHECKOUT FIELDS ==========
     // Tracks when checkout was initiated and when the PENDING order expires.

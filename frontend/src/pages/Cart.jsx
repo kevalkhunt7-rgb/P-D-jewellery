@@ -1,27 +1,27 @@
 import React, { useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom'; 
+import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   ShoppingBag, Trash2, Heart, Plus, Minus, ShieldCheck,
   Truck, Sparkles, ChevronRight, ArrowRight
 } from 'lucide-react';
-import { useCart } from '../context/CartContext'; 
+import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useProducts } from '../context/ProductContext';
-import { useSettings } from '../context/SettingsContext'; // 👈 1. Import Settings Context
+import { useSettings } from '../context/SettingsContext';
+import { useShipping } from '../context/ShippingContext';
 import { ProductCard } from '../components/ProductCard';
-
-;
 
 function Cart({ currentProduct, quantity, selectedFinish }) {
 
-  
+
   const { cart, updateQuantity, removeFromCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { products } = useProducts();
-  const { settings } = useSettings(); // 👈 2. Destructure Settings
-  const currencySymbol = settings?.general?.currencySymbol || '₹';
-  const currency = settings?.general?.currency || 'INR';
+  const { settings } = useSettings();
+  const { currencyContext, calculateShippingCost } = useShipping();
+  const currencySymbol = currencyContext?.currencySymbol || '₹';
+  const currency = currencyContext?.currency || 'INR';
   const navigate = useNavigate();
 
   // Recommendations logic - Pick 3 random products whenever page opens
@@ -47,39 +47,24 @@ function Cart({ currentProduct, quantity, selectedFinish }) {
    * 🚀 3. DYNAMIC ORDER RULES CALCULATIONS 
    * Safeguarded to check both singular and plural backend structures
    */
- 
-const orderConfig = useMemo(() => {
-  return settings?.order || settings?.orders || {};
-}, [settings]);
 
-console.log("Settings:", settings);
-console.log("Order Config:", orderConfig);
-console.log("Shipping:", orderConfig.shippingCharge);
-console.log("Currency:", orderConfig.currency);
+  // Calculate total net weight (in grams) for cart items
+  const totalWeight = useMemo(() => {
+    return cart.reduce((acc, item) => acc + ((item.product?.netWeight || item.netWeight || 0) * item.quantity), 0);
+  }, [cart]);
 
+  // Calculate dynamic shipping cost based on matched region
+  const shippingInfo = useMemo(() => {
+    return calculateShippingCost(subtotal, totalWeight);
+  }, [subtotal, totalWeight, calculateShippingCost]);
 
-  const shippingCharge = Number(orderConfig.shippingCharge) || 0;
-  const freeShippingThreshold = Number(orderConfig.freeShippingMinAmount) || 0;
-  const taxPercentage = typeof orderConfig.taxPercentage === 'number' ? orderConfig.taxPercentage : 3;
-
-  // Calculate conditional active shipping cost
-  const actualShippingCost = useMemo(() => {
-    if (freeShippingThreshold > 0 && subtotal >= freeShippingThreshold) {
-      return 0;
-    }
-    return shippingCharge;
-  }, [subtotal, shippingCharge, freeShippingThreshold]);
-
-
-  // Calculate precise tax breakdown
-  const calculatedTaxAmount = useMemo(() => {
-    return subtotal * (taxPercentage / 100);
-  }, [subtotal, taxPercentage]);
+  const actualShippingCost = shippingInfo.charge;
+  const deliveryTime = shippingInfo.deliveryTime;
 
   // Combined Grand Total
   const grandTotal = useMemo(() => {
-    return subtotal + actualShippingCost + calculatedTaxAmount;
-  }, [subtotal, actualShippingCost, calculatedTaxAmount]);
+    return subtotal + actualShippingCost;
+  }, [subtotal, actualShippingCost]);
 
   const handleRedirect = () => {
     navigate('/checkout');
@@ -255,20 +240,21 @@ console.log("Currency:", orderConfig.currency);
                     <span className="font-medium">Subtotal</span>
                     <span className="font-semibold text-[#2C2C2C]">{currencySymbol}{subtotal.toLocaleString(currency === 'USD' ? 'en-US' : 'en-IN', { minimumFractionDigits: currency === 'USD' ? 2 : 0, maximumFractionDigits: 2 })}</span>
                   </div>
-                  
+
                   {/* 🚀 DYNAMIC SHIPPING & TAX LINES */}
                   <div className="flex justify-between items-center text-[#2C2C2C]/70">
                     <span className="font-medium">Shipping Premium</span>
                     <span className={`font-semibold ${actualShippingCost === 0 ? 'text-[#B76E79] font-bold uppercase text-[10px] tracking-wider' : 'text-[#2C2C2C]'}`}>
-                      {actualShippingCost === 0 ? 'Complimentary' : `${currencySymbol}${actualShippingCost.toLocaleString()}`}
+                      {actualShippingCost === 0 ? 'Complimentary' : `${currencySymbol}${actualShippingCost.toLocaleString(currency === 'USD' ? 'en-US' : 'en-IN', { minimumFractionDigits: currency === 'USD' ? 2 : 0, maximumFractionDigits: 2 })}`}
                     </span>
                   </div>
-                  {calculatedTaxAmount > 0 && (
-                    <div className="flex justify-between items-center text-[#2C2C2C]/70">
-                      <span className="font-medium">Estimated Tax ({taxPercentage}%)</span>
-                      <span className="font-semibold text-[#2C2C2C]">{currencySymbol}{calculatedTaxAmount.toLocaleString(currency === 'USD' ? 'en-US' : 'en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  {deliveryTime && (
+                    <div className="flex justify-between items-center text-xs text-[#2C2C2C]/50 mt-1">
+                      <span>Estimated Delivery</span>
+                      <span className="font-medium text-[#2C2C2C]">{deliveryTime}</span>
                     </div>
                   )}
+
                 </div>
 
                 {/* Final Total Row */}

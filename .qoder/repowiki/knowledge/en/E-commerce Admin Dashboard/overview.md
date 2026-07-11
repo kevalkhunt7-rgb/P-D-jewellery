@@ -1,1 +1,0 @@
-A React-based administrative interface for managing jewelry store operations, including inventory, orders, customers, and analytics.

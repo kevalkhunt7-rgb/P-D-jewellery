@@ -34,12 +34,9 @@ const policies = [
     "We implement industry-standard security measures including SSL encryption, secure servers, and controlled system access to help protect your personal data against unauthorized access or misuse.",
 
   
-  ],
+  ]
 
-  note: {
-    tone: "info",
-    text: "You may request access, correction, or deletion of your personal data at any time by contacting our support team. We will respond to eligible privacy requests in accordance with applicable laws."
-  },
+ 
 },{
   id: "refund-policy",
   title: "Refund Policy",
@@ -58,12 +55,9 @@ const policies = [
     "If a cancellation request is declined, no refund will be processed, and your order will continue as scheduled.",
 
     "For any refund-related queries, you may contact our customer support team with your order details."
-  ],
+  ]
 
-  note: {
-    tone: "info",
-    text: "Refunds are issued only to the original payment method used during checkout and cannot be transferred to another account or payment method."
-  },
+ 
 },
   {
   id: "shipping-policy",
@@ -85,12 +79,7 @@ const policies = [
     "Once your order has been dispatched, a confirmation email containing your shipment tracking details and an attached e-invoice (PDF) will be sent, allowing you to track your order in real time.",
 
     "Every shipment is securely packaged to help ensure your jewellery arrives safely and in excellent condition."
-  ],
-
-  note: {
-    tone: "info",
-    text: "Delivery timelines are estimates and may vary due to product customization, courier operations, weather conditions, public holidays, or other unforeseen circumstances."
-  },
+  ]
 },
   {
   id: "terms-and-conditions",
@@ -114,12 +103,7 @@ const policies = [
     "By using our website, you agree not to engage in unlawful activities, transmit malicious software, interfere with website functionality, or misuse our services in any manner.",
 
     "Your use of our website is also subject to our Privacy Policy, Shipping Policy, Refund Policy, and other applicable policies published on this website."
-  ],
-
-  note: {
-    tone: "info",
-    text: "These Terms & Conditions are governed by the laws of India. Any disputes arising from the use of this website shall be subject to the exclusive jurisdiction of the courts in Surat, Gujarat."
-  },
+  ]
 },
 
   {
@@ -140,12 +124,7 @@ const policies = [
     "If your cancellation request is declined, the order will continue to be processed or delivered as scheduled.",
 
     "Orders that have already been shipped, delivered, or entered an irreversible production stage may not be eligible for cancellation."
-  ],
-
-  note: {
-    tone: "info",
-    text: "You can track the status of your cancellation request from your account. Our support team may contact you if additional information is required."
-  },
+  ]
 },
   
  {
@@ -166,18 +145,13 @@ const policies = [
     "Orders will be confirmed only after successful payment authorization. If a payment fails or is declined, the order will not be processed until payment is successfully completed.",
 
     "In the event of payment failures or duplicate transactions, any eligible refunds will be processed according to our Refund Policy and the policies of the respective payment provider."
-  ],
-
-  note: {
-    tone: "warning",
-    text: "Never share your OTP, UPI PIN, card PIN, passwords, or banking credentials with anyone. P&D Luxury Jewellery will never ask for this information through phone calls, emails, or messages."
-  },
+  ]
 },
   
 ];
 
 const readingTime = (policy) => {
-  const words = (policy.intro + " " + policy.bullets.join(" ") + " " + policy.note.text).split(/\s+/).length;
+  const words = (policy.intro + " " + policy.bullets.join(" ") + " " ).split(/\s+/).length;
   return Math.max(1, Math.ceil(words / 200));
 };
 
@@ -649,13 +623,9 @@ const PolicyCard = ({ policy, index, isDark, isOpen, onToggleAccordion, register
         ))}
       </ul>
 
-      <NoteBox isDark={isDark} tone={policy.note.tone} text={policy.note.text} />
+     
 
-      <PolicyAccordion isDark={isDark} isOpen={isOpen} onToggle={onToggleAccordion} title="Legal & additional details">
-        This policy forms part of our full Terms of Service and is reviewed periodically to reflect changes in law, courier
-        partnerships, and payment regulation. If any clause here conflicts with a signed order confirmation, the order
-        confirmation takes precedence for that specific purchase.
-      </PolicyAccordion>
+      
     </motion.section>
   );
 };

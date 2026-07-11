@@ -9,10 +9,12 @@ import Razorpay from "razorpay";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import crypto from "crypto";
-import { getCurrencyContext } from "../utils/currencyHelper.js";
+import { getCurrencyContext, getCurrencySymbol, getCountryCode } from "../utils/currencyHelper.js";
+import { getActiveRegionsCached } from "../utils/shippingCache.js";
 import { refundPaypalCapture, getPaypalRefundStatus } from "./paypalController.js";
 import paypalClient from "../config/paypal.js";
 import paypal from "@paypal/checkout-server-sdk";
+import cron from "node-cron";
 import {
   sendOrderConfirmationEmail,
   sendOrderStatusUpdateEmail,
@@ -26,9 +28,14 @@ const serializeOrder = async (order, req) => {
   const context = await getCurrencyContext(req);
   const orderObj = order.toObject ? order.toObject() : order;
 
+  // If order is not paid and is PENDING, show its status as FAILED
+  if (!orderObj.isPaid && orderObj.orderStatus === "PENDING") {
+    orderObj.orderStatus = "FAILED";
+  }
+
   // Get the currency to use: prefer the order's display currency
   const useCurrency = orderObj.displayCurrency || context.currency;
-  const useSymbol = useCurrency === "USD" ? "$" : "₹";
+  const useSymbol = getCurrencySymbol(useCurrency);
 
   orderObj.currency = useCurrency;
   orderObj.currencySymbol = useSymbol;
@@ -38,7 +45,7 @@ const serializeOrder = async (order, req) => {
   orderObj.shippingPrice = orderObj.displayShippingPrice || orderObj.shippingPrice;
   orderObj.taxPrice = orderObj.displayTaxPrice || orderObj.taxPrice;
   orderObj.totalPrice = orderObj.displayTotalPrice || orderObj.totalPrice;
-  orderObj.discountAmount = orderObj.displayCurrency === "USD" && orderObj.exchangeRate
+  orderObj.discountAmount = orderObj.displayCurrency !== "INR" && orderObj.exchangeRate
     ? Number((orderObj.discountAmount / orderObj.exchangeRate).toFixed(2))
     : orderObj.discountAmount;
 
@@ -60,6 +67,11 @@ const serializeOrder = async (order, req) => {
 const serializeOrderForAdmin = async (order) => {
   if (!order) return order;
   const orderObj = order.toObject ? order.toObject() : order;
+
+  // If order is not paid and is PENDING, show its status as FAILED
+  if (!orderObj.isPaid && orderObj.orderStatus === "PENDING") {
+    orderObj.orderStatus = "FAILED";
+  }
 
   // Admin always sees INR
   orderObj.currency = "INR";
@@ -134,24 +146,14 @@ export const cleanupExpiredOrders = async () => {
             for (const item of dbOrder.orderItems) {
               await Product.findByIdAndUpdate(
                 item.product,
-                { $inc: { stock: item.quantity, totalSales: -item.quantity } },
-                { session }
-              );
-            }
-          } else {
-            for (const item of dbOrder.orderItems) {
-              await Product.findByIdAndUpdate(
-                item.product,
-                { $inc: { totalSales: -item.quantity } },
+                { $inc: { stock: item.quantity } },
                 { session }
               );
             }
           }
-          dbOrder.orderStatus = "FAILED";
-          dbOrder.expiresAt = undefined;
-          await dbOrder.save({ session });
+          await Order.findByIdAndDelete(order._id).session(session);
           await session.commitTransaction();
-          console.log(`[Checkout Cleanup] Restored stock and marked expired order ${order._id} as FAILED.`);
+          console.log(`[Checkout Cleanup] Restored stock and permanently deleted expired order ${order._id}.`);
         } else {
           await session.abortTransaction();
         }
@@ -193,10 +195,9 @@ export const initiateCheckout = async (req, res) => {
 
     // 1. Fetch static settings & cart OUTSIDE the transaction to minimize locking & read overhead.
     const settings = await Settings.findOne() || await Settings.create({});
-    const shippingCharge = settings.order?.shippingCharge || 0;
-    const freeShippingMinAmount = settings.order?.freeShippingMinAmount || 0;
     const taxPercentage = settings.order?.taxPercentage || 0;
     const enableTracking = settings.inventory?.enableTracking !== false;
+    const activeRegions = await getActiveRegionsCached();
 
     const cart = await Cart.findOne({ user: req.user._id }).populate("cartItems.product");
     if (!cart || !cart.cartItems || cart.cartItems.length === 0) {
@@ -207,8 +208,9 @@ export const initiateCheckout = async (req, res) => {
     }
 
     const context = await getCurrencyContext(req);
-    const storeSettings = await StoreSettings.findOne() || await StoreSettings.create({ goldRate24kt: 8000 });
+    const storeSettings = await StoreSettings.findOne() || await StoreSettings.create({ goldRate24kt: 8000, dailySilverRate999: 100 });
     const goldRate24kt = storeSettings.goldRate24kt;
+    const dailySilverRate999 = storeSettings.dailySilverRate999 || 100;
 
     let itemsPrice = 0; // INR
     const verifiedOrderItems = [];
@@ -235,35 +237,37 @@ export const initiateCheckout = async (req, res) => {
         });
       }
 
-      // If lockedPricing is missing (migration/legacy case), initialize it now
-      if (!item.lockedPricing) {
-        const breakdown = calculatePriceBreakdown({
-          goldRate24kt,
-          purity: product.purity || "22KT",
-          netWeight: product.netWeight || 0,
-          makingChargeType: product.makingChargeType || "per_gram",
-          makingChargeValue: product.makingChargeValue || 0,
-          discountPercentage: product.discountPercentage || 0,
-        });
+      // Always recalculate pricing using current rates and latest product details
+      const breakdown = calculatePriceBreakdown({
+        metalType: product.metalType || "GOLD",
+        goldRate24kt,
+        dailySilverRate999,
+        purity: product.purity || "22KT",
+        netWeight: product.netWeight || 0,
+        makingChargeType: product.makingChargeType || "per_gram",
+        makingChargeValue: product.makingChargeValue || 0,
+        extraCharges: product.extraCharges || 0,
+        discountPercentage: product.discountPercentage || 0,
+      });
 
-        item.lockedPricing = {
-          goldRate24kt,
-          purity: product.purity || "22KT",
-          netWeight: product.netWeight || 0,
-          makingChargeType: product.makingChargeType || "per_gram",
-          makingChargeValue: product.makingChargeValue || 0,
-          metalValue: breakdown.metalValue,
-          makingCharge: breakdown.makingCharge,
-          cgst: breakdown.cgst,
-          sgst: breakdown.sgst,
-          originalPrice: breakdown.originalPrice,
-          discountPercentage: breakdown.discountPercentage,
-          salePrice: breakdown.salePrice,
-          lockedAt: new Date(),
-        };
-      }
-
-      const lp = item.lockedPricing;
+      const lp = {
+        metalType: product.metalType || "GOLD",
+        goldRate24kt,
+        dailySilverRate999,
+        purity: product.purity || "22KT",
+        netWeight: product.netWeight || 0,
+        makingChargeType: product.makingChargeType || "per_gram",
+        makingChargeValue: product.makingChargeValue || 0,
+        metalValue: breakdown.metalValue,
+        extraCharges: breakdown.extraCharges,
+        makingCharge: breakdown.makingCharge,
+        cgst: breakdown.cgst,
+        sgst: breakdown.sgst,
+        originalPrice: breakdown.originalPrice,
+        discountPercentage: breakdown.discountPercentage,
+        salePrice: breakdown.salePrice,
+        lockedAt: new Date(),
+      };
       const itemTotalPrice = Number((lp.salePrice * item.quantity).toFixed(2));
       itemsPrice += itemTotalPrice;
 
@@ -309,8 +313,73 @@ export const initiateCheckout = async (req, res) => {
       });
     }
 
-    // Dynamic shipping cost
-    const calculatedShippingPrice = (freeShippingMinAmount > 0 && itemsPrice >= freeShippingMinAmount) ? 0 : shippingCharge;
+    // Dynamic shipping cost from region rules
+    let calculatedShippingPrice = 0; // INR
+    let shippingRegion = "Rest of World";
+    let shippingCountry = "US";
+    let shippingCurrency = "USD";
+    let deliveryTime = "7–10 Business Days";
+    let shippingMethod = "Flat";
+
+    const orderCountryCode = getCountryCode(shippingAddress.country) || "IN";
+    shippingCountry = orderCountryCode;
+
+    let matchedRegion = activeRegions.find(r => r.countries.includes(orderCountryCode));
+    if (!matchedRegion) {
+      matchedRegion = activeRegions.find(r => r.isDefault === true);
+    }
+
+    if (matchedRegion) {
+      shippingRegion = matchedRegion.name;
+      shippingCurrency = matchedRegion.currency || "USD";
+      deliveryTime = matchedRegion.deliveryTime || "5–7 Business Days";
+
+      // Calculate total net weight (in grams) for cart items
+      let totalWeight = 0;
+      for (const item of cart.cartItems) {
+        if (item.product) {
+          totalWeight += (item.product.netWeight || 0) * (item.quantity || 1);
+        }
+      }
+
+      let rawShippingCharge = matchedRegion.flatShippingCharge || 0;
+      let threshold = matchedRegion.freeShippingThreshold;
+
+      // Check for weight-wise rules
+      if (matchedRegion.weightRules && matchedRegion.weightRules.length > 0) {
+        const matchedWeightRule = matchedRegion.weightRules.find(
+          r => totalWeight >= r.minWeight && totalWeight < r.maxWeight
+        );
+        if (matchedWeightRule) {
+          rawShippingCharge = matchedWeightRule.charge;
+          shippingMethod = "Weight";
+        }
+      }
+
+      // Convert matched region's shipping charge (which is in USD or INR) to INR
+      const storeSettings = await StoreSettings.findOne() || await StoreSettings.create({ goldRate24kt: 8000, dailySilverRate999: 100 });
+      const usdConversionRate = storeSettings.usdConversionRate || 94.4;
+
+      const ruleConversionRate = matchedRegion.currency === "INR" ? 1 : usdConversionRate;
+      const itemsPriceInRuleCurrency = itemsPrice / ruleConversionRate;
+
+      if (threshold !== null && threshold !== undefined && threshold > 0 && itemsPriceInRuleCurrency >= threshold) {
+        calculatedShippingPrice = 0;
+      } else {
+        // Convert shipping charge back to INR for master totals
+        calculatedShippingPrice = Number((rawShippingCharge * ruleConversionRate).toFixed(2));
+      }
+    } else {
+      // General settings fallback logic (in case no regions or defaults are found)
+      const settingsShippingCharge = settings.order?.shippingCharge || 0;
+      const settingsFreeShippingThreshold = settings.order?.freeShippingMinAmount || 0;
+      
+      if (settingsFreeShippingThreshold > 0 && itemsPrice >= settingsFreeShippingThreshold) {
+        calculatedShippingPrice = 0;
+      } else {
+        calculatedShippingPrice = settingsShippingCharge;
+      }
+    }
 
     // Validate coupon and compute discount
     let discountAmount = 0;
@@ -347,28 +416,45 @@ export const initiateCheckout = async (req, res) => {
       appliedCouponCode = coupon.code;
     }
 
-    // Dynamic tax calculation
-    const calculatedTaxPrice = Number(((itemsPrice - discountAmount) * (taxPercentage / 100)).toFixed(2));
+    // Dynamic tax calculation - Forced to 0 as requested
+    const calculatedTaxPrice = 0;
 
     // Master grand total in INR
-    const totalPrice = Number((itemsPrice + calculatedShippingPrice + calculatedTaxPrice - discountAmount).toFixed(2));
+    let totalPrice = Number((itemsPrice + calculatedShippingPrice - discountAmount).toFixed(2));
 
     // Display values (converted to USD if applicable)
     const displayCurrency = context.currency;
     let displayItemsPrice = itemsPrice;
     let displayShippingPrice = calculatedShippingPrice;
     let displayTaxPrice = calculatedTaxPrice;
+    let displayDiscountAmount = discountAmount;
     let displayTotalPrice = totalPrice;
 
-    if (displayCurrency === "USD") {
+    if (displayCurrency !== "INR") {
       displayItemsPrice = Number((itemsPrice / context.conversionRate).toFixed(2));
       displayShippingPrice = Number((calculatedShippingPrice / context.conversionRate).toFixed(2));
-      displayTaxPrice = Number((calculatedTaxPrice / context.conversionRate).toFixed(2));
-      displayTotalPrice = Number((totalPrice / context.conversionRate).toFixed(2));
+      displayTaxPrice = 0;
+      displayDiscountAmount = Number((discountAmount / context.conversionRate).toFixed(2));
+
+      // Calculate total in display currency as the exact sum of the rounded display values
+      displayTotalPrice = Number((displayItemsPrice + displayShippingPrice + displayTaxPrice - displayDiscountAmount).toFixed(2));
+
+      // Sync back to database INR values to guarantee absolute consistency with payment gateways
+      itemsPrice = Number((displayItemsPrice * context.conversionRate).toFixed(2));
+      calculatedShippingPrice = Number((displayShippingPrice * context.conversionRate).toFixed(2));
+      discountAmount = Number((displayDiscountAmount * context.conversionRate).toFixed(2));
+      totalPrice = Number((displayTotalPrice * context.conversionRate).toFixed(2));
+    } else {
+      displayItemsPrice = itemsPrice;
+      displayShippingPrice = calculatedShippingPrice;
+      displayTaxPrice = 0;
+      displayDiscountAmount = discountAmount;
+      totalPrice = Number((itemsPrice + calculatedShippingPrice - discountAmount).toFixed(2));
+      displayTotalPrice = totalPrice;
     }
 
-    // Set order expiry (30 mins from now)
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    // Set order expiry (10 mins from now)
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     // 2. Perform Stock Reservation & Order Document Creation inside a Retriable Transaction
     let createdOrder = null;
@@ -379,21 +465,12 @@ export const initiateCheckout = async (req, res) => {
         for (const item of verifiedOrderItems) {
           const updatedProduct = await Product.findOneAndUpdate(
             { _id: item.product, stock: { $gte: item.quantity } },
-            { $inc: { stock: -item.quantity, totalSales: item.quantity } },
+            { $inc: { stock: -item.quantity } },
             { returnDocument: "after", session }
           );
           if (!updatedProduct) {
             throw new Error(`${item.name} went out of stock while placing order`);
           }
-        }
-      } else {
-        // If tracking is disabled, only increment totalSales without decrementing stock
-        for (const item of verifiedOrderItems) {
-          await Product.findByIdAndUpdate(
-            item.product,
-            { $inc: { totalSales: item.quantity } },
-            { session }
-          );
         }
       }
 
@@ -420,6 +497,12 @@ export const initiateCheckout = async (req, res) => {
 
         paidCurrency: displayCurrency,
         paidAmount: displayTotalPrice,
+
+        shippingRegion,
+        shippingCountry,
+        shippingCurrency,
+        deliveryTime,
+        shippingMethod,
 
         orderStatus: "PENDING",
         checkoutInitiatedAt: new Date(),
@@ -455,7 +538,7 @@ export const initiateCheckout = async (req, res) => {
           purchase_units: [
             {
               amount: {
-                currency_code: "USD",
+                currency_code: displayCurrency === "INR" ? "USD" : displayCurrency,
                 value: Number(displayTotalPrice).toFixed(2),
               },
             },
@@ -477,25 +560,17 @@ export const initiateCheckout = async (req, res) => {
 
     } catch (gatewayError) {
       console.error("[Checkout Gateway Error]: Failed to create payment gateway order:", gatewayError);
-      
+
       // Fallback: If gateway order creation failed, immediately release stock & mark order as FAILED
       try {
         if (enableTracking) {
           for (const item of verifiedOrderItems) {
             await Product.findByIdAndUpdate(item.product, {
-              $inc: { stock: item.quantity, totalSales: -item.quantity }
-            });
-          }
-        } else {
-          for (const item of verifiedOrderItems) {
-            await Product.findByIdAndUpdate(item.product, {
-              $inc: { totalSales: -item.quantity }
+              $inc: { stock: item.quantity }
             });
           }
         }
-        await Order.findByIdAndUpdate(createdOrder._id, {
-          $set: { orderStatus: "FAILED", expiresAt: undefined }
-        });
+        await Order.findByIdAndDelete(createdOrder._id);
       } catch (cleanupErr) {
         console.error("[Checkout Gateway Fallback Error]: Failed to restore stock & mark order as failed:", cleanupErr);
       }
@@ -582,6 +657,17 @@ export const confirmCheckout = async (req, res) => {
         .digest("hex");
 
       if (generatedSignature !== razorpaySignature) {
+        if (order.inventoryTracked !== false) {
+          for (const item of order.orderItems) {
+            await Product.findByIdAndUpdate(
+              item.product,
+              { $inc: { stock: item.quantity } },
+              { session }
+            );
+          }
+        }
+        await Order.findByIdAndDelete(orderId).session(session);
+        await session.commitTransaction();
         return res.status(400).json({
           success: false,
           message: "Razorpay signature verification failed",
@@ -609,6 +695,17 @@ export const confirmCheckout = async (req, res) => {
       const response = await paypalClient.execute(request);
 
       if (response.result.status !== "COMPLETED") {
+        if (order.inventoryTracked !== false) {
+          for (const item of order.orderItems) {
+            await Product.findByIdAndUpdate(
+              item.product,
+              { $inc: { stock: item.quantity } },
+              { session }
+            );
+          }
+        }
+        await Order.findByIdAndDelete(orderId).session(session);
+        await session.commitTransaction();
         return res.status(400).json({
           success: false,
           message: `PayPal capture status is ${response.result.status}, expected COMPLETED`,
@@ -631,6 +728,15 @@ export const confirmCheckout = async (req, res) => {
     order.expiresAt = undefined;
 
     await order.save({ session });
+
+    // Increment product total sales since payment is successful
+    for (const item of order.orderItems) {
+      await Product.findByIdAndUpdate(
+        item.product,
+        { $inc: { totalSales: item.quantity } },
+        { session }
+      );
+    }
 
     // Update coupon usage
     if (order.couponCode) {
@@ -710,24 +816,13 @@ export const cancelCheckout = async (req, res) => {
       for (const item of order.orderItems) {
         await Product.findByIdAndUpdate(
           item.product,
-          { $inc: { stock: item.quantity, totalSales: -item.quantity } },
-          { session }
-        );
-      }
-    } else {
-      for (const item of order.orderItems) {
-        await Product.findByIdAndUpdate(
-          item.product,
-          { $inc: { totalSales: -item.quantity } },
+          { $inc: { stock: item.quantity } },
           { session }
         );
       }
     }
 
-    order.orderStatus = "FAILED";
-    order.expiresAt = undefined;
-
-    await order.save({ session });
+    await Order.findByIdAndDelete(orderId).session(session);
     await session.commitTransaction();
 
     res.status(200).json({
@@ -758,6 +853,7 @@ export const getMyOrders = async (req, res) => {
 
     const orders = await Order.find({
       user: req.user._id,
+      isPaid: true,
     }).sort({ createdAt: -1 });
 
     const serializedOrders = await serializeOrders(orders, req);
@@ -796,7 +892,7 @@ export const getSingleOrder = async (req, res) => {
       });
     }
 
-    const order = await Order.findById(id)
+    const order = await Order.findOne({ _id: id, isPaid: true })
       .populate("user", "name email")
       .populate("orderItems.product");
 
@@ -810,8 +906,8 @@ export const getSingleOrder = async (req, res) => {
     // Use admin serializer for admin users, customer serializer for regular users
     const userRole = req.user?.role ? req.user.role.toLowerCase() : "";
     const isAdmin = userRole === "admin" || userRole === "superadmin";
-    
-    const serializedOrder = isAdmin 
+
+    const serializedOrder = isAdmin
       ? await serializeOrderForAdmin(order)
       : await serializeOrder(order, req);
 
@@ -839,7 +935,7 @@ export const getAllOrders = async (req, res) => {
     // NOTE: this loads every order into memory with no pagination. Fine for
     // a small catalog, but worth adding page/limit query params before this
     // gets used against a large order collection in production.
-    const orders = await Order.find()
+    const orders = await Order.find({ isPaid: true })
       .populate("user", "name email")
       .sort({ createdAt: -1 });
 
@@ -1194,6 +1290,14 @@ export const handleRazorpayWebhook = async (req, res) => {
           };
           await order.save();
 
+          // Increment product total sales since payment is successful
+          for (const item of order.orderItems) {
+            await Product.findByIdAndUpdate(
+              item.product,
+              { $inc: { totalSales: item.quantity } }
+            );
+          }
+
           // Clear Cart
           const cart = await Cart.findOne({ user: order.user });
           if (cart) {
@@ -1397,7 +1501,7 @@ export const approveCancellation = async (req, res) => {
             if (refundCurrency === "USD") {
               // Convert INR refund amount to USD using exchangeRate
               const calculatedUSD = Number((order.refundAmount / (order.exchangeRate || 1)).toFixed(2));
-              
+
               // Validate that the refund amount matches the original paidAmount (within a small tolerance)
               const difference = Math.abs(calculatedUSD - order.paidAmount);
               if (difference > 0.05) {
@@ -1454,7 +1558,7 @@ export const approveCancellation = async (req, res) => {
             order.refundProcessedAt = new Date();
           } catch (paypalError) {
             const apiErrorDetails = paypalError.response?.data || null;
-            
+
             // 5. Detailed logging of PayPal API failure (business validation errors)
             console.error("=================================================");
             console.error("[PayPal Refund API Response Failure]");
@@ -1467,9 +1571,9 @@ export const approveCancellation = async (req, res) => {
 
             order.refundStatus = "Failed";
             order.refundFailureReason =
-              apiErrorDetails?.message || 
-              (apiErrorDetails?.details && JSON.stringify(apiErrorDetails.details)) || 
-              paypalError.message || 
+              apiErrorDetails?.message ||
+              (apiErrorDetails?.details && JSON.stringify(apiErrorDetails.details)) ||
+              paypalError.message ||
               "PayPal refund failed";
           }
         }
@@ -1511,14 +1615,16 @@ export const approveCancellation = async (req, res) => {
       { returnDocument: "after", runValidators: false }
     );
 
-    // Restock items if they were tracked.
+    // Restock items if they were tracked
     if (order.inventoryTracked !== false) {
       for (const item of order.orderItems) {
         await Product.findByIdAndUpdate(item.product, {
-          $inc: { stock: item.quantity, totalSales: -item.quantity },
+          $inc: { stock: item.quantity },
         });
       }
-    } else {
+    }
+    // Decrement totalSales only if the order was paid
+    if (order.isPaid) {
       for (const item of order.orderItems) {
         await Product.findByIdAndUpdate(item.product, {
           $inc: { totalSales: -item.quantity },
@@ -1613,3 +1719,251 @@ export const rejectCancellation = async (req, res) => {
     });
   }
 };
+
+// ================= ADMIN DIRECT ORDER CANCELLATION & REFUND =================
+export const adminCancelOrder = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { id } = req.params;
+
+    if (!id || id === 'undefined' || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Order ID format",
+      });
+    }
+
+    const order = await Order.findById(id).session(session);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    // Prevent cancellation of orders that are already cancelled, refunded, or delivered
+    if (order.orderStatus === "CANCELLED") {
+      return res.status(400).json({
+        success: false,
+        message: "This order is already cancelled",
+      });
+    }
+
+    if (order.orderStatus === "DELIVERED") {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot cancel a delivered order",
+      });
+    }
+
+    if (order.refundStatus === "Completed") {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot cancel an already refunded order",
+      });
+    }
+
+    let refundId = order.refundId;
+    let refundStatus = order.refundStatus;
+    let refundProcessedAt = order.refundProcessedAt;
+    let refundFailureReason = order.refundFailureReason;
+
+    // Process refund only if isPaid is true
+    if (order.isPaid) {
+      const refundAmount = order.totalPrice; // Full refund
+
+      if (order.paymentMethod === "Razorpay" || order.paymentMethod === "ONLINE") {
+        if (order.paymentInfo?.razorpayPaymentId) {
+          try {
+            console.log(`[Admin Order Refund Init] Processing Razorpay refund for order ${order._id}. Payment ID: ${order.paymentInfo.razorpayPaymentId}`);
+            const refund = await razorpay.payments.refund(
+              order.paymentInfo.razorpayPaymentId,
+              {
+                amount: Math.round(refundAmount * 100),
+                speed: "normal",
+                notes: {
+                  orderId: order._id.toString(),
+                  customer: order.shippingAddress.fullName,
+                  reason: "Cancelled by Admin",
+                },
+              }
+            );
+
+            refundId = refund.id;
+            refundStatus = refund.status === "processed" ? "Completed" : "Pending";
+            refundProcessedAt = new Date();
+          } catch (razorpayError) {
+            console.error("[Admin Order Refund Error] Razorpay refund failed:", razorpayError);
+            throw new Error(
+              `Razorpay refund failed: ${razorpayError?.error?.description || razorpayError.message || "Unknown error"}`
+            );
+          }
+        } else {
+          throw new Error("No Razorpay payment ID on record for this order");
+        }
+      } else if (order.paymentMethod === "PAYPAL") {
+        const captureId = order.paymentInfo?.id;
+        const captureStatus = order.paymentInfo?.status;
+
+        if (!captureStatus || captureStatus.toUpperCase() !== "COMPLETED") {
+          throw new Error(`PayPal capture status is '${captureStatus || "UNKNOWN"}', expected 'COMPLETED'`);
+        } else if (!captureId) {
+          throw new Error("No PayPal capture ID on record for this order");
+        } else {
+          try {
+            const refundCurrency = order.paidCurrency || "USD";
+            let refundVal = refundAmount;
+
+            if (refundCurrency === "USD") {
+              refundVal = order.paidAmount || Number((refundAmount / (order.exchangeRate || 1)).toFixed(2));
+            }
+
+            console.log(`[Admin Order Refund Init] Processing PayPal refund for order ${order._id}. Capture ID: ${captureId}`);
+            const refundResponse = await refundPaypalCapture(captureId, refundVal, refundCurrency);
+
+            refundId = refundResponse.id;
+            refundStatus = refundResponse.status === "COMPLETED" ? "Completed" : "Pending";
+            refundProcessedAt = new Date();
+          } catch (paypalError) {
+            const apiErrorDetails = paypalError.response?.data || null;
+            const errMsg = apiErrorDetails?.message || paypalError.message || "PayPal refund failed";
+            console.error("[Admin Order Refund Error] PayPal refund failed:", errMsg);
+            throw new Error(`PayPal refund failed: ${errMsg}`);
+          }
+        }
+      } else {
+        refundStatus = "NotRequired";
+      }
+    } else {
+      refundStatus = "NotRequired";
+    }
+
+    // Release coupon usage if applicable
+    if (order.couponCode) {
+      const coupon = await Coupon.findOne({ code: order.couponCode }).session(session);
+      if (coupon) {
+        coupon.usedCount = Math.max(0, coupon.usedCount - 1);
+        coupon.usedBy = coupon.usedBy.filter(
+          (uid) => uid.toString() !== order.user.toString()
+        );
+        await coupon.save({ session });
+      }
+    }
+
+    // Update order status and details
+    order.orderStatus = "CANCELLED";
+    order.refundId = refundId;
+    order.refundStatus = refundStatus;
+    if (refundProcessedAt) order.refundProcessedAt = refundProcessedAt;
+    if (refundFailureReason) order.refundFailureReason = refundFailureReason;
+
+    // Set cancellation metadata
+    order.cancellationStatus = "Approved";
+    order.cancellationReason = "Cancelled by Admin";
+    order.cancellationReviewedAt = Date.now();
+    order.cancellationReviewedBy = req.user._id;
+    order.expiresAt = undefined; // prevent deletion by TTL
+
+    await order.save({ session });
+
+    // Restock items if they were tracked
+    if (order.inventoryTracked !== false) {
+      for (const item of order.orderItems) {
+        await Product.findByIdAndUpdate(
+          item.product,
+          { $inc: { stock: item.quantity } },
+          { session }
+        );
+      }
+    }
+
+    // Reverse product sales/analytics if order was previously counted (i.e. if it was paid)
+    if (order.isPaid) {
+      for (const item of order.orderItems) {
+        await Product.findByIdAndUpdate(
+          item.product,
+          { $inc: { totalSales: -item.quantity } },
+          { session }
+        );
+      }
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    // Send cancellation/refund notification email asynchronously
+    sendCancellationApprovedEmail(order);
+
+    res.status(200).json({
+      success: true,
+      message: order.isPaid && refundStatus === "Completed"
+        ? "Order cancelled and refund processed successfully"
+        : "Order cancelled successfully",
+      order,
+    });
+
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error("========== ADMIN CANCEL ORDER ERROR ==========");
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to cancel order by admin",
+    });
+  }
+};
+
+// ================= DELETE ORDER (ADMIN) =================
+export const deleteOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id || id === 'undefined' || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Order ID format",
+      });
+    }
+
+    const order = await Order.findById(id);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    // Prevent deleting active paid orders (must be cancelled/failed first)
+    if (order.isPaid && order.orderStatus !== "CANCELLED" && order.orderStatus !== "FAILED") {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot delete an active paid order. Please cancel it first.",
+      });
+    }
+
+    await Order.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: "Order record deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete order error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to delete order",
+    });
+  }
+};
+
+// ================= AUTOMATIC CRON CLEANUP =================
+// Automatically runs every minute to delete expired checkouts and restock their inventory
+cron.schedule("* * * * *", () => {
+  cleanupExpiredOrders().catch((err) =>
+    console.error("[Cron Cleanup Error] Failed to run scheduled checkout cleanup:", err)
+  );
+});

@@ -355,7 +355,7 @@ function ContactUs() {
               <div className="relative rounded-2xl overflow-hidden h-[400px] sm:h-[500px]">
                 <img
                   src={contactImg}
-                  alt={`${storeName} Luxury Atelier`}
+                  alt={`${storeName} Luxury Luxury`}
                   className="w-full h-full object-cover transform scale-100 group-hover:scale-105 transition-transform duration-[1.5s] ease-out"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#1F1F1F]/60 via-transparent to-transparent" />
@@ -538,7 +538,7 @@ function ContactUs() {
         >
           <div className="text-center max-w-2xl mx-auto mb-16">
             <span className="text-[10px] uppercase tracking-[0.3em] text-[#D4AF37] font-semibold block mb-3">Channels of Access</span>
-            <h2 className="font-serif text-3xl font-light tracking-wide">Direct Ateliers & Directories</h2>
+            <h2 className="font-serif text-3xl font-light tracking-wide">Direct Luxurys & Directories</h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

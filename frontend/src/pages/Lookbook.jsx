@@ -85,7 +85,7 @@ const [isVideoMuted, setIsVideoMuted] = useState(true);
   ];
 
   const instagramGallery = [
-    { img: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&q=80&w=600", tag: "#AtelierElegance", likes: "2.4k", comments: "142" },
+    { img: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&q=80&w=600", tag: "#LuxuryElegance", likes: "2.4k", comments: "142" },
     { img: "https://images.unsplash.com/photo-1588444837495-c6cfeb53f32d?auto=format&fit=crop&q=80&w=600", tag: "#LegacyDiamonds", likes: "4.1k", comments: "98" },
     { img: "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&q=80&w=600", tag: "#VogueLiving", likes: "1.8k", comments: "44" },
     { img: "https://images.unsplash.com/photo-1601121141461-9d6647bca1ed?auto=format&fit=crop&q=80&w=600", tag: "#SignatureGold", likes: "3.2k", comments: "210" },
@@ -375,7 +375,7 @@ const [isVideoMuted, setIsVideoMuted] = useState(true);
         <div className="text-center space-y-3 mb-16">
           <span className="text-[11px] font-bold tracking-[0.25em] text-[#B76E79] uppercase block">THE LOOKBOOK EDITIONS</span>
           <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-[#2C2C2C] tracking-tight">
-            Featured Atelier Pieces
+            Featured Luxury Pieces
           </h2>
           <div className="w-12 h-px bg-[#D4AF37] mx-auto mt-4" />
         </div>
@@ -412,7 +412,7 @@ const [isVideoMuted, setIsVideoMuted] = useState(true);
             <h2 className="font-serif text-3xl sm:text-4xl font-bold tracking-tight leading-tight">
               Behind The <br />
               <span className="italic font-normal text-[#E8C7B7]">
-                Atelier Doors
+                Luxury Doors
               </span>
             </h2>
 

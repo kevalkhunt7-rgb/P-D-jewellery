@@ -93,7 +93,7 @@ export default function GiveReview() {
     <div className="min-h-screen flex items-center justify-center bg-[#FDF8F3]">
       <div className="flex flex-col items-center gap-3">
         <Loader2 className="w-8 h-8 animate-spin text-[#B76E79]" />
-        <p className="text-xs font-serif italic text-stone-800 tracking-wider">Loading Atelier Record...</p>
+        <p className="text-xs font-serif italic text-stone-800 tracking-wider">Loading Luxury Record...</p>
       </div>
     </div>
   );
@@ -133,7 +133,7 @@ export default function GiveReview() {
             />
             <div className="min-w-0">
               <h3 className="font-serif text-base text-stone-900 truncate">{product?.name}</h3>
-              <p className="text-[9px] text-stone-800 font-semibold uppercase tracking-widest mt-0.5">Atelier Signature Series</p>
+              <p className="text-[9px] text-stone-800 font-semibold uppercase tracking-widest mt-0.5">Luxury Signature Series</p>
             </div>
           </div>
 
@@ -186,7 +186,7 @@ export default function GiveReview() {
             {/* Luxury Media Uploader */}
             <div className="space-y-2">
               <label className="text-[10px] font-bold tracking-widest text-stone-800 uppercase block">
-                Atelier Imagery <span className="font-normal text-stone-800 lowercase italic">(up to 3)</span>
+                Luxury Imagery <span className="font-normal text-stone-800 lowercase italic">(up to 3)</span>
               </label>
               
               <div className="grid grid-cols-4 gap-3">

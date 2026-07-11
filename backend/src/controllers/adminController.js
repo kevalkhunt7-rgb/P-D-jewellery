@@ -32,11 +32,15 @@ export const getDashboardStats = async (req, res) => {
     );
 
     // ======================================================
-    // EXCLUDED ORDER STATUSES
+    // ACTIVE AND PAID ORDER FILTER FOR ANALYTICS
     // ======================================================
-    // Revenue counts immediately upon placement, and drops when cancelled.
-    const excludedStatuses = ["CANCELLED", "cancelled"];
-    const activeOrderFilter = { orderStatus: { $nin: excludedStatuses } };
+    // Only successful and paid orders count towards analytics and revenue
+    const activeOrderFilter = {
+      isPaid: true,
+      "paymentInfo.status": { $in: ["paid", "COMPLETED", "completed"] },
+      orderStatus: { $nin: ["CANCELLED", "cancelled", "FAILED", "PENDING"] },
+      refundStatus: { $nin: ["Completed", "Processing"] }
+    };
 
     // ======================================================
     // TOTAL ACTIVE ORDERS
@@ -395,8 +399,14 @@ export const getAllCustomers = async (req, res) => {
       .select('-password');
 
     const customerStats = await Promise.all(customers.map(async (customer) => {
-      // Excludes cancelled orders from customer lifetime logs
-      const orders = await Order.find({ user: customer._id, orderStatus: { $nin: ["CANCELLED", "cancelled"] } });
+      // Only count successfully paid, active, non-refunded orders
+      const orders = await Order.find({
+        user: customer._id,
+        isPaid: true,
+        "paymentInfo.status": { $in: ["paid", "COMPLETED", "completed"] },
+        orderStatus: { $nin: ["CANCELLED", "cancelled", "FAILED", "PENDING"] },
+        refundStatus: { $nin: ["Completed", "Processing"] }
+      });
       const totalSpent = orders.reduce((sum, order) => sum + order.totalPrice, 0);
       return {
         _id: customer._id,
@@ -430,7 +440,13 @@ export const getCustomerDetails = async (req, res) => {
 
     // Pull down order logs
     const orders = await Order.find({ user: customer._id }).sort({ createdAt: -1 });
-    const activeOrders = orders.filter(o => !["CANCELLED", "cancelled"].includes(o.orderStatus));
+    const activeOrders = orders.filter(o => 
+      o.isPaid &&
+      o.paymentInfo &&
+      ["paid", "COMPLETED", "completed"].includes(o.paymentInfo.status) &&
+      !["CANCELLED", "cancelled", "FAILED", "PENDING"].includes(o.orderStatus) &&
+      !["Completed", "Processing"].includes(o.refundStatus)
+    );
     
     const totalSpent = activeOrders.reduce((sum, order) => sum + order.totalPrice, 0);
 

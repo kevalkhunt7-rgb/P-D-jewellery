@@ -51,7 +51,9 @@ export function Settings() {
   const [files, setFiles] = useState({});
 
   const [goldRate24kt, setGoldRate24kt] = useState(8000);
+  const [dailySilverRate999, setDailySilverRate999] = useState(100);
   const [goldRateAuditLogs, setGoldRateAuditLogs] = useState([]);
+  const [silverRateAuditLogs, setSilverRateAuditLogs] = useState([]);
   const [savingGoldRate, setSavingGoldRate] = useState(false);
 
   // ==========================================
@@ -105,7 +107,9 @@ export function Settings() {
       const { data } = await api.get("/settings/gold-rate");
       if (data.success) {
         setGoldRate24kt(data.goldRate24kt);
+        setDailySilverRate999(data.dailySilverRate999 || 100);
         setGoldRateAuditLogs(data.auditLogs || []);
+        setSilverRateAuditLogs(data.silverAuditLogs || []);
       }
     } catch (error) {
       console.error("Failed to fetch gold rate", error);
@@ -253,18 +257,19 @@ export function Settings() {
 
   const saveGoldRate = async () => {
     setSavingGoldRate(true);
-    const loadToast = toast.loading("Saving gold rate settings...");
+    const loadToast = toast.loading("Saving metal rate settings...");
     try {
       const { data } = await api.put("/settings/gold-rate", {
         goldRate24kt: Number(goldRate24kt),
+        dailySilverRate999: Number(dailySilverRate999),
       });
       if (data.success) {
-        toast.success("Gold rate updated successfully", { id: loadToast });
+        toast.success("Metal rates updated successfully", { id: loadToast });
         fetchGoldRateSettings();
       }
     } catch (error) {
-      console.error("Save gold rate error:", error);
-      toast.error(error.response?.data?.message || "Failed to save gold rate", { id: loadToast });
+      console.error("Save metal rates error:", error);
+      toast.error(error.response?.data?.message || "Failed to save metal rates", { id: loadToast });
     } finally {
       setSavingGoldRate(false);
     }
@@ -272,7 +277,7 @@ export function Settings() {
 
   const TABS = [
     { id: "general", label: "General", icon: <FiSettings /> },
-    { id: "goldRate", label: "Gold Rate", icon: <FiSettings /> },
+    { id: "goldRate", label: "Metal Rates", icon: <FiSettings /> },
     { id: "seo", label: "SEO", icon: <FiGlobe /> },
     { id: "order", label: "Orders", icon: <FiShoppingBag /> },
     { id: "inventory", label: "Inventory", icon: <FiBox /> },
@@ -318,11 +323,11 @@ export function Settings() {
 
         {/* Content Area */}
         <div className="flex-1 max-w-4xl">
-          {/* Gold Rate Settings */}
+          {/* Metal Rate Settings */}
           {activeTab === "goldRate" && (
             <SectionCard
-              title="Global Gold Rate Settings"
-              description="Update the global base rate per gram for pure 24KT gold."
+              title="Global Metal Rate Settings"
+              description="Update the global daily base rates per gram for Gold and Silver."
               onSave={saveGoldRate}
               loading={savingGoldRate}
             >
@@ -333,37 +338,78 @@ export function Settings() {
                   onChange={(e) => setGoldRate24kt(parseFloat(e.target.value) || 0)}
                   placeholder="e.g. 8000"
                 />
+                <InputField
+                  label="999 Fine Silver Rate (₹/g)" id="dailySilverRate999" type="number"
+                  step="0.01"
+                  value={dailySilverRate999}
+                  onChange={(e) => setDailySilverRate999(parseFloat(e.target.value) || 0)}
+                  placeholder="e.g. 100"
+                />
               </div>
 
               {/* Audit Logs Section */}
-              <div className="mt-8">
-                <h3 className="text-sm font-bold text-white tracking-wide border-b border-slate-800 pb-2 mb-4">Gold Rate Update History</h3>
-                {goldRateAuditLogs.length === 0 ? (
-                  <p className="text-xs text-slate-500 italic">No update logs recorded yet.</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs border-collapse">
-                      <thead>
-                        <tr className="border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider">
-                          <th className="py-2.5">Date</th>
-                          <th className="py-2.5">Old Rate</th>
-                          <th className="py-2.5">New Rate</th>
-                          <th className="py-2.5">Updated By</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/60 text-slate-300">
-                        {goldRateAuditLogs.map((log) => (
-                          <tr key={log._id}>
-                            <td className="py-2.5">{new Date(log.createdAt).toLocaleDateString()} {new Date(log.createdAt).toLocaleTimeString()}</td>
-                            <td className="py-2.5">₹{log.oldRate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                            <td className="py-2.5">₹{log.newRate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                            <td className="py-2.5">{log.updatedBy?.name || "System"} ({log.updatedBy?.email || "N/A"})</td>
+              <div className="grid md:grid-cols-2 gap-8 mt-8 border-t border-slate-800 pt-6">
+                {/* Gold History */}
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-wide border-b border-slate-800 pb-2 mb-4">Gold Rate Update History</h3>
+                  {goldRateAuditLogs.length === 0 ? (
+                    <p className="text-xs text-slate-500 italic">No update logs recorded yet.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider">
+                            <th className="py-2.5">Date</th>
+                            <th className="py-2.5">Old Rate</th>
+                            <th className="py-2.5">New Rate</th>
+                            <th className="py-2.5">Updated By</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                          {goldRateAuditLogs.map((log) => (
+                            <tr key={log._id}>
+                              <td className="py-2.5">{new Date(log.createdAt).toLocaleDateString()} {new Date(log.createdAt).toLocaleTimeString()}</td>
+                              <td className="py-2.5">₹{log.oldRate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                              <td className="py-2.5">₹{log.newRate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                              <td className="py-2.5">{log.updatedBy?.name || "System"} ({log.updatedBy?.email || "N/A"})</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* Silver History */}
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-wide border-b border-slate-800 pb-2 mb-4">Silver Rate Update History</h3>
+                  {silverRateAuditLogs.length === 0 ? (
+                    <p className="text-xs text-slate-500 italic">No update logs recorded yet.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider">
+                            <th className="py-2.5">Date</th>
+                            <th className="py-2.5">Old Rate</th>
+                            <th className="py-2.5">New Rate</th>
+                            <th className="py-2.5">Updated By</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                          {silverRateAuditLogs.map((log) => (
+                            <tr key={log._id}>
+                              <td className="py-2.5">{new Date(log.createdAt).toLocaleDateString()} {new Date(log.createdAt).toLocaleTimeString()}</td>
+                              <td className="py-2.5">₹{log.oldRate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                              <td className="py-2.5">₹{log.newRate.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                              <td className="py-2.5">{log.updatedBy?.name || "System"} ({log.updatedBy?.email || "N/A"})</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </div>
             </SectionCard>
           )}

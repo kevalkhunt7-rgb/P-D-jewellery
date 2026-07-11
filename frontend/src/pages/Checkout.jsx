@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useProducts } from '../context/ProductContext';
+import { useShipping } from '../context/ShippingContext';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 import { sanitizePhone, isValidPhone, PHONE_ERROR_MESSAGE } from '../utils/phoneValidation';
@@ -37,16 +38,17 @@ export default function PremiumCheckoutPage() {
   const { user } = useAuth();
   const { settings } = useSettings();
   const { countryCode } = useProducts();
-  const currencySymbol = settings?.general?.currencySymbol || '₹';
-  const currency = settings?.general?.currency || 'INR';
+  const { currencyContext, calculateShippingCost } = useShipping();
+  const currencySymbol = currencyContext?.currencySymbol || '₹';
+  const currency = currencyContext?.currency || 'INR';
 
   // Load the PayPal SDK once as soon as the checkout page mounts.
-  // Hard-coding USD keeps the option reference stable so the SDK never reloads.
+  // Using the resolved currency keeps the payment script aligned.
   const paypalScriptOptions = useMemo(() => ({
     "client-id": import.meta.env.VITE_PAYPAL_CLIENT_ID || 'test',
-    currency: 'USD',
+    currency: currency === 'INR' ? 'USD' : currency,
     intent: 'capture',
-  }), []);
+  }), [currency]);
 
   const { cart: contextCart, updateQuantity: contextUpdateQty, removeFromCart: contextRemoveItem, clearCart } = useCart();
   const [directCart, setDirectCart] = useState(location.state?.customCart || null);
@@ -92,28 +94,22 @@ export default function PremiumCheckoutPage() {
 
   const discountedSubtotal = Math.max(0, subtotal - discountAmount);
 
-  const orderConfig = useMemo(() => {
-    return settings?.order || settings?.orders || {};
-  }, [settings]);
+  // Calculate total net weight (in grams) for cart items
+  const totalWeight = useMemo(() => {
+    return activeCart.reduce((acc, item) => acc + ((item.product?.netWeight || item.netWeight || 0) * (item.quantity || 1)), 0);
+  }, [activeCart]);
 
-  const shippingCharge = Number(orderConfig.shippingCharge) || 0;
-  const freeShippingThreshold = Number(orderConfig.freeShippingMinAmount) || 0;
-  const taxPercentage = Number(orderConfig.taxPercentage) || 0;
+  // Calculate dynamic shipping cost based on matched region
+  const shippingInfo = useMemo(() => {
+    return calculateShippingCost(discountedSubtotal, totalWeight);
+  }, [discountedSubtotal, totalWeight, calculateShippingCost]);
 
-  const actualShippingCost = useMemo(() => {
-    if (freeShippingThreshold > 0 && subtotal >= freeShippingThreshold) {
-      return 0;
-    }
-    return shippingCharge;
-  }, [subtotal, shippingCharge, freeShippingThreshold]);
-
-  const calculatedTaxAmount = useMemo(() => {
-    return discountedSubtotal * (taxPercentage / 100);
-  }, [discountedSubtotal, taxPercentage]);
+  const actualShippingCost = shippingInfo.charge;
+  const deliveryTime = shippingInfo.deliveryTime;
 
   const orderTotal = useMemo(() => {
-    return discountedSubtotal + actualShippingCost + calculatedTaxAmount;
-  }, [discountedSubtotal, actualShippingCost, calculatedTaxAmount]);
+    return discountedSubtotal + actualShippingCost;
+  }, [discountedSubtotal, actualShippingCost]);
 
   const transactionId = useMemo(() => `TXN-${Math.floor(100000 + Math.random() * 900000)}`, []);
 
@@ -121,7 +117,6 @@ export default function PremiumCheckoutPage() {
   const displaySubtotal = serverSummary ? serverSummary.itemsPrice : subtotal;
   const displayDiscount = serverSummary ? serverSummary.discountAmount : discountAmount;
   const displayShipping = serverSummary ? serverSummary.shippingPrice : actualShippingCost;
-  const displayTax = serverSummary ? serverSummary.taxPrice : calculatedTaxAmount;
   const displayTotal = serverSummary ? serverSummary.totalPrice : orderTotal;
   const displayCurrencySymbol = serverSummary ? serverSummary.currencySymbol : currencySymbol;
   const displayCurrency = serverSummary ? serverSummary.currency : currency;
@@ -455,7 +450,7 @@ export default function PremiumCheckoutPage() {
                             <div className="flex justify-between items-start gap-2">
                               <div>
                                 <h3 className="text-xl font-semibold text-stone-900 leading-tight">{item.title}</h3>
-                                <p className="text-[15px] text-stone-800 font-bold mt-0.5">{item.subtitle || item.category || 'Atelier Edition'}</p>
+                                <p className="text-[15px] text-stone-800 font-bold mt-0.5">{item.subtitle || item.category || 'Luxury Edition'}</p>
                               </div>
                               <span className="font-mono text-xl font-semibold text-stone-900">{displayCurrencySymbol}{(item.price * (item.quantity || 1)).toLocaleString(displayCurrency === 'USD' ? 'en-US' : 'en-IN', { minimumFractionDigits: displayCurrency === 'USD' ? 2 : 0, maximumFractionDigits: 2 })}</span>
                             </div>
@@ -492,7 +487,7 @@ export default function PremiumCheckoutPage() {
 
                       {displayDiscount > 0 && (
                         <div className="flex justify-between text-emerald-700 font-medium">
-                          <span>Atelier Discount</span>
+                          <span>Luxury Discount</span>
                           <span className="font-semibold">-{displayCurrencySymbol}{displayDiscount.toLocaleString(displayCurrency === 'USD' ? 'en-US' : 'en-IN', { minimumFractionDigits: displayCurrency === 'USD' ? 2 : 0, maximumFractionDigits: 2 })}</span>
                         </div>
                       )}
@@ -503,15 +498,14 @@ export default function PremiumCheckoutPage() {
                           {displayShipping === 0 ? 'Complimentary' : `${displayCurrencySymbol}${displayShipping.toLocaleString(displayCurrency === 'USD' ? 'en-US' : 'en-IN', { minimumFractionDigits: displayCurrency === 'USD' ? 2 : 0, maximumFractionDigits: 2 })}`}
                         </span>
                       </div>
-
-                      {displayTax > 0 && (
-                        <div className="flex justify-between text-stone-500 font-bold">
-                          <span className="font-medium">Estimated Tax ({taxPercentage}%)</span>
-                          <span className="font-semibold text-stone-900">
-                            {displayCurrencySymbol}{displayTax.toLocaleString(displayCurrency === 'USD' ? 'en-US' : 'en-IN', { minimumFractionDigits: displayCurrency === 'USD' ? 2 : 0, maximumFractionDigits: 2 })}
-                          </span>
+                      {deliveryTime && (
+                        <div className="flex justify-between text-[11px] text-stone-400 font-bold -mt-3 pl-0.5">
+                          <span>Estimated Delivery</span>
+                          <span className="font-semibold text-stone-700">{deliveryTime}</span>
                         </div>
                       )}
+
+
 
                       <div className="pt-4 border-t text-xl font-semibold border-stone-200 flex justify-between items-baseline">
                         <span>Total Amount</span>

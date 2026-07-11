@@ -1,8 +1,0 @@
-schema_version: 1
-module_path: admin
-title: E-commerce Admin Dashboard
-scope:
-    - admin/
-source_files: []
-depends_on: []
-related_to: []

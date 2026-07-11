@@ -295,19 +295,19 @@ export const handlePaypalWebhook = async (req, res) => {
             order.refundCompletedAt = new Date();
             order.refundId = resource.id; // Store PayPal's refund ID
 
-            // Restock items
+            // Restock items if they were tracked
             if (order.inventoryTracked !== false) {
               for (const item of order.orderItems) {
                 await Product.findByIdAndUpdate(item.product, {
-                  $inc: { stock: item.quantity, totalSales: -item.quantity },
+                  $inc: { stock: item.quantity },
                 });
               }
-            } else {
-              for (const item of order.orderItems) {
-                await Product.findByIdAndUpdate(item.product, {
-                  $inc: { totalSales: -item.quantity },
-                });
-              }
+            }
+            // Decrement totalSales since this order was paid
+            for (const item of order.orderItems) {
+              await Product.findByIdAndUpdate(item.product, {
+                $inc: { totalSales: -item.quantity },
+              });
             }
             await order.save();
             console.log(`[Database Sync Success] Order ID ${order._id} successfully updated to 'CANCELLED' & restocked via Webhook.`);
@@ -349,6 +349,14 @@ export const handlePaypalWebhook = async (req, res) => {
             order.orderStatus = "CONFIRMED";
             order.expiresAt = undefined;
             await order.save();
+
+            // Increment product total sales since payment is successful
+            for (const item of order.orderItems) {
+              await Product.findByIdAndUpdate(
+                item.product,
+                { $inc: { totalSales: item.quantity } }
+              );
+            }
 
             // Clear Cart
             const cart = await Cart.findOne({ user: order.user });

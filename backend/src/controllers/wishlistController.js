@@ -1,5 +1,6 @@
 import Wishlist from "../model/wishlistModel.js";
 import Product from "../model/productModel.js";
+import { injectDynamicPricing } from "./productController.js";
 
 
 
@@ -109,10 +110,25 @@ export const getMyWishlist = async (req, res) => {
       });
     }
 
+    const serializedProducts = await Promise.all(
+      wishlist.products.map(async (item) => {
+        if (item.product) {
+          const pricingProduct = await injectDynamicPricing(item.product, req);
+          return {
+            ...item.toObject(),
+            product: pricingProduct,
+          };
+        }
+        return item;
+      })
+    );
+
+    const wishlistObj = wishlist.toObject();
+    wishlistObj.products = serializedProducts;
 
     res.status(200).json({
       success: true,
-      wishlist,
+      wishlist: wishlistObj,
     });
 
   } catch (error) {

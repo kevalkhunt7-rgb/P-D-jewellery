@@ -50,9 +50,17 @@ const cartSchema = new mongoose.Schema(
         // Checkout reads from here — it never calls calculatePriceBreakdown() again.
         // This prevents gold-rate drift and price tampering.
         lockedPricing: {
+          metalType: {
+            type: String,
+            default: "GOLD",
+          },
           goldRate24kt: {
             type: Number,
             required: true,
+          },
+          dailySilverRate999: {
+            type: Number,
+            default: 100,
           },
           purity: {
             type: String,
@@ -75,6 +83,12 @@ const cartSchema = new mongoose.Schema(
             type: Number,
             required: true,
           },
+          extraCharges: [
+            {
+              label: { type: String },
+              value: { type: Number }
+            }
+          ],
           makingCharge: {
             type: Number,
             required: true,

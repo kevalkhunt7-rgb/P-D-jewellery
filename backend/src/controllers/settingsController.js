@@ -1,6 +1,7 @@
 import Settings from "../model/settingsModel.js";
 import StoreSettings from "../model/storeSettingsModel.js";
 import GoldRateAudit from "../model/goldRateAuditModel.js";
+import SilverRateAudit from "../model/silverRateAuditModel.js";
 import { getStoreSettingsCached, clearSettingsCache } from "../utils/settingsCache.js";
 import cloudinary from "../config/cloudinary.js";
 import { getCurrencyContext } from "../utils/currencyHelper.js";
@@ -10,20 +11,20 @@ const serializeSettings = async (settings, req) => {
   if (!settings) return settings;
   const context = await getCurrencyContext(req);
   const settingsObj = settings.toObject ? settings.toObject() : settings;
-  
+
   if (settingsObj.general) {
     settingsObj.general.currency = context.currency;
     settingsObj.general.currencySymbol = context.currencySymbol;
   }
 
   if (context.currency === "USD" && settingsObj.order) {
-      if (settingsObj.order.shippingCharge !== undefined) {
-        settingsObj.order.shippingCharge = Number((settingsObj.order.shippingCharge / context.conversionRate).toFixed(2));
-      }
-      if (settingsObj.order.freeShippingMinAmount !== undefined) {
-        settingsObj.order.freeShippingMinAmount = Number((settingsObj.order.freeShippingMinAmount / context.conversionRate).toFixed(2));
-      }
+    if (settingsObj.order.shippingCharge !== undefined) {
+      settingsObj.order.shippingCharge = Number((settingsObj.order.shippingCharge / context.conversionRate).toFixed(2));
     }
+    if (settingsObj.order.freeShippingMinAmount !== undefined) {
+      settingsObj.order.freeShippingMinAmount = Number((settingsObj.order.freeShippingMinAmount / context.conversionRate).toFixed(2));
+    }
+  }
 
   return settingsObj;
 };
@@ -110,7 +111,7 @@ export const updateSettings = async (req, res) => {
     if (req.files) {
       for (const fieldName of Object.keys(req.files)) {
         const file = req.files[fieldName][0];
-        
+
         // Find existing settings to delete old image if it exists
         const settings = await Settings.findOne();
         const currentImageUrl = settings[section]?.[fieldName]?.public_id;
@@ -160,11 +161,17 @@ export const updateSettings = async (req, res) => {
 export const getGoldRate = async (req, res) => {
   try {
     const storeSettings = await getStoreSettingsCached();
-    
+
     // Also fetch audit logs for admin audit tracking
     let auditLogs = [];
+    let silverAuditLogs = [];
     if (req.user && (req.user.role?.toLowerCase() === "admin" || req.user.role?.toLowerCase() === "superadmin")) {
       auditLogs = await GoldRateAudit.find()
+        .populate("updatedBy", "name email")
+        .sort({ createdAt: -1 })
+        .limit(10);
+
+      silverAuditLogs = await SilverRateAudit.find()
         .populate("updatedBy", "name email")
         .sort({ createdAt: -1 })
         .limit(10);
@@ -173,14 +180,16 @@ export const getGoldRate = async (req, res) => {
     res.status(200).json({
       success: true,
       goldRate24kt: storeSettings.goldRate24kt,
+      dailySilverRate999: storeSettings.dailySilverRate999 || 100,
       updatedAt: storeSettings.updatedAt,
       auditLogs,
+      silverAuditLogs,
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to fetch gold rate",
+      message: error.message || "Failed to fetch metal rates",
     });
   }
 };
@@ -188,45 +197,73 @@ export const getGoldRate = async (req, res) => {
 // ================= UPDATE GOLD RATE =================
 export const updateGoldRate = async (req, res) => {
   try {
-    const { goldRate24kt } = req.body;
-    
-    if (goldRate24kt === undefined || typeof goldRate24kt !== "number" || goldRate24kt <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide a valid positive gold rate.",
-      });
+    const { goldRate24kt, dailySilverRate999 } = req.body;
+
+    const updateObj = {};
+
+    if (goldRate24kt !== undefined) {
+      if (typeof goldRate24kt !== "number" || goldRate24kt <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Please provide a valid positive gold rate.",
+        });
+      }
+      updateObj.goldRate24kt = goldRate24kt;
+    }
+
+    if (dailySilverRate999 !== undefined) {
+      if (typeof dailySilverRate999 !== "number" || dailySilverRate999 <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Please provide a valid positive silver rate.",
+        });
+      }
+      updateObj.dailySilverRate999 = dailySilverRate999;
     }
 
     const oldSettings = await StoreSettings.findOne();
     const oldRate = oldSettings ? oldSettings.goldRate24kt : 8000;
+    const oldSilverRate = oldSettings ? (oldSettings.dailySilverRate999 || 100) : 100;
 
     const settings = await StoreSettings.findOneAndUpdate(
       {},
-      { goldRate24kt },
+      updateObj,
       { new: true, upsert: true, runValidators: true }
     );
 
-    // Create Admin Audit Log Entry
-    await GoldRateAudit.create({
-      oldRate,
-      newRate: goldRate24kt,
-      updatedBy: req.user._id,
-    });
+    // Create Admin Audit Log Entry (if gold rate changed)
+    if (goldRate24kt !== undefined && goldRate24kt !== oldRate) {
+      await GoldRateAudit.create({
+        oldRate,
+        newRate: goldRate24kt,
+        updatedBy: req.user._id,
+      });
+    }
+
+    // Create Admin Audit Log Entry (if silver rate changed)
+    if (dailySilverRate999 !== undefined && dailySilverRate999 !== oldSilverRate) {
+      await SilverRateAudit.create({
+        oldRate: oldSilverRate,
+        newRate: dailySilverRate999,
+        updatedBy: req.user._id,
+      });
+    }
 
     // Clear settings cache to force reload on next call
     clearSettingsCache();
 
     res.status(200).json({
       success: true,
-      message: "Gold rate updated successfully",
+      message: "Metal rates updated successfully",
       goldRate24kt: settings.goldRate24kt,
+      dailySilverRate999: settings.dailySilverRate999,
       updatedAt: settings.updatedAt,
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: error.message || "Failed to update gold rate",
+      message: error.message || "Failed to update metal rates",
     });
   }
 };

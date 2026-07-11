@@ -12,6 +12,7 @@ import { WishlistProvider } from './context/WishlistContext'
 import { ProductProvider } from './context/ProductContext'
 import { AuthProvider } from './context/AuthContext'
 import { SettingsProvider } from './context/SettingsContext'
+import { ShippingProvider } from './context/ShippingContext'
 import { Toaster } from 'react-hot-toast'
 
 // Components
@@ -48,7 +49,8 @@ function App() {
     <div className="w-full min-h-screen overflow-x-hidden bg-[#FAF9F6] relative">
       <AuthProvider>
         <ProductProvider>
-          <SettingsProvider>
+          <ShippingProvider>
+            <SettingsProvider>
             {/* 🚀 Mount FaviconManager here so it can use the settings context */}
             <FaviconManager />
 
@@ -59,7 +61,7 @@ function App() {
 
                 <main className="pt-16 w-full overflow-x-hidden">
                   <ScrollToTop />
-                  
+
                   {/* 3. Wrap your Routes in Suspense and pass your custom <Loading /> component */}
                   <Suspense fallback={<Loading />}>
                     <Routes>
@@ -81,17 +83,18 @@ function App() {
                       <Route path="/exchange-policy" element={<ExchangePolicy />} />
                       <Route path="/jewellery-care-guide" element={<JewelleryCareGuide />} />
                       <Route path="/order-detail/:id" element={<OrderDetailPage />} />
-                      <Route path="/policies" element={<PoliciesPage />} /> 
+                      <Route path="/policies" element={<PoliciesPage />} />
                       <Route path='/*' element={<NotFoundPage />} />
                     </Routes>
                   </Suspense>
 
                 </main>
-                <Footer/> 
-              
+                <Footer />
+
               </CartProvider>
             </WishlistProvider>
-          </SettingsProvider>
+            </SettingsProvider>
+          </ShippingProvider>
         </ProductProvider>
       </AuthProvider>
     </div>

@@ -1,9 +1,12 @@
 export const calculatePriceBreakdown = ({
+  metalType = "GOLD",
   goldRate24kt,
+  dailySilverRate999 = 0,
   purity,
   netWeight,
   makingChargeType,
   makingChargeValue,
+  extraCharges = 0,
   cgstRate = 1.5,
   sgstRate = 1.5,
   discountPercentage = 0,
@@ -16,9 +19,16 @@ export const calculatePriceBreakdown = ({
     "14KT": 0.595,
     "9KT":  0.405,
     
-    // Silver / Platinum Purities & generic numeric keys
+    // Silver Purities
+    "999 Fine": 1.000,
+    "958": 0.958,
     "925 Sterling": 0.925,
     "925": 0.925,
+    "900": 0.900,
+    "835": 0.835,
+    "800": 0.800,
+    
+    // Platinum Purities & generic numeric keys
     "950 Platinum": 0.950,
     "950": 0.950,
     "999 Platinum": 0.999,
@@ -28,8 +38,12 @@ export const calculatePriceBreakdown = ({
   // Safe fallback to 1.0 if not mapped
   const multiplier = purityMultiplier[purity] !== undefined ? purityMultiplier[purity] : 1.000;
 
+  // Resolve base metal rate
+  const isSilver = metalType && metalType.toUpperCase() === "SILVER";
+  const activeRate = isSilver ? dailySilverRate999 : goldRate24kt;
+
   // 1. Base Metal Rate per Gram (rounded to 2 decimals)
-  const baseMetalRate = Number((goldRate24kt * multiplier).toFixed(2));
+  const baseMetalRate = Number((activeRate * multiplier).toFixed(2));
 
   // 2. Total Metal Value (rounded to 2 decimals)
   const metalValue = Number((netWeight * baseMetalRate).toFixed(2));
@@ -43,7 +57,11 @@ export const calculatePriceBreakdown = ({
   }
 
   // 4. Combined Subtotal (rounded to 2 decimals)
-  const combinedSubtotal = Number((metalValue + makingCharge).toFixed(2));
+  const extraChargesTotal = Array.isArray(extraCharges)
+    ? extraCharges.reduce((sum, item) => sum + (Number(item?.value) || 0), 0)
+    : (Number(extraCharges) || 0);
+
+  const combinedSubtotal = Number((metalValue + extraChargesTotal + makingCharge).toFixed(2));
 
   // 5. CGST and SGST Calculations (rounded to 2 decimals)
   const cgstValue = Number((combinedSubtotal * (cgstRate / 100)).toFixed(2));
@@ -57,6 +75,7 @@ export const calculatePriceBreakdown = ({
 
   return {
     metalValue,
+    extraCharges: extraChargesTotal,
     makingCharge,
     cgst: cgstValue,
     sgst: sgstValue,

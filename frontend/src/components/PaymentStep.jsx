@@ -148,7 +148,7 @@ export default function PaymentStep({
                   transition={{ duration: 0.2 }}
                 >
                   <ShoppingBag className="w-4 h-4 stroke-[2]" />
-                  <span>Make Payment ({currencySymbol}{Math.round(orderTotal).toLocaleString()})</span>
+                  <span>Make Payment ({currencySymbol}{orderTotal.toLocaleString()})</span>
                 </motion.div>
               )}
             </AnimatePresence>

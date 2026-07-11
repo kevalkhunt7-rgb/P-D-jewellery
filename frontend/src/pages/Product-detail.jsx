@@ -52,7 +52,7 @@ function ProductDetailPage({ product }) {
         : [];
     const currentProduct = currentProductRaw ? {
         ...currentProductRaw,
-        title: currentProductRaw.title || currentProductRaw.name || "Atelier Piece",
+        title: currentProductRaw.title || currentProductRaw.name || "Luxury Piece",
         category: currentProductRaw.category || "Exclusive Collection",
         price: currentProductRaw.price || 0,
         originalPrice: currentProductRaw.originalPrice ?? undefined,
@@ -198,7 +198,7 @@ function ProductDetailPage({ product }) {
 
             {/* Breadcrumbs */}
             <div className="container mx-auto px-4 sm:px-6 lg:px-12 pt-28 pb-6 text-[10px] sm:text-xs uppercase tracking-[0.2em] text-stone-800 flex items-center gap-2 flex-wrap">
-                <Link to="/" className="hover:text-[#B76E79] transition-colors duration-300">Atelier</Link>
+                <Link to="/" className="hover:text-[#B76E79] transition-colors duration-300">Luxury</Link>
                 <ChevronRight className="w-3 h-3 stroke-[1.5]" />
                 <span className="hover:text-[#B76E79] cursor-pointer transition-colors duration-300">Collections</span>
                 <ChevronRight className="w-3 h-3 stroke-[1.5]" />

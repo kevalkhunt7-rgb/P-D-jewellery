@@ -179,7 +179,10 @@ export function JewellerySpecifications({ product }) {
                                 let sgstAmount = priceBreakdown.sgst ?? priceBreakdown.sgstValue ?? priceBreakdown.sgstAmount ?? 0;
 
                                 // 4. Absolute Fallback: If values are missing (0) but subtotal exists, calculate dynamically
-                                const taxSubtotal = metalValue + makingCharge;
+                                const extraChargesSum = Array.isArray(product.extraCharges)
+                                    ? product.extraCharges.reduce((sum, item) => sum + (Number(item?.value) || 0), 0)
+                                    : (Number(product.extraCharges) || 0);
+                                const taxSubtotal = metalValue + extraChargesSum + makingCharge;
                                 if (cgstAmount === 0 && taxSubtotal > 0) {
                                     cgstAmount = taxSubtotal * (cgstRate / 100);
                                 }
@@ -224,6 +227,20 @@ export function JewellerySpecifications({ product }) {
                                                             {formatVal(makingCharge)}
                                                         </td>
                                                     </tr>
+
+                                                    {/* Extra Charges */}
+                                                    {Array.isArray(product.extraCharges) && product.extraCharges.map((charge, idx) => (
+                                                        <tr key={idx} className="group">
+                                                            <td className="py-2 align-top">
+                                                                <span className="text-[12px] font-bold uppercase tracking-wider text-stone-600 block">
+                                                                    {charge.label || "Extra Charge"}
+                                                                </span>
+                                                            </td>
+                                                            <td className="py-2 text-sm font-semibold text-stone-800 text-right align-top">
+                                                                {formatVal(charge.value || 0)}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
 
                                                     {/* Taxes Block (Grid Embedded via single cell) */}
                                                     <tr>

@@ -15,17 +15,21 @@ import Settings from "../model/settingsModel.js";
 
 
 // ================= DYNAMIC PRICING HELPERS =================
-const injectDynamicPricing = async (product, req) => {
+export const injectDynamicPricing = async (product, req) => {
   if (!product) return null;
   const storeSettings = await getStoreSettingsCached();
   const goldRate24kt = storeSettings.goldRate24kt;
+  const dailySilverRate999 = storeSettings.dailySilverRate999 || 100;
 
   const calculation = calculatePriceBreakdown({
+    metalType: product.metalType || "GOLD",
     goldRate24kt,
+    dailySilverRate999,
     purity: product.purity || "22KT",
     netWeight: product.netWeight || 0,
     makingChargeType: product.makingChargeType || "per_gram",
     makingChargeValue: product.makingChargeValue || 0,
+    extraCharges: product.extraCharges || 0,
     discountPercentage: product.discountPercentage || 0,
   });
 
@@ -35,27 +39,40 @@ const injectDynamicPricing = async (product, req) => {
   let salePrice = calculation.salePrice;
   let originalPrice = calculation.originalPrice;
   let metalValue = calculation.metalValue;
+  let extraCharges = calculation.extraCharges;
   let makingCharge = calculation.makingCharge;
   let cgst = calculation.cgst;
   let sgst = calculation.sgst;
 
-if (currencyCtx.currency === "USD") {
-  salePrice = Number((salePrice / currencyCtx.conversionRate).toFixed(2));
-  originalPrice = Number((originalPrice / currencyCtx.conversionRate).toFixed(2));
-  metalValue = Number((metalValue / currencyCtx.conversionRate).toFixed(2));
-  makingCharge = Number((makingCharge / currencyCtx.conversionRate).toFixed(2));
+  if (currencyCtx.currency === "USD") {
+    salePrice = Number((salePrice / currencyCtx.conversionRate).toFixed(2));
+    originalPrice = Number((originalPrice / currencyCtx.conversionRate).toFixed(2));
+    metalValue = Number((metalValue / currencyCtx.conversionRate).toFixed(2));
+    extraCharges = Number((extraCharges / currencyCtx.conversionRate).toFixed(2));
+    makingCharge = Number((makingCharge / currencyCtx.conversionRate).toFixed(2));
 
-  if (cgst !== undefined) {
-    cgst = Number((cgst / currencyCtx.conversionRate).toFixed(2));
+    if (cgst !== undefined) {
+      cgst = Number((cgst / currencyCtx.conversionRate).toFixed(2));
+    }
+
+    if (sgst !== undefined) {
+      sgst = Number((sgst / currencyCtx.conversionRate).toFixed(2));
+    }
   }
 
-  if (sgst !== undefined) {
-    sgst = Number((sgst / currencyCtx.conversionRate).toFixed(2));
-  }
-}
+  const convertedExtraCharges = Array.isArray(productObj.extraCharges)
+    ? productObj.extraCharges.map(item => ({
+      label: item.label,
+      value: currencyCtx.currency === "USD"
+        ? Number((item.value / currencyCtx.conversionRate).toFixed(2))
+        : item.value,
+      _id: item._id
+    }))
+    : [];
 
   return {
     ...productObj,
+    extraCharges: convertedExtraCharges,
     specifications: resolveProductSpecifications(productObj),
     price: salePrice, // root-level for backward compatibility
     originalPrice: originalPrice, // root-level for backward compatibility
@@ -63,6 +80,7 @@ if (currencyCtx.currency === "USD") {
     currencySymbol: currencyCtx.currencySymbol,
     pricing: {
       metalValue,
+      extraCharges,
       makingCharge,
       cgst,
       sgst,
@@ -81,6 +99,7 @@ const injectDynamicPricingArray = async (products, req) => {
   const currencyCtx = await getCurrencyContext(req);
   const storeSettings = await getStoreSettingsCached();
   const goldRate24kt = storeSettings.goldRate24kt;
+  const dailySilverRate999 = storeSettings.dailySilverRate999 || 100;
 
   return products.map((product) => {
 
@@ -94,17 +113,21 @@ const injectDynamicPricingArray = async (products, req) => {
     // PRICE CALCULATION (INR BASE)
     // =========================
     const calculation = calculatePriceBreakdown({
+      metalType: productObj.metalType || "GOLD",
       goldRate24kt,
+      dailySilverRate999,
       purity: productObj.purity || "22KT",
       netWeight: productObj.netWeight || 0,
       makingChargeType: productObj.makingChargeType || "per_gram",
       makingChargeValue: productObj.makingChargeValue || 0,
+      extraCharges: productObj.extraCharges || 0,
       discountPercentage: productObj.discountPercentage || 0,
     });
 
     let salePrice = calculation.salePrice;
     let originalPrice = calculation.originalPrice;
     let metalValue = calculation.metalValue;
+    let extraCharges = calculation.extraCharges;
     let makingCharge = calculation.makingCharge;
     let cgst = calculation.cgst;
     let sgst = calculation.sgst;
@@ -118,13 +141,25 @@ const injectDynamicPricingArray = async (products, req) => {
       salePrice = Number((salePrice / rate).toFixed(2));
       originalPrice = Number((originalPrice / rate).toFixed(2));
       metalValue = Number((metalValue / rate).toFixed(2));
+      extraCharges = Number((extraCharges / rate).toFixed(2));
       makingCharge = Number((makingCharge / rate).toFixed(2));
       cgst = Number((cgst / rate).toFixed(2));
       sgst = Number((sgst / rate).toFixed(2));
     }
 
+    const convertedExtraCharges = Array.isArray(productObj.extraCharges)
+      ? productObj.extraCharges.map(item => ({
+        label: item.label,
+        value: currencyCtx.currency === "USD"
+          ? Number((item.value / currencyCtx.conversionRate).toFixed(2))
+          : item.value,
+        _id: item._id
+      }))
+      : [];
+
     return {
       ...productObj,
+      extraCharges: convertedExtraCharges,
       specifications: resolveProductSpecifications(productObj),
 
       price: salePrice,
@@ -135,6 +170,7 @@ const injectDynamicPricingArray = async (products, req) => {
 
       pricing: {
         metalValue,
+        extraCharges,
         makingCharge,
         cgst,
         sgst,
@@ -197,6 +233,7 @@ export const createProduct = async (req, res) => {
       gst,
       gender,
       specifications,
+      extraCharges,
     } = req.body;
 
     // FIX: Map public_id from file.filename to prevent orphaned assets
@@ -248,6 +285,22 @@ export const createProduct = async (req, res) => {
         }
       } else {
         processedGemstones = gemstoneDetails;
+      }
+    }
+
+    let processedExtraCharges = [];
+    if (extraCharges) {
+      if (typeof extraCharges === 'string') {
+        try {
+          processedExtraCharges = JSON.parse(extraCharges);
+        } catch (parseError) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid format for extraCharges details array data",
+          });
+        }
+      } else {
+        processedExtraCharges = extraCharges;
       }
     }
 
@@ -329,6 +382,7 @@ export const createProduct = async (req, res) => {
       gst: Number(gst) || 3,
       gender: mappedSpecificationFields.gender ?? gender,
       specifications: processedSpecifications,
+      extraCharges: processedExtraCharges,
     });
 
     if (defaultRating) {
@@ -643,6 +697,14 @@ export const updateProduct = async (req, res) => {
         updateData.gemstoneDetails = JSON.parse(updateData.gemstoneDetails);
       } catch (error) {
         return res.status(400).json({ success: false, message: "Invalid JSON format for gemstoneDetails" });
+      }
+    }
+
+    if (typeof updateData.extraCharges === 'string') {
+      try {
+        updateData.extraCharges = JSON.parse(updateData.extraCharges);
+      } catch (error) {
+        return res.status(400).json({ success: false, message: "Invalid JSON format for extraCharges" });
       }
     }
 

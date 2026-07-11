@@ -53,7 +53,7 @@ function WhyChooseUs() {
             Why Choose Us
           </span>
           <h2 className="font-serif text-4xl md:text-5xl font-bold text-[#2C2C2C] tracking-wide mb-4">
-            The Atelier Promise
+            The Luxury Promise
           </h2>
           <p className="text-sm md:text-base text-stone-600 max-w-2xl mx-auto">
             From certified diamonds to lifetime service, discover what makes us your trusted destination for fine jewellery.

@@ -88,33 +88,38 @@ function Navbar() {
                                     }}
                                 />
 
-                                <div className="flex flex-col">
+                                <div className="flex flex-col justify-center leading-tight">
+                                    {/* Store Name (e.g., P&D) */}
                                     <h1
                                         className="font-serif tracking-wider"
                                         style={{
-                                            fontSize: "clamp(1.2rem, 4vw, 1.5rem)",
+                                            fontSize: "clamp(2rem, 6vw, 2rem)", // Slightly larger on mobile if needed, scales beautifully
                                             fontWeight: 700,
                                             background: "linear-gradient(135deg, #B76E79 0%, #D4AF37 100%)",
                                             WebkitBackgroundClip: "text",
                                             WebkitTextFillColor: "transparent",
+                                            lineHeight: "1.1"
                                         }}
                                     >
                                         {storeName}
                                     </h1>
 
+                                    {/* Subtitle (Luxury Jewellery) */}
                                     {!storeName.toLowerCase().includes("jewel") && (
-                                        <h1
-                                            className="font-serif tracking-wider"
+                                        <span
+                                            className="font-serif tracking-widest uppercase mt-1 text-xs"
                                             style={{
-                                                fontSize: "clamp(1rem, 2vw, 1rem)",
-                                                fontWeight: 700,
+
+                                                fontWeight: 600,
                                                 background: "linear-gradient(135deg, #B76E79 0%, #D4AF37 100%)",
                                                 WebkitBackgroundClip: "text",
                                                 WebkitTextFillColor: "transparent",
+                                                lineHeight: "1",
+                                                letterSpacing: "0.15em" // Adds elegant spacing between the tiny letters
                                             }}
                                         >
                                             Luxury Jewellery
-                                        </h1>
+                                        </span>
                                     )}
                                 </div>
                             </Link>

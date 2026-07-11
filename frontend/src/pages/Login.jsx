@@ -244,7 +244,7 @@ function Login() {
             <h1 className="font-serif tracking-[0.2em] text-2xl font-semibold text-[#2C2C2C]">
               P&D LUXURY JEWELLERY
             </h1>
-            <p className="text-[#B76E79] text-xs tracking-[0.15em] uppercase mt-1">High-End Atelier</p>
+            <p className="text-[#B76E79] text-xs tracking-[0.15em] uppercase mt-1">High-End Luxury</p>
           </div>
 
           {/* Form Luxury Card */}
@@ -469,7 +469,7 @@ function Login() {
                         </div>
                       </div>
                       <span className="text-xs text-[#2C2C2C]/70 group-hover:text-[#2C2C2C] transition-colors leading-normal font-sans">
-                        I agree to the <a href="#terms" className="underline text-[#B76E79]">Terms</a> & <a href="#privacy" className="underline text-[#B76E79]">Atelier Privacy Guidelines</a>
+                        I agree to the <a href="#terms" className="underline text-[#B76E79]">Terms</a> & <a href="#privacy" className="underline text-[#B76E79]">Luxury Privacy Guidelines</a>
                       </span>
                     </label>
                   </div>

@@ -9,7 +9,7 @@ import {
   FiChevronDown,
   FiCalendar,
   FiX,
-
+  FiTrash2,
 } from "react-icons/fi";
 import api from "../utils/api";
 import toast from "react-hot-toast";
@@ -63,6 +63,7 @@ export function Orders() {
   const [loading, setLoading] = useState(true);
   const [activeDropdownId, setActiveDropdownId] = useState(null);
   const [cancelModal, setCancelModal] = useState({ isOpen: false, orderId: null });
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, orderId: null });
 
   // Filter States
   const [showFilters, setShowFilters] = useState(false);
@@ -122,6 +123,21 @@ export function Orders() {
       }
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to cancel order", { id: loadToast });
+    }
+  };
+
+  const handleDeleteOrder = async () => {
+    const { orderId } = deleteModal;
+    const loadToast = toast.loading("Deleting order record...");
+    try {
+      const { data } = await api.delete(`/orders/delete/${orderId}`);
+      if (data.success) {
+        toast.success("Order record deleted successfully", { id: loadToast });
+        setDeleteModal({ isOpen: false, orderId: null });
+        fetchOrders();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to delete order record", { id: loadToast });
     }
   };
 
@@ -241,6 +257,14 @@ export function Orders() {
         <FiXCircle className="w-3.5 h-3.5" />
       </button>
 
+      <button
+        title="Delete Order Record"
+        onClick={() => setDeleteModal({ isOpen: true, orderId: order._id })}
+        className="p-2 text-slate-400 hover:text-rose-600 bg-slate-950 border border-slate-800/60 hover:border-rose-500/30 rounded-lg transition-all"
+      >
+        <FiTrash2 className="w-3.5 h-3.5" />
+      </button>
+
       <span className="w-px h-4 bg-slate-800 mx-0.5" />
 
       <div className="relative">
@@ -284,6 +308,15 @@ export function Orders() {
         onConfirm={handleCancelOrder}
         title="Cancel Order"
         message="Are you sure you want to cancel this order? This action will notify the customer."
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, orderId: null })}
+        onConfirm={handleDeleteOrder}
+        title="Delete Order Record"
+        message="Are you sure you want to permanently delete this order record? This action cannot be undone."
       />
 
       {/* Title block */}

@@ -100,7 +100,7 @@ export default function NotFoundPage() {
           className="pt-8 text-[9px] font-medium tracking-widest text-stone-800 uppercase flex items-center justify-center gap-1.5"
         >
           <ShieldAlert className="w-3.5 h-3.5 text-[#D4AF37]/80 stroke-[1.5]" />
-          <span>Atelier Secure Browsing Parameters Active</span>
+          <span>Luxury Secure Browsing Parameters Active</span>
         </motion.div>
       </motion.div>
     </div>
