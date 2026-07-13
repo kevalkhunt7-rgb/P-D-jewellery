@@ -1960,6 +1960,161 @@ export const deleteOrder = async (req, res) => {
   }
 };
 
+// ================= RETRY REFUND (ADMIN) =================
+export const retryRefund = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id || id === 'undefined' || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Order ID format",
+      });
+    }
+
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    if (order.refundStatus !== "Failed") {
+      return res.status(400).json({
+        success: false,
+        message: "Refund status is not Failed. Cannot retry.",
+      });
+    }
+
+    // Process the refund
+    if (order.paymentMethod === "Razorpay" || order.paymentMethod === "ONLINE") {
+      if (order.paymentInfo?.razorpayPaymentId) {
+        try {
+          console.log(`[Order Refund Retry] Processing Razorpay refund for order ${order._id}. Payment ID: ${order.paymentInfo.razorpayPaymentId}`);
+          const refund = await razorpay.payments.refund(
+            order.paymentInfo.razorpayPaymentId,
+            {
+              amount: Math.round(order.refundAmount * 100),
+              speed: "normal",
+              notes: {
+                orderId: order._id.toString(),
+                customer: order.shippingAddress?.fullName || "Customer",
+                reason: order.cancellationReason || "Cancellation refund retry",
+              },
+            }
+          );
+
+          order.refundId = refund.id;
+          order.refundStatus = refund.status === "processed" ? "Completed" : "Pending";
+          order.refundProcessedAt = new Date();
+          order.refundFailureReason = "";
+          console.log(`[Order Refund Retry Success] Razorpay refund initiated. Refund ID: ${refund.id}, Status: ${order.refundStatus}`);
+        } catch (razorpayError) {
+          console.error("[Order Refund Retry Error] Razorpay refund failed:", razorpayError);
+          order.refundStatus = "Failed";
+          order.refundFailureReason =
+            razorpayError?.error?.description || razorpayError.message || "Refund failed";
+        }
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: "No Razorpay payment ID on record for this order",
+        });
+      }
+    } else if (order.paymentMethod === "PAYPAL") {
+      const captureId = order.paymentInfo?.id;
+      const captureStatus = order.paymentInfo?.status;
+
+      if (!captureStatus || captureStatus.toUpperCase() !== "COMPLETED") {
+        return res.status(400).json({
+          success: false,
+          message: `PayPal capture status is '${captureStatus || "UNKNOWN"}', expected 'COMPLETED'`,
+        });
+      } else if (!captureId) {
+        return res.status(400).json({
+          success: false,
+          message: "No PayPal capture ID on record for this order",
+        });
+      } else {
+        try {
+          const refundCurrency = order.paidCurrency || "USD";
+          let refundVal = order.refundAmount;
+
+          if (refundCurrency === "USD") {
+            const calculatedUSD = Number((order.refundAmount / (order.exchangeRate || 1)).toFixed(2));
+            const difference = Math.abs(calculatedUSD - order.paidAmount);
+            if (difference > 0.05) {
+              refundVal = order.paidAmount;
+            } else {
+              refundVal = calculatedUSD;
+            }
+          } else {
+            const difference = Math.abs(order.refundAmount - order.totalPrice);
+            if (difference > 1) {
+              refundVal = order.totalPrice;
+            }
+          }
+
+          const refundResponse = await refundPaypalCapture(captureId, refundVal, refundCurrency);
+
+          order.refundId = refundResponse.id;
+          order.refundStatus = refundResponse.status === "COMPLETED" ? "Completed" : "Pending";
+          order.refundProcessedAt = new Date();
+          order.refundFailureReason = "";
+        } catch (paypalError) {
+          const apiErrorDetails = paypalError.response?.data || null;
+          order.refundStatus = "Failed";
+          order.refundFailureReason =
+            apiErrorDetails?.message ||
+            (apiErrorDetails?.details && JSON.stringify(apiErrorDetails.details)) ||
+            paypalError.message ||
+            "PayPal refund failed";
+        }
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: `Refund retry is not supported for payment method: ${order.paymentMethod}`,
+      });
+    }
+
+    const updatedOrder = await Order.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          refundId: order.refundId,
+          refundStatus: order.refundStatus,
+          refundProcessedAt: order.refundProcessedAt,
+          refundFailureReason: order.refundFailureReason,
+        }
+      },
+      { returnDocument: "after", runValidators: false }
+    );
+
+    if (updatedOrder.refundStatus === "Failed") {
+      return res.status(400).json({
+        success: false,
+        message: `Refund retry failed: ${updatedOrder.refundFailureReason}`,
+        order: updatedOrder
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Refund retried successfully",
+      order: updatedOrder,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to retry refund",
+    });
+  }
+};
+
 // ================= AUTOMATIC CRON CLEANUP =================
 // Automatically runs every minute to delete expired checkouts and restock their inventory
 cron.schedule("* * * * *", () => {

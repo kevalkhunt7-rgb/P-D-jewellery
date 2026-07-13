@@ -63,19 +63,30 @@ export default function NewArrivalsPage() {
   const [visibleCount, setVisibleCount] = useState(8);
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
 
+  const hasNewArrivals = useMemo(() => {
+    return (products || []).some(p => 
+      p.isNew || 
+      (p.tags && Array.isArray(p.tags) && 
+       p.tags.some(tag => tag.toLowerCase().includes('new arrival')))
+    );
+  }, [products]);
+
   const filteredAndSortedProducts = useMemo(() => {
-    let result = [...(products || [])].filter(p => {
+    const baseProducts = products || [];
+    let newArrivals = baseProducts.filter(p => {
       const isNewArrival = p.isNew || 
         (p.tags && Array.isArray(p.tags) && 
          p.tags.some(tag => tag.toLowerCase().includes('new arrival')));
       return isNewArrival;
     });
 
+    let result = newArrivals.length > 0 ? newArrivals : [...baseProducts];
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(p => 
-        p.title.toLowerCase().includes(query) || 
-        p.description.toLowerCase().includes(query)
+        (p.title || p.name || "").toLowerCase().includes(query) || 
+        (p.description || "").toLowerCase().includes(query)
       );
     }
 
@@ -146,7 +157,7 @@ export default function NewArrivalsPage() {
             New Arrivals
           </motion.h1>
           <p className="text-stone-500 text-sm max-w-md mx-auto">
-            Discover our latest additions, fresh from the atelier.
+            {hasNewArrivals ? "Discover our latest additions, fresh from the atelier." : "Discover our curated collection from the atelier."}
           </p>
         </div>
       </section>
@@ -156,7 +167,7 @@ export default function NewArrivalsPage() {
 
           <div className="text-xs tracking-wider text-stone-500 font-bold flex items-center gap-2">
             <Grid className="w-4 h-4 text-[#B76E79]/80 stroke-[1.5]" />
-            Showing <span className="font-semibold text-stone-900">{filteredAndSortedProducts.length}</span> New Pieces
+            Showing <span className="font-semibold text-stone-900">{filteredAndSortedProducts.length}</span> {hasNewArrivals ? "New Pieces" : "Pieces"}
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto justify-end">

@@ -72,6 +72,9 @@ function Navbar() {
                                     src={logoUrl}
                                     alt={storeName}
                                     className="h-15 w-auto object-contain"
+                                    width="60"
+                                    height="60"
+                                    fetchpriority="high"
                                     variants={{
                                         initial: { rotate: 0 },
                                         hover: {
@@ -223,7 +226,7 @@ function Navbar() {
                                 {[
                                     { name: "Collections", path: "/collections" },
                                     { name: "New Arrivals", path: "/new-arrivals" },
-                                    { name: "Bridal", path: "/bridal" },
+                                    { name: "Bridal", path: "/collections?occasion=wedding" },
                                     { name: "About", path: "/about" },
                                 ].map((item) => (
                                     <Link
@@ -257,6 +260,8 @@ function Navbar() {
                                 <input
                                     autoFocus
                                     type="text"
+                                    id="search-input"
+                                    aria-label="Search for jewelry, materials, or collections"
                                     placeholder="Search for jewelry, materials, or collections..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}

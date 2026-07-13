@@ -33,7 +33,8 @@ export function WishlistTab({ validWishlistItems }) {
                 id={itemId}
                 title={item.title || item.name}
                 price={item.price}
-                image={item.image}
+                image={item.image || (fullProductData?.images && fullProductData.images.length > 0 ? (fullProductData.images[0].url || fullProductData.images[0]) : '')}
+                images={fullProductData?.images}
                 tag={item.tag || fullProductData?.tag}
                 rating={productRating}
                 reviewsCount={reviewsCount}

@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Sparkles, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import brideImg from "../assets/bride.png"
+import brideImg from "../assets/bride.jpg"
 
 export function BridalShowcase() {
     const navigate = useNavigate();
@@ -31,6 +31,9 @@ export function BridalShowcase() {
                                     src={brideImg}
                                     alt="Bridal jewelry collection"
                                     className="w-full h-auto rounded-3xl shadow-2xl"
+                                    width="767"
+                                    height="1024"
+                                    loading="lazy"
                                     style={{ display: 'block', width: '100%', height: 'auto' }}
                                 />
                             </motion.div>

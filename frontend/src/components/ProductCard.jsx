@@ -161,6 +161,9 @@ export function ProductCard(props) {
             src={displayImage}
             alt={title || "Product Image"}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+            width="300"
+            height="300"
+            loading="lazy"
             style={{
               width: '100%',
               height: '100%',

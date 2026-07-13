@@ -477,9 +477,7 @@ export function AdminLayout() {
                   </div>
                   <div className="h-[1px] bg-slate-800 my-1 mx-2" />
 
-                  <button className="w-full text-left text-xs px-3 py-2 text-slate-300 hover:bg-slate-800 hover:text-slate-100 transition-colors">
-                    Profile
-                  </button>
+                  
                   {/* 🔐 Optional profile action role display check */}
                   {admin?.role === "superAdmin" && (
                     <button

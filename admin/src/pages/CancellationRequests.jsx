@@ -8,6 +8,7 @@ import {
   FiRefreshCw,
   FiLoader,
   FiTrash2,
+  FiRotateCcw,
 } from "react-icons/fi";
 import api from "../utils/api";
 import toast from "react-hot-toast";
@@ -198,6 +199,22 @@ export function CancellationRequests() {
     }
   };
 
+  const handleRetryRefund = async (orderId) => {
+    setProcessing(orderId);
+    const loadToast = toast.loading("Retrying refund...");
+    try {
+      const { data } = await api.put(`/orders/admin/${orderId}/retry-refund`);
+      if (data.success) {
+        toast.success("Refund retried successfully", { id: loadToast });
+        fetchCancellationRequests();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to retry refund", { id: loadToast });
+    } finally {
+      setProcessing(null);
+    }
+  };
+
   const handleDelete = async () => {
     const { orderId } = deleteModal;
     setProcessing(orderId);
@@ -223,6 +240,8 @@ export function CancellationRequests() {
       request.user?.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const currentApproveRequest = requestsData.find(r => r._id === approveModal.orderId);
+
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center p-12 text-slate-400">
@@ -235,54 +254,87 @@ export function CancellationRequests() {
   }
 
   return (
-    <div className="space-y-6 text-slate-200 p-1">
-      {/* Approve Confirmation Modal */}
-      <DeleteModal
-        isOpen={approveModal.isOpen}
-        onClose={() => setApproveModal({ isOpen: false, orderId: null })}
-        onConfirm={handleApprove}
-        title="Approve Cancellation & Refund"
-        message="Are you sure you want to approve this cancellation? This will attempt to process a refund via Razorpay and mark the order as cancelled."
-      />
+  <div className="space-y-6 text-slate-200 p-1">
+  {/* Approve Confirmation Modal */}
+  {approveModal.isOpen && (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-xl">
+        <h2 className="text-lg font-bold text-white mb-2">Approve Cancellation & Refund</h2>
+        <p className="text-xs text-slate-400 mb-4">
+          Are you sure you want to approve this cancellation? This will attempt to process a refund via Razorpay and mark the order as cancelled.
+        </p>
 
-      {/* Reject Confirmation Modal */}
-      {rejectModal.isOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-xl">
-            <h2 className="text-lg font-bold text-white mb-2">Reject Cancellation</h2>
-            <p className="text-xs text-slate-400 mb-4">Please provide a reason for rejecting this cancellation request.</p>
-
-            <div className="space-y-4 mb-6">
-              <textarea
-                value={rejectModal.reason}
-                onChange={(e) => setRejectModal({ ...rejectModal, reason: e.target.value })}
-                placeholder="Enter rejection reason..."
-                className="w-full h-24 bg-slate-950 border border-slate-800 text-slate-200 placeholder-slate-500 text-xs rounded-xl px-4 py-3 focus:outline-none focus:border-amber-500/50 resize-none"
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setRejectModal({ isOpen: false, orderId: null, reason: "" })}
-                className="flex-1 px-4 py-2.5 border border-slate-700 text-slate-300 text-xs font-semibold uppercase tracking-widest rounded-xl hover:bg-slate-800/50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleReject}
-                disabled={processing === rejectModal.orderId || !rejectModal.reason.trim()}
-                className="flex-1 px-4 py-2.5 bg-rose-600 text-white text-xs font-semibold uppercase tracking-widest rounded-xl hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-              >
-                {processing === rejectModal.orderId ? (
-                  <FiLoader className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  "Reject"
-                )}
-              </button>
-            </div>
+        {currentApproveRequest?.cancellationReason && (
+          <div className="bg-slate-950 border border-slate-800/80 rounded-xl p-4.5 mb-5">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">User's Cancellation Reason</span>
+            <p className="text-xs text-slate-350 italic leading-relaxed">
+              "{currentApproveRequest.cancellationReason}"
+            </p>
           </div>
+        )}
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => setApproveModal({ isOpen: false, orderId: null })}
+            className="flex-1 px-4 py-2.5 border border-slate-700 text-slate-300 text-xs font-semibold uppercase tracking-widest rounded-xl hover:bg-slate-800/50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleApprove}
+            disabled={processing === approveModal.orderId}
+            className="flex-1 px-4 py-2.5 bg-emerald-600 text-white text-xs font-semibold uppercase tracking-widest rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          >
+            {processing === approveModal.orderId ? (
+              <FiLoader className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              "Approve"
+            )}
+          </button>
         </div>
-      )}
+      </div>
+    </div>
+  )}
+
+  {/* Reject Confirmation Modal */}
+  {rejectModal.isOpen && (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-xl">
+        <h2 className="text-lg font-bold text-white mb-2">Reject Cancellation</h2>
+        <p className="text-xs text-slate-400 mb-4">Please provide a reason for rejecting this cancellation request.</p>
+
+        <div className="space-y-4 mb-6">
+          <textarea
+            value={rejectModal.reason}
+            onChange={(e) => setRejectModal({ ...rejectModal, reason: e.target.value })}
+            placeholder="Enter rejection reason..."
+            className="w-full h-24 bg-slate-950 border border-slate-800 text-slate-200 placeholder-slate-500 text-xs rounded-xl px-4 py-3 focus:outline-none focus:border-amber-500/50 resize-none"
+          />
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => setRejectModal({ isOpen: false, orderId: null, reason: "" })}
+            className="flex-1 px-4 py-2.5 border border-slate-700 text-slate-300 text-xs font-semibold uppercase tracking-widest rounded-xl hover:bg-slate-800/50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleReject}
+            disabled={processing === rejectModal.orderId || !rejectModal.reason.trim()}
+            className="flex-1 px-4 py-2.5 bg-rose-600 text-white text-xs font-semibold uppercase tracking-widest rounded-xl hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          >
+            {processing === rejectModal.orderId ? (
+              <FiLoader className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              "Reject"
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
+
 
       {/* Delete Confirmation Modal */}
       <DeleteModal
@@ -498,6 +550,21 @@ export function CancellationRequests() {
                               <FiLoader className="w-3.5 h-3.5 animate-spin" />
                             ) : (
                               <FiRefreshCw className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        )}
+
+                        {request.refundStatus === "Failed" && (
+                          <button
+                            title="Retry Refund"
+                            onClick={() => handleRetryRefund(request._id)}
+                            disabled={processing === request._id}
+                            className="p-2 text-slate-400 hover:text-amber-400 bg-slate-950 border border-slate-800/60 hover:border-amber-500/30 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            {processing === request._id ? (
+                              <FiLoader className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <FiRotateCcw className="w-3.5 h-3.5" />
                             )}
                           </button>
                         )}

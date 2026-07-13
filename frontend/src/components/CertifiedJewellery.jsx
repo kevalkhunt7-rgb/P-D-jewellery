@@ -70,6 +70,9 @@ function CertifiedJewellery() {
                 src="https://i.pinimg.com/736x/4e/22/bc/4e22bc1de0f601d2735697245a92f774.jpg" 
                 alt="Certified Fine Jewellery" 
                 className="rounded-[2.5rem] shadow-[0_30px_60px_rgba(44,44,44,0.06)] w-full h-auto"
+                width="500"
+                height="600"
+                loading="lazy"
               />
             </div>
           </div>

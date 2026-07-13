@@ -630,9 +630,7 @@ const PolicyCard = ({ policy, index, isDark, isOpen, onToggleAccordion, register
   );
 };
 
-/* ================================================================== */
-/* BACK TO TOP                                                         */
-/* ================================================================== */
+
 
 const BackToTopButton = () => {
   const [visible, setVisible] = useState(false);

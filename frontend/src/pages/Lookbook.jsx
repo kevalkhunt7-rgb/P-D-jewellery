@@ -140,7 +140,7 @@ const [isVideoMuted, setIsVideoMuted] = useState(true);
                                     }}
                                 />
             <Sparkles className="w-3.5 h-3.5 text-[#D4AF37] fill-current animate-spin" style={{ animationDuration: '6s' }} />
-            <span className="text-white text-[30px] font-bold tracking-[0.3em] uppercase">P&D LUXURY JEWELLERY</span>
+            <span className="text-white text-[30px]  font-bold tracking-[0.3em] uppercase">P&D LUXURY JEWELLERY</span>
           </motion.div>
                      
           <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl text-white font-bold tracking-tight leading-[1.05] mb-8">
@@ -466,15 +466,6 @@ const [isVideoMuted, setIsVideoMuted] = useState(true);
         </div>
       </div>
     </section>
-
-      
-
-      
-
-      {/* =====================================
-          9. FINAL LUXURY CTA
-         ===================================== */}
-      
 
     </div>
   );

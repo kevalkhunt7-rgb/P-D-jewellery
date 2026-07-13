@@ -88,6 +88,15 @@ export default function PremiumCheckoutPage() {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (!window.Razorpay) {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      document.body.appendChild(script);
+    }
+  }, []);
+
   // Stable baseline calculations (used as local estimates on step 1)
   const subtotal = activeCart.reduce((acc, item) => acc + (item.price * (item.quantity || 1)), 0);
   const discountAmount = appliedCoupon ? appliedCoupon.discountAmount : 0;

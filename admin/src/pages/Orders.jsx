@@ -170,6 +170,114 @@ export function Orders() {
     toast.success("PDF Report Exported");
   };
 
+  const exportExcelMonthly = () => {
+    if (filteredOrders.length === 0) {
+      toast.error("No orders to export");
+      return;
+    }
+
+    // Group orders by month-year
+    const groups = {};
+    filteredOrders.forEach(order => {
+      const date = new Date(order.createdAt);
+      const monthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+      ];
+      const monthYear = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+
+      if (!groups[monthYear]) {
+        groups[monthYear] = [];
+      }
+      groups[monthYear].push(order);
+    });
+
+    // Generate CSV content with UTF-8 BOM for Excel compatibility
+    let csvContent = "\ufeff";
+
+    // Headers
+    const headers = [
+      "Month/Year Group",
+      "Order ID",
+      "Customer",
+      "Email",
+      "Items Count",
+      "Amount (INR)",
+      "Payment Method",
+      "Payment Status",
+      "Order Status",
+      "Date"
+    ];
+    csvContent += headers.map(h => `"${h}"`).join(",") + "\r\n";
+
+    // Sort month/year groups chronologically
+    const sortedGroups = Object.keys(groups).sort((a, b) => {
+      const dateA = new Date(groups[a][0].createdAt);
+      const dateB = new Date(groups[b][0].createdAt);
+      return dateB - dateA;
+    });
+
+    sortedGroups.forEach(monthYear => {
+      // Add a header row for the month group
+      csvContent += `"${monthYear}",,,,,,,,,\r\n`;
+
+      let monthTotalAmount = 0;
+      groups[monthYear].forEach(order => {
+        const orderId = order._id.toUpperCase();
+        const customerName = order.user?.name || "Guest";
+        const customerEmail = order.user?.email || "No Email";
+        const itemsCount = `${order.orderItems?.length || 0} items`;
+        const amount = order.totalPrice;
+        monthTotalAmount += amount;
+
+        const paymentMethod = order.paymentMethod || "Razorpay";
+        const paymentStatus = order.paymentStatus || (order.isPaid ? "Paid" : "Pending");
+        const orderStatus = order.orderStatus || "PENDING";
+        const formattedDate = new Date(order.createdAt).toLocaleDateString();
+
+        const row = [
+          "",
+          orderId,
+          customerName,
+          customerEmail,
+          itemsCount,
+          amount.toFixed(2),
+          paymentMethod,
+          paymentStatus,
+          orderStatus,
+          formattedDate
+        ];
+
+        csvContent += row.map(val => `"${val.replace(/"/g, '""')}"`).join(",") + "\r\n";
+      });
+
+      // Add a subtotal row for the month
+      const subtotalRow = [
+        `"Total for ${monthYear}"`,
+        "",
+        "",
+        "",
+        "",
+        `"${monthTotalAmount.toFixed(2)}"`,
+        "",
+        "",
+        "",
+        ""
+      ];
+      csvContent += subtotalRow.join(",") + "\r\n\r\n";
+    });
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `orders_monthly_report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Excel/CSV Report Exported");
+  };
+
   const getFilteredOrders = () => {
     let filtered = ordersData;
 
@@ -283,11 +391,10 @@ export function Orders() {
                 <button
                   key={statusOption}
                   onClick={() => handleUpdateStatus(order._id, statusOption)}
-                  className={`w-full px-3 py-1.5 text-left text-[10px] font-semibold block capitalize transition-colors ${
-                    order.orderStatus === statusOption
+                  className={`w-full px-3 py-1.5 text-left text-[10px] font-semibold block capitalize transition-colors ${order.orderStatus === statusOption
                       ? "text-amber-400 bg-amber-500/5"
                       : "text-slate-400 hover:text-white hover:bg-slate-900"
-                  }`}
+                    }`}
                 >
                   {statusOption}
                 </button>
@@ -331,11 +438,10 @@ export function Orders() {
           <button
             key={tab.value}
             onClick={() => setActiveTab(tab.value)}
-            className={`px-3 sm:px-4 py-2.5 text-xs font-semibold whitespace-nowrap transition-all border-b-2 -mb-px shrink-0 ${
-              activeTab === tab.value
+            className={`px-3 sm:px-4 py-2.5 text-xs font-semibold whitespace-nowrap transition-all border-b-2 -mb-px shrink-0 ${activeTab === tab.value
                 ? "border-amber-500 text-amber-500 bg-amber-500/5"
                 : "border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700"
-            }`}
+              }`}
           >
             {tab.label}
           </button>
@@ -365,20 +471,20 @@ export function Orders() {
               <div className="flex flex-col sm:flex-row gap-2.5">
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium border transition-all rounded-xl w-full sm:w-auto ${
-                    showFilters ? "bg-amber-500 text-slate-950 border-amber-500" : "bg-slate-950 text-slate-300 border-slate-800 hover:bg-slate-800/50"
-                  }`}
+                  className={`inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium border transition-all rounded-xl w-full sm:w-auto ${showFilters ? "bg-amber-500 text-slate-950 border-amber-500" : "bg-slate-950 text-slate-300 border-slate-800 hover:bg-slate-800/50"
+                    }`}
                 >
                   <FiFilter className="w-3.5 h-3.5" />
                   Filters
                 </button>
 
+
                 <button
-                  onClick={exportPDF}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium text-slate-300 bg-slate-950 border border-slate-800 hover:bg-slate-800/50 hover:text-white transition-all rounded-xl w-full sm:w-auto"
+                  onClick={exportExcelMonthly}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all rounded-xl w-full sm:w-auto"
                 >
                   <FiDownload className="w-3.5 h-3.5" />
-                  Export
+                  Export Excel
                 </button>
               </div>
             </div>
@@ -386,25 +492,13 @@ export function Orders() {
             {/* Advanced Filters Panel */}
             {showFilters && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-slate-950/50 border border-slate-800/50 rounded-xl animate-in fade-in slide-in-from-top-2">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Payment Status</label>
-                  <select
-                    value={filters.paymentStatus}
-                    onChange={(e) => setFormData({...filters, paymentStatus: e.target.value})}
-                    className="w-full bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-lg px-3 py-2 outline-none focus:border-amber-500/50"
-                  >
-                    <option value="all">All Payments</option>
-                    <option value="paid">Paid</option>
-                    <option value="pending">Pending</option>
-                    <option value="refunded">Refunded</option>
-                  </select>
-                </div>
+
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Order Status</label>
                   <select
                     value={filters.orderStatus}
-                    onChange={(e) => setFormData({...filters, orderStatus: e.target.value})}
-                    className="w-full bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-lg px-3 py-2 outline-none focus:border-amber-500/50"
+                    onChange={(e) => setFormData({ ...filters, orderStatus: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-800 text-slate-200 text-xs rounded-lg px-3 py-2 outline-none focus:border-amber-500/50"
                   >
                     <option value="all">All Statuses</option>
                     <option value="PENDING">Pending</option>
@@ -416,23 +510,15 @@ export function Orders() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Start Date</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Search With Date</label>
                   <input
                     type="date"
                     value={filters.startDate}
-                    onChange={(e) => setFormData({...filters, startDate: e.target.value})}
-                    className="w-full bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-lg px-3 py-2 outline-none focus:border-amber-500/50"
+                    onChange={(e) => setFormData({ ...filters, startDate: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-lg px-3 py-2 outline-none focus:border-amber-500/50 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">End Date</label>
-                  <input
-                    type="date"
-                    value={filters.endDate}
-                    onChange={(e) => setFormData({...filters, endDate: e.target.value})}
-                    className="w-full bg-slate-900 border border-slate-800 text-slate-300 text-xs rounded-lg px-3 py-2 outline-none focus:border-amber-500/50"
-                  />
-                </div>
+
                 <div className="sm:col-span-2 lg:col-span-4 flex justify-end">
                   <button
                     onClick={() => setFormData({ paymentStatus: "all", orderStatus: "all", startDate: "", endDate: "" })}

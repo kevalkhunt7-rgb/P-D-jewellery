@@ -17,6 +17,7 @@ import {
     deleteCancellationRecord,
     adminCancelOrder,
     deleteOrder,
+    retryRefund,
 } from "../controllers/orderController.js";
 
 import {
@@ -94,6 +95,13 @@ router.delete(
   protect,
   adminOnly,
   deleteCancellationRecord
+);
+
+router.put(
+  "/admin/:id/retry-refund",
+  protect,
+  adminOnly,
+  retryRefund
 );
 
 // Razorpay Webhook

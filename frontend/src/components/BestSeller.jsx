@@ -80,12 +80,14 @@ export function BestSellers() {
             <div className="hidden sm:flex absolute bottom-0 right-0 gap-3 z-10">
               <button
                 onClick={() => sliderRef.current?.slickPrev()}
+                aria-label="Previous best sellers"
                 className="w-11 h-11 rounded-full bg-white shadow-md hover:bg-[#B76E79] hover:text-white transition-all duration-300 flex items-center justify-center border border-gray-100"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <button
                 onClick={() => sliderRef.current?.slickNext()}
+                aria-label="Next best sellers"
                 className="w-11 h-11 rounded-full bg-white shadow-md hover:bg-[#B76E79] hover:text-white transition-all duration-300 flex items-center justify-center border border-gray-100"
               >
                 <ChevronRight className="w-5 h-5" />

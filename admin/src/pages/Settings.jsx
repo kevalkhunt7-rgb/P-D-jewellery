@@ -279,7 +279,6 @@ export function Settings() {
     { id: "general", label: "General", icon: <FiSettings /> },
     { id: "goldRate", label: "Metal Rates", icon: <FiSettings /> },
     { id: "seo", label: "SEO", icon: <FiGlobe /> },
-    { id: "order", label: "Orders", icon: <FiShoppingBag /> },
     { id: "inventory", label: "Inventory", icon: <FiBox /> },
     { id: "social", label: "Social Media", icon: <FiShare2 /> },
     { id: "adminRequests", label: "Admin Requests", icon: <FiUsers /> },
@@ -505,29 +504,7 @@ export function Settings() {
             </SectionCard>
           )}
 
-          {/* Order Settings */}
-          {activeTab === "order" && (
-            <SectionCard
-              title="Order Preferences"
-              description="Manage shipping, taxes, and order behavior"
-              onSave={() => saveSection("order")}
-              loading={saving}
-            >
-              <div className="grid md:grid-cols-2 gap-6">
-                <InputField
-                  label="Shipping Charge" id="shippingCharge" type="number"
-                  value={settings.order.shippingCharge}
-                  onChange={(e) => handleInputChange("order", e)}
-                />
-                <InputField
-                  label="Free Shipping Above" id="freeShippingMinAmount" type="number"
-                  value={settings.order.freeShippingMinAmount}
-                  onChange={(e) => handleInputChange("order", e)}
-                />
-              </div>
-              <div className="grid gap-4 pt-2"></div>
-            </SectionCard>
-          )}
+          
 
           {/* Inventory Settings */}
           {activeTab === "inventory" && (

@@ -242,6 +242,9 @@ export function Hero() {
                     animate="center"
                     exit="exit"
                     className="absolute w-full h-full object-cover"
+                    width="450"
+                    height="550"
+                    fetchpriority="high"
                   />
                 </AnimatePresence>
               </div>
@@ -277,6 +280,7 @@ export function Hero() {
                         setDirection(idx > current ? 1 : -1);
                         setCurrent(idx);
                       }}
+                      aria-label={`Go to slide ${idx + 1}`}
                       className={`h-2 transition-all duration-300 rounded-full ${idx === current ? 'w-6 sm:w-8 bg-[#B76E79]' : 'w-2 bg-[#B76E79]/40'
                         }`}
                     />

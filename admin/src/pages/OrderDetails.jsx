@@ -119,10 +119,7 @@ export function OrderDetails() {
             </select>
           </div>
           
-          <button className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-slate-300 hover:text-white text-xs font-bold px-3 py-2 rounded-xl transition-colors">
-            <FiDownload className="w-3.5 h-3.5" />
-            Invoice
-          </button>
+          
         </div>
       </div>
 

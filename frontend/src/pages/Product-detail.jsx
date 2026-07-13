@@ -42,7 +42,6 @@ function ProductDetailPage({ product }) {
         products.find((p) => String(p.slug) === String(slug) || String(p.id) === String(slug) || String(p._id) === String(slug));
 
     // NORMALIZATION LAYER
-    // 1. UPDATE THIS OBJECT PACKET INSIDE ProductDetailPage.jsx
     const normalizedSpecifications = currentProductRaw
         ? (
             Array.isArray(currentProductRaw.specifications) && currentProductRaw.specifications.length > 0
@@ -66,11 +65,9 @@ function ProductDetailPage({ product }) {
         grossWeight: currentProductRaw.grossWeight || currentProductRaw.details?.grossWeight || currentProductRaw.details?.weight || undefined,
         netWeight: currentProductRaw.netWeight || currentProductRaw.details?.netWeight || undefined,
 
-        // Check if your DB stores diamonds flat or inside an accent nested object
         diamondWeight: currentProductRaw.diamondWeight || currentProductRaw.details?.diamondWeight || currentProductRaw.details?.caratWeight || undefined,
         diamondPieces: currentProductRaw.diamondPieces || currentProductRaw.details?.diamondPieces || currentProductRaw.details?.stones || undefined,
 
-        // Extra Admin Fields
         baseMaterial: currentProductRaw.baseMaterial || currentProductRaw.details?.baseMaterial || currentProductRaw.metalType || undefined,
         platingType: currentProductRaw.platingType || currentProductRaw.details?.platingType || undefined,
         metalColor: currentProductRaw.metalColor || currentProductRaw.color || currentProductRaw.details?.color || undefined,
@@ -89,6 +86,7 @@ function ProductDetailPage({ product }) {
                 ? currentProductRaw.occasion.replace(/([A-Z])/g, ' $1').trim().split(', ').join(', ')
                 : undefined
     } : null;
+
     const { addToCart, cart } = useCart();
     const { wishlist, toggleWishlist, addToWishlist, removeFromWishlist } = useWishlist();
 
@@ -115,26 +113,32 @@ function ProductDetailPage({ product }) {
 
     const activeDisplayImage = getActiveImageUrl();
 
+    // FIXED MOUSE MOVE POSITIONING MATH
     const handleMouseMove = (e) => {
         if (!imgRef.current) return;
         const target = imgRef.current;
         const rect = target.getBoundingClientRect();
 
+        // Calculate accurate mouse positioning coordinates relative to image element box boundaries
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
+        if (x < 0 || y < 0 || x > rect.width || y > rect.height) return;
+
         const zoomFactor = 2.5;
-        const bgX = (x * zoomFactor) - (rect.width / 2);
-        const bgY = (y * zoomFactor) - (rect.height / 2);
+        
+        // Using percentages aligns the zoom canvas precisely under your cursor marker
+        const bgX = (x / rect.width) * 100;
+        const bgY = (y / rect.height) * 100;
 
         setZoomStyle({
             display: 'block',
             left: `${x}px`,
             top: `${y}px`,
             backgroundImage: `url(${activeDisplayImage})`,
-            backgroundPosition: `-${bgX}px -${bgY}px`,
+            backgroundPosition: `${bgX}% ${bgY}%`,
             backgroundSize: `${rect.width * zoomFactor}px ${rect.height * zoomFactor}px`,
-            transform: 'translate(-50%, -50%)'
+            transform: 'translate(-50%, -50%)' // Centers the zoom circle target directly under pointer
         });
     };
 
@@ -179,7 +183,7 @@ function ProductDetailPage({ product }) {
     };
 
     const handleWishlistToggle = () => {
-        const normalizedItem = { ...currentProduct, id: currentProduct._id || currentProduct.id };
+        const normalizedItem = { ...currentProduct, id: currentProduct._id || currentProduct.id, image: activeDisplayImage };
         if (toggleWishlist) {
             toggleWishlist(normalizedItem);
         } else {
@@ -205,7 +209,7 @@ function ProductDetailPage({ product }) {
                 <span className="text-stone-700 font-medium">{currentProduct.title}</span>
             </div>
 
-            {/* Top Workspace Grid (Images + Config Panel) */}
+            {/* Top Workspace Grid */}
             <main className="container mx-auto px-4 sm:px-6 lg:px-12 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 pb-12 relative z-10 items-start">
 
                 {/* VISUAL SHOWCASE FRAME (LEFT) */}
@@ -228,7 +232,7 @@ function ProductDetailPage({ product }) {
                         </div>
                     )}
 
-                    {/* Main Window */}
+                    {/* Main Window Frame */}
                     <div className="flex-1 relative bg-white rounded-[2.5rem] border border-stone-200/50 shadow-xl shadow-stone-200/20 overflow-hidden group aspect-[4/5] w-full max-h-[640px] flex items-center justify-center">
                         <AnimatePresence mode="wait">
                             {!is360Mode ? (
@@ -243,7 +247,7 @@ function ProductDetailPage({ product }) {
                                     onMouseLeave={handleMouseLeave}
                                 >
                                     <img ref={imgRef} src={activeDisplayImage} alt={currentProduct.title} className="w-full h-full object-cover pointer-events-none" />
-                                    <div className="absolute hidden lg:block w-48 h-48 rounded-full border border-white/30 shadow-[0_20px_40px_rgba(0,0,0,0.25)] pointer-events-none ring-4 ring-stone-900/5" style={zoomStyle} />
+                                    <div className="absolute hidden lg:block w-48 h-48 rounded-full border border-white/30 shadow-[0_20px_40px_rgba(0,0,0,0.25)] pointer-events-none ring-4 ring-stone-900/5 z-20" style={zoomStyle} />
                                 </motion.div>
                             ) : (
                                 <motion.div key="360" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full relative overflow-hidden bg-gradient-to-b from-stone-50 to-white">
@@ -273,7 +277,7 @@ function ProductDetailPage({ product }) {
                                 </span>
                                 {currentProduct.originalPrice && currentProduct.originalPrice > currentProduct.price && (
                                     <>
-                                        <span className="  text-sm line-through text-stone-800">
+                                        <span className=" text-sm line-through text-stone-800">
                                             {currentProduct.currencySymbol || '₹'}
                                             {currentProduct.originalPrice.toLocaleString(currentProduct.currency === 'USD' ? 'en-US' : 'en-IN', { minimumFractionDigits: currentProduct.currency === 'USD' ? 2 : 0, maximumFractionDigits: 2 })}
                                         </span>
@@ -285,12 +289,12 @@ function ProductDetailPage({ product }) {
                             </div>
 
                             <div className="flex items-center gap-2 bg-white px-3.5 py-1.5 rounded-full border border-stone-200/50 shadow-sm">
+                                <span className="text-[11px] font-bold text-stone-700">{Number(currentProduct.rating || 0).toFixed(1)}</span>
                                 <div className="flex text-amber-400">
                                     {[...Array(5)].map((_, i) => (
                                         <Star key={i} className={`w-3 h-3 ${i < Math.round(currentProduct.rating || 0) ? 'fill-current' : 'text-stone-200 fill-stone-200'}`} />
                                     ))}
                                 </div>
-                                <span className="text-[11px] font-bold text-stone-500 tracking-wider">({currentProduct.reviewsCount})</span>
                             </div>
                         </div>
 
@@ -347,7 +351,7 @@ function ProductDetailPage({ product }) {
                 </div>
             </main>
 
-            {/* FULL WIDTH DEDICATED SPECIFICATION SPACE */}
+            {/* Full Width Dedicated Specification Space */}
             <section className="container mx-auto px-4 sm:px-6 lg:px-12 pb-16 relative z-10">
                 <JewellerySpecifications product={currentProduct} />
             </section>
